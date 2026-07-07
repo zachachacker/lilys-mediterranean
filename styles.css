@@ -242,13 +242,32 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
     linear-gradient(155deg, var(--deep) 8%, var(--deep-2) 70%, #071e28);
   color: var(--foam);
 }
-.hero-inner { max-width: var(--maxw); margin-inline: auto; width: 100%; position: relative; z-index: 3; }
+.hero-inner {
+  max-width: var(--maxw); margin-inline: auto; width: 100%; position: relative; z-index: 3;
+  display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.85fr);
+  gap: clamp(2rem, 5vw, 4.5rem); align-items: center;
+}
+.hero-photo {
+  border-radius: 4px; aspect-ratio: 4 / 4.6; margin: 0;
+  box-shadow: 0 40px 90px -35px rgba(4, 20, 28, 0.9);
+  transform: rotate(1.2deg);
+}
+.hero-photo figcaption {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1rem 1.2rem;
+  font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--foam);
+  background: linear-gradient(to top, rgba(7, 27, 35, 0.82), transparent);
+}
+.hero-photo .hp-price { color: var(--lemon); }
 .hero .eyebrow { color: var(--lemon); margin-bottom: clamp(1.4rem, 3vw, 2.2rem); }
 .hero h1 {
-  font-size: var(--step-5);
+  /* photo-led hero: the image carries scale, the type stays confident but shares */
+  font-size: clamp(2.6rem, 6.2vw, 5.6rem);
   font-variation-settings: "opsz" 144, "SOFT" 0, "wght" 480;
-  line-height: 0.94; letter-spacing: -0.025em;
-  max-width: 16ch;
+  line-height: 0.96; letter-spacing: -0.025em;
+  max-width: 15ch;
 }
 .hero h1 .flame {
   font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 60, "WONK" 1, "wght" 460;
@@ -329,6 +348,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
   display: grid; place-items: center;
 }
 .plate .ring { position: absolute; inset: 0; display: grid; place-items: center; }
+.plate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .plate figcaption {
   position: absolute; left: 0; right: 0; bottom: 0;
   padding: 1.4rem 1.6rem;
@@ -358,25 +378,22 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .rail::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--teal) 60%, transparent); border-radius: 100px; }
 .dish {
   scroll-snap-align: start; position: relative;
-  border-radius: 3px; overflow: hidden; aspect-ratio: 3 / 4;
-  background: linear-gradient(160deg, var(--deep), #08222c);
-  display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 1.4rem; color: var(--foam);
+  border-radius: 4px; overflow: hidden;
+  background: linear-gradient(160deg, #13242c, #0b1d25);
+  display: flex; flex-direction: column;
+  color: var(--foam);
   transition: transform var(--dur) var(--ease-2), box-shadow var(--dur) var(--ease-2);
   will-change: transform;
 }
-.dish::before {
-  content: ""; position: absolute; inset: 0;
-  background: radial-gradient(90% 60% at 50% 12%, color-mix(in srgb, var(--lemon) 20%, transparent), transparent 55%);
-  opacity: 0.7; transition: opacity var(--dur) var(--ease-2);
-}
 .dish:hover { transform: translateY(-8px); box-shadow: 0 26px 50px -22px rgba(8, 34, 44, 0.85); }
-.dish:hover::before { opacity: 1; }
-.dish .motif { position: absolute; top: 1.1rem; right: 1.1rem; opacity: 0.5; }
-.dish .veg { position: absolute; top: 1.2rem; left: 1.2rem; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--olive); background: color-mix(in srgb, var(--foam) 90%, transparent); padding: 0.3em 0.55em; border-radius: 2px; }
-.dish h3 { position: relative; font-size: var(--step-1); font-variation-settings: "opsz" 72, "SOFT" 10; margin-bottom: 0.4rem; }
-.dish .price { position: relative; font-family: var(--mono); font-size: 0.9rem; color: var(--lemon); letter-spacing: 0.04em; }
-.dish .desc { position: relative; font-size: 0.82rem; opacity: 0.8; margin-top: 0.5rem; line-height: 1.45; }
+.dish-img { aspect-ratio: 1 / 0.92; position: relative; }
+.dish-img img { transition: transform 1.2s var(--ease); }
+.dish:hover .dish-img img { transform: scale(1.045); }
+.dish .veg { position: absolute; top: 0.9rem; left: 0.9rem; z-index: 2; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--char); background: var(--lemon); padding: 0.35em 0.6em; border-radius: 2px; }
+.dish-body { padding: 1.1rem 1.2rem 1.3rem; display: flex; flex-direction: column; flex: 1; }
+.dish h3 { font-size: 1.15rem; font-variation-settings: "opsz" 60, "SOFT" 10; margin-bottom: 0.35rem; }
+.dish .price { font-family: var(--mono); font-size: 0.86rem; color: var(--lemon); letter-spacing: 0.04em; }
+.dish .desc { font-size: 0.8rem; opacity: 0.75; margin-top: 0.45rem; line-height: 1.45; }
 
 /* -------------------------------------------------------------- credo */
 .credo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); }
@@ -388,6 +405,14 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 
 /* --------------------------------------------------------------- menu */
 .menu-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: clamp(2rem, 4vw, 3.2rem); }
+@media (max-width: 720px) {
+  .menu-tabs {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter);
+  }
+  .menu-tabs::-webkit-scrollbar { display: none; }
+  .menu-tabs button { white-space: nowrap; flex: none; }
+}
 .menu-tabs button {
   font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
   padding: 0.6em 1em; border-radius: 100px;
@@ -408,15 +433,73 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .menu-cat > h3::after { content: ""; flex: 1; height: 1px; background: color-mix(in srgb, var(--foam) 16%, transparent); }
 .menu-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.2rem 3rem; }
 .menu-item {
-  display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 1rem;
-  padding: 1rem 0; border-bottom: 1px solid color-mix(in srgb, var(--foam) 10%, transparent);
-  align-items: baseline;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 0.3rem 1rem;
+  padding: 0.9rem 0; border-bottom: 1px solid color-mix(in srgb, var(--foam) 10%, transparent);
+  align-items: center;
 }
+.mi-thumb {
+  grid-row: 1 / span 2; width: 58px; height: 58px; border-radius: 4px; overflow: hidden;
+  align-self: center;
+}
+.mi-thumb.none { background: linear-gradient(150deg, color-mix(in srgb, var(--foam) 7%, transparent), transparent); }
 .menu-item .mi-name { font-family: var(--serif); font-size: 1.12rem; font-weight: 500; font-variation-settings: "opsz" 40, "SOFT" 0; }
 .menu-item .mi-price { font-family: var(--mono); font-size: 0.9rem; color: var(--lemon); letter-spacing: 0.02em; white-space: nowrap; }
-.menu-item .mi-desc { grid-column: 1 / -1; font-size: 0.85rem; color: color-mix(in srgb, var(--foam) 62%, transparent); line-height: 1.5; max-width: 54ch; }
+.menu-item .mi-desc { grid-column: 2 / -1; font-size: 0.85rem; color: color-mix(in srgb, var(--foam) 62%, transparent); line-height: 1.5; max-width: 54ch; }
 .menu-item .tag { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--olive); margin-left: 0.5em; }
 .menu-note { margin-top: 2rem; font-size: 0.85rem; color: color-mix(in srgb, var(--foam) 55%, transparent); font-style: italic; }
+
+/* ------------------------------------------------------------ press quote */
+.quote-band { padding-block: clamp(3.5rem, 8vw, 6.5rem); }
+.press-quote { max-width: 26ch; margin: 0; }
+.press-quote p {
+  font-family: var(--serif); font-size: var(--step-2); line-height: 1.18;
+  font-variation-settings: "opsz" 100, "SOFT" 20; letter-spacing: -0.01em; text-wrap: balance;
+}
+.press-quote em { font-style: italic; color: var(--lemon); font-variation-settings: "opsz" 100, "SOFT" 50, "WONK" 1; }
+.press-quote cite {
+  display: block; margin-top: 1.4rem; font-style: normal;
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--foam) 62%, transparent);
+}
+.proof-row {
+  display: flex; flex-wrap: wrap; gap: 0.6rem 2rem; margin-top: 2.2rem;
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--lemon);
+}
+
+/* order extras */
+.order-card .partners { margin-top: 1.1rem; margin-bottom: 0; font-size: 0.8rem; color: color-mix(in srgb, currentColor 62%, transparent); }
+.amenities {
+  margin-top: 1.6rem; font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; line-height: 2;
+  color: color-mix(in srgb, var(--char) 55%, transparent);
+}
+
+/* --------------------------------------------------------- menu CTA band */
+.menu-cta-grid {
+  display: grid; grid-template-columns: 1.4fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: center;
+}
+.menu-cta h2 { font-size: var(--step-3); margin-top: 0.6rem; }
+.menu-cta-sub { margin-top: 1.2rem; color: color-mix(in srgb, var(--foam) 68%, transparent); max-width: 44ch; }
+.menu-cta-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 0.9rem; }
+@media (max-width: 900px) {
+  .menu-cta-grid { grid-template-columns: 1fr; }
+  .menu-cta-actions { flex-direction: row; flex-wrap: wrap; }
+}
+
+/* ------------------------------------------------- photo treatment system
+ * One warm editorial grade across every photo so mixed shots read as one
+ * art-directed set (grade + brand-duotone wash + grain sits above). */
+.photo { position: relative; overflow: hidden; }
+.photo img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: saturate(1.08) contrast(1.05) brightness(0.97);
+}
+.photo::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--deep) 32%, transparent), transparent 45%, color-mix(in srgb, var(--lemon) 14%, transparent));
+  mix-blend-mode: soft-light;
+}
 
 /* --------------------------------------------------------------- order */
 .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 4vw, 3rem); }
@@ -494,6 +577,10 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 
 /* --------------------------------------------------------------- responsive */
 @media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 2.2rem; }
+  /* photo leads on mobile — food first, then the words */
+  .hero-photo { transform: none; aspect-ratio: 4 / 2.9; max-width: 560px; order: -1; }
+  .hero { padding-top: clamp(5.5rem, 12vh, 8rem); }
   .story-grid, .credo-grid, .order-grid, .visit-grid { grid-template-columns: 1fr; }
   .menu-list { grid-template-columns: 1fr; }
   .credo-grid { gap: 2rem; }
