@@ -47,36 +47,34 @@
 <!-- ===================================================== HERO -->
 <main id="top">
 <section class="hero" id="hero">
-  <div class="hero-mark" aria-hidden="true">مشاوي</div>
-  <div class="hero-inner">
-    <div class="hero-copy">
+  <div class="hero-copy">
+    <div class="hero-mark" aria-hidden="true">مشاوي</div>
+    <div class="hero-copy-inner">
       <span class="eyebrow">Flame-grilled · Mezze · Lebanese home cooking</span>
-      <h1>Fresh Mediterranean, on the <span class="flame">Indialantic</span> shore.</h1>
-      <p class="hero-sub">A family-run Lebanese &amp; Mediterranean grill on Florida's Space Coast — char-grilled skewers, house-made hummus, and warm pita. Real food, made with heart, never frozen.</p>
+      <h1><span class="hw">Fresh</span> <span class="hw">Mediterranean,</span> <span class="hw">on</span> <span class="hw">the</span> <span class="hw flame">Indialantic</span> <span class="hw">shore.</span></h1>
+      <p class="hero-sub">A family-run Lebanese &amp; Mediterranean grill on Florida's Space Coast — char-grilled skewers, house-made hummus, warm pita. Real food, never frozen.</p>
       <div class="hero-cta">
         <a class="btn" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener" id="magnet">Order Online <span class="arw">→</span></a>
-        <a class="btn ghost" href="tel:+13213124444">Call to Order · (321) 312-4444</a>
+        <a class="btn ghost" href="tel:+13213124444">(321) 312-4444</a>
       </div>
       <div class="hero-meta">
         <span id="statusMount"></span>
         <span><i class="dot"></i> 4.6 ★ · 350+ reviews</span>
-        <span><i class="dot"></i> Dine-in · Takeout · Catering</span>
       </div>
     </div>
-    <figure class="hero-photo photo" aria-label="Bone-in lamb chops platter with garlic rice, hummus and salad">
-      <img src="assets/photos/lamb-chops-hummus-plate.webp" alt="Lamb chops platter with rice, grilled vegetables, hummus and pita at Lily's" fetchpriority="high">
-      <figcaption><span>Bone-in lamb chops platter</span><span class="hp-price">$26.49</span></figcaption>
-    </figure>
   </div>
-
-  <div class="shoreline" aria-hidden="true">
-    <svg class="wave" viewBox="0 0 1440 90" preserveAspectRatio="none" fill="none">
-      <path d="M0 45 C 180 10, 360 80, 540 45 S 900 10, 1080 45 S 1440 80, 1440 45 L1440 90 L0 90 Z" fill="#F4F1E8" opacity="0.06"/>
-      <path d="M0 55 C 180 22, 360 88, 540 55 S 900 22, 1080 55 S 1440 88, 1440 55" stroke="#2E7D82" stroke-width="1.4" opacity="0.5"/>
-      <path d="M0 62 C 200 34, 380 92, 560 62 S 920 34, 1120 62 S 1440 92, 1440 62" stroke="#E4A72E" stroke-width="1" opacity="0.35"/>
-    </svg>
-  </div>
+  <figure class="hero-photo photo" aria-label="Bone-in lamb chops platter with garlic rice, hummus and salad">
+    <img src="assets/photos/lamb-chops-hummus-plate.webp" alt="Lamb chops platter with rice, grilled vegetables, hummus and pita at Lily's" fetchpriority="high">
+    <figcaption><span>Bone-in lamb chops platter</span><span class="hp-price">$26.49</span></figcaption>
+  </figure>
 </section>
+
+<!-- marquee: the daily litany -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Hummus · Shawarma · Flame-grilled · Mezze · Baklava · Gyros · Falafel · Tawouk · Kafta · Fresh, never frozen · </span><span>Hummus · Shawarma · Flame-grilled · Mezze · Baklava · Gyros · Falafel · Tawouk · Kafta · Fresh, never frozen · </span>
+  </div>
+</div>
 
 <!-- ===================================================== STORY -->
 <section class="section" id="story">
@@ -89,11 +87,17 @@
       <p>Everything is fresh and never frozen — no shortcuts, no freezer aisle. Regulars call it "the best Mediterranean in Brevard," and honestly, we cook like we're feeding family, because most days that's exactly how it feels.</p>
       <p class="sig">— Lily &amp; family</p>
     </div>
-    <figure class="plate photo reveal d1">
-      <span class="badge">Fresh · never frozen</span>
-      <img loading="lazy" src="assets/photos/interior-dining-room.webp" alt="Lily's dining room in Indialantic, with its beach mural and booths">
-      <figcaption><span>The dining room</span><span>Indialantic, FL</span></figcaption>
-    </figure>
+    <div class="story-media reveal d1">
+      <figure class="story-main photo">
+        <span class="badge">Fresh · never frozen</span>
+        <img loading="lazy" src="assets/photos/interior-dining-room.webp" alt="Lily's dining room in Indialantic, with its beach mural and booths">
+        <figcaption><span>The dining room</span><span>Indialantic, FL</span></figcaption>
+      </figure>
+      <figure class="story-inset photo">
+        <img loading="lazy" src="assets/photos/storefront-exterior.webp" alt="Lily's storefront on 5th Avenue — look for the pergola">
+        <figcaption>Look for the pergola · 2 5th Ave</figcaption>
+      </figure>
+    </div>
   </div>
 </section>
 
@@ -192,26 +196,26 @@
 
 <!-- ===================================================== PRESS QUOTE -->
 <section class="section deepbg quote-band" aria-label="Press">
-  <div class="wrap">
-    <blockquote class="press-quote reveal">
+  <div class="wrap quote-grid">
+    <div class="quote-stat reveal" aria-label="4.6 stars on Google">
+      <span class="qs-num">4.6</span>
+      <span class="qs-star">★</span>
+      <span class="qs-sub">Google · 350+ reviews<br>5/5 Tripadvisor</span>
+    </div>
+    <blockquote class="press-quote reveal d1">
       <p>"Simple, fresh, and made with care, Lily's proves that sometimes the best meals are the ones that <em>feel like home</em>."</p>
       <cite>— Gabriela Huselton, Treasure Coast Foodie</cite>
     </blockquote>
-    <div class="proof-row reveal d1">
-      <span>4.6 ★ Google</span><span>5/5 Tripadvisor</span><span>150+ Yelp reviews</span><span>$7–32 · family prices</span>
-    </div>
   </div>
 </section>
 
-<!-- ===================================================== MENU CTA -->
-<section class="section dark menu-cta" id="menu">
-  <div class="wrap menu-cta-grid">
-    <div class="reveal">
-      <span class="eyebrow">Thirteen categories · vegan &amp; gluten-free throughout</span>
-      <h2>Sixty-two dishes.<br>One menu.</h2>
-      <p class="menu-cta-sub">Mezze to share, wraps for the beach, platters straight off the grill — and baklava to finish.</p>
-    </div>
-    <div class="menu-cta-actions reveal d1">
+<!-- ===================================================== MENU CTA (full-bleed food band) -->
+<section class="menu-band" id="menu">
+  <img class="menu-band-img" loading="lazy" src="assets/photos/family-mixed-grill.png" alt="">
+  <div class="menu-band-inner">
+    <span class="eyebrow">Thirteen categories · vegan &amp; gluten-free throughout</span>
+    <h2>Sixty-two dishes.<br>One menu.</h2>
+    <div class="menu-cta-actions reveal">
       <a class="btn" href="menu.html">Browse the full menu <span class="arw">→</span></a>
       <a class="btn ghost" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Order online</a>
     </div>
