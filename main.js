@@ -3,8 +3,9 @@
   "use strict";
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* ---- full menu data (real, from lilysmediterranean.com) ---- */
-  const MENU = [
+  /* ---- menu data lives in data.js (window.LILYS) — one source of truth
+     for the pages AND the Ask Lily's chatbot. Fallback kept for safety. ---- */
+  const MENU = (window.LILYS && window.LILYS.MENU) || [
     { c: "Appetizers", items: [
       ["Hummus", "Chickpeas, tahini, garlic, lemon & olive oil, with pita.", "$8.99", "Vegan"],
       ["Lily's Ultimate Hummus", "Hummus topped with olive oil, chickpeas, feta, olives, tomato, herbs & paprika.", "$12.49", ""],
@@ -213,7 +214,8 @@
 
   /* ---- live open/closed pill + today highlight ----
      Consensus hours (Google/Yelp/Sauce agree): Wed 4-9pm, Fri/Sat till 11pm. */
-  const HOURS = { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: [16, 21], 4: [11, 22], 5: [11, 23], 6: [11, 23] };
+  const HOURS = (window.LILYS && window.LILYS.HOURS) ||
+    { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: [16, 21], 4: [11, 22], 5: [11, 23], 6: [11, 23] };
   // The restaurant runs on Florida time regardless of where the visitor is.
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const day = now.getDay();
