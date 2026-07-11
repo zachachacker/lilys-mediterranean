@@ -30,8 +30,10 @@ window.LILYS = {
   },
   payments: "Cards, Google Pay and Venmo (via our online ordering).",
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
-  // Wed 16-21 and Fri/Sat till 23 per Google/Yelp consensus — CONFIRM WITH OWNER before launch.
-  HOURS: { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: [16, 21], 4: [11, 22], 5: [11, 23], 6: [11, 23] },
+  // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,
+  // Thu 11-10, Fri/Sat 11-11, Sun 11-10.
+  HOURS: { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] },
+  halal: true, // confirmed by owner — halal AND kosher
   signatures: [
     "Lamb & Beef Gyro Wrap", "Lily's Ultimate Hummus", "Lily's Mixed Grill Platter",
     "Chicken Shawarma Wrap", "Batata Harrah", "Bone-In Lamb Chops Platter", "Homemade Baklava",

@@ -215,7 +215,7 @@
   /* ---- live open/closed pill + today highlight ----
      Consensus hours (Google/Yelp/Sauce agree): Wed 4-9pm, Fri/Sat till 11pm. */
   const HOURS = (window.LILYS && window.LILYS.HOURS) ||
-    { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: [16, 21], 4: [11, 22], 5: [11, 23], 6: [11, 23] };
+    { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] };
   // The restaurant runs on Florida time regardless of where the visitor is.
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const day = now.getDay();

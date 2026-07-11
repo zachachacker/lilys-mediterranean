@@ -122,10 +122,16 @@
       const v = ITEMS.filter((it) => it.t === "GF").slice(0, 6);
       return { html: `Our platters and bowls are the gluten-free sweet spot:${v.map(itemCard).join("")}<span class="cb-fine">Please mention gluten sensitivity when ordering.</span>`, chips: ["What's vegan?", "How do I order?"] };
     }
-    if (has(q, ["allerg", "nut ", "nuts", "dairy", "halal", "sesame"])) {
+    if (has(q, ["halal", "kosher"])) {
       return {
-        html: `For allergens and preparation questions (nuts, dairy, sesame, halal), please ask our staff directly — call ${callLink()} and we'll give you a straight answer for any dish.`,
-        chips: ["What's vegan?", "Menu"],
+        html: `Yes — our food is <strong>halal and kosher</strong>. Enjoy the whole menu with confidence.`,
+        chips: ["Best dishes", "What's vegan?", "How do I order?"],
+      };
+    }
+    if (has(q, ["allerg", "nut ", "nuts", "dairy", "sesame", "peanut", "shellfish"])) {
+      return {
+        html: `For specific allergens (nuts, dairy, sesame, shellfish), please call us at ${callLink()} and we'll confirm for any dish — we'd rather be sure than guess.`,
+        chips: ["What's vegan?", "Is it halal?", "Menu"],
       };
     }
 
