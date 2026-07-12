@@ -763,6 +763,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 }
 .cb-fab:hover { transform: translateY(-2px); box-shadow: 0 22px 48px -14px rgba(8, 34, 44, 0.8); }
 .cb-fab svg { width: 17px; height: 17px; }
+.cb-panel[hidden] { display: none; }
 .cb-panel {
   position: absolute; right: 0; bottom: calc(100% + 0.8rem);
   width: min(380px, calc(100vw - 2rem));
