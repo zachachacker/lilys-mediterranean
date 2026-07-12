@@ -20,6 +20,7 @@ window.LILYS = {
   orderUrl: "https://www.lilysmediterraneanfl.com/order",
   instagram: "https://www.instagram.com/lilysmediterranean/",
   directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=2+5th+Ave+STE+C+Indialantic+FL+32903",
+  reviewsUrl: "https://www.google.com/maps/search/?api=1&query=Lily%27s+Mediterranean+Fresh+Grill+2+5th+Ave+Indialantic+FL+32903",
   delivery: {
     promo: "Free delivery on orders above $60.",
     partners: [

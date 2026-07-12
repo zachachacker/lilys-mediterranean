@@ -104,7 +104,7 @@
     "hummus": "hummus.png", "lily's ultimate hummus": "lily-s-ultimate-hummus.png",
     "baba ghanouj": "baba-ghanouj.png", "batata harrah": "batata-harrah.png",
     "cheese spring roll": "homemade-cheese-spring-roll.png", "falafel": "falafel-humus-and-cucumber.png",
-    "grape leaves": "grape-leaves.png", "homemade spinach pie": "homemade-meat-pie.png",
+    "grape leaves": "grape-leaves.png",
     "kibbeh": "kibbeh.png", "ultimate cold mezza": "ultimate-cold-mezza.png",
     "greek salad": "greek-salad.png", "fattoush salad": "fattoush-salad.png",
     "tabbouleh": "tabbouleh.png", "caesar salad": "caesar-salad.png",
@@ -112,20 +112,20 @@
     "homemade lentil soup": "homemade-lentil-soup.png", "homemade pumpkin soup": "homemade-pumpkin-soup.png",
     "lamb & beef gyro wrap": "lamb-beef-gyro-wrap.png", "chicken gyro wrap": "chicken-gyro-wrap.png",
     "chicken shawarma wrap": "chicken-shawarma-wrap.png", "beef shawarma wrap": "beef-shawarma-wrap.png",
-    "shish tawouk wrap": "shish-tawouk-wrap.png", "falafel wrap": "shish-tawouk-wrap.png",
+    "shish tawouk wrap": "shish-tawouk-wrap.png", "falafel wrap": "falafel-humus-and-cucumber.png",
     "hummus & tabbouleh wrap": "hummus-tabbouleh-wrap.png",
     "lily's mixed grill platter": "lily-s-mixed-grill-platter.png", "mixed grill platter": "mixed-grill-platter.png",
-    "bone-in lamb chops platter": "bone-in-lamb-chops-platter.png", "beef kabob platter": "tawouk-platter-chicken-kabob.png",
+    "bone-in lamb chops platter": "bone-in-lamb-chops-platter.png", "beef kabob platter": "beef-kafta-platter.png",
     "beef kafta platter": "beef-kafta-platter.png", "best friend platter": "best-friend-platter.png",
     "chicken shawarma platter": "chicken-shawarma-platter.png", "lamb & beef platter": "lamb-beef-gyro-platter.png",
     "jumbo shrimp platter": "grilled-shrimp-platter.png",
     "grilled chicken bowl": "grilled-chicken-bowl.png", "falafel bowl": "falafel-bowl.png",
     "family mixed grill": "family-mixed-grill.png", "family mixed gyro": "family-mixed-gyro.png",
     "family mixed shawarma": "family-mixed-shawarma.png", "family falafel platter": "family-falafel-platter.png",
-    "cheeseburger": "cheeseburger.png", "kid cheeseburger": "kid-cheeseburger.png",
-    "cheese quesadilla": "chicken-quesadilla.png", "chicken quesadilla": "chicken-quesadilla.png",
+    "cheeseburger": "cheeseburger.png", "angus beef burger": "cheeseburger.png", "kid cheeseburger": "kid-cheeseburger.png",
+    "chicken quesadilla": "chicken-quesadilla.png",
     "steak quesadilla": "steak-quesadilla.png",
-    "seasoned fries basket": "seasoned-fries-basket.png", "sweet potato fries": "sweet-potato-french-fries.png",
+    "fries basket": "seasoned-fries-basket.png", "seasoned fries basket": "seasoned-fries-basket.png", "sweet potato fries": "sweet-potato-french-fries.png",
     "garlic rice": "garlic-rice.png",
     "homemade baklava": "baklava.png", "ny cheesecake": "ny-cheesecake.png", "tiramisu": "tiramisu.png",
   };
@@ -134,22 +134,30 @@
   const tabs = document.getElementById("menuTabs");
   const body = document.getElementById("menuBody");
   if (tabs && body) {
+    const hashId = location.hash.slice(1);
+    const setActive = (btn) => {
+      tabs.querySelectorAll("button").forEach((x) => { x.classList.remove("active"); x.removeAttribute("aria-current"); });
+      btn.classList.add("active");
+      btn.setAttribute("aria-current", "true");
+      // keep the active pill visible in the horizontally-scrolling sticky bar
+      tabs.scrollTo({ left: btn.offsetLeft - tabs.clientWidth / 2 + btn.offsetWidth / 2, behavior: reduce ? "auto" : "smooth" });
+    };
     MENU.forEach((cat, i) => {
       const id = "cat-" + cat.c.toLowerCase().replace(/[^a-z]+/g, "-");
       const b = document.createElement("button");
       b.textContent = cat.c;
       b.dataset.target = id;
-      if (i === 0) b.classList.add("active");
+      if (hashId ? id === hashId : i === 0) { b.classList.add("active"); b.setAttribute("aria-current", "true"); }
       tabs.appendChild(b);
 
       const sec = document.createElement("div");
-      sec.className = "menu-cat";
+      sec.className = "menu-cat"; // deliberately not .reveal — the menu must never depend on an observer to be visible
       sec.id = id;
       let rows = "";
       cat.items.forEach(([n, d, p, tag]) => {
         const ph = PHOTOS[n.toLowerCase()];
         const thumb = ph
-          ? `<span class="mi-thumb photo"><img loading="lazy" src="assets/photos/${ph}" alt=""></span>`
+          ? `<span class="mi-thumb photo"><img loading="lazy" decoding="async" width="58" height="58" src="assets/photos/thumbs/${ph.replace(/\.png$/, ".webp")}" alt=""></span>`
           : `<span class="mi-thumb none" aria-hidden="true"></span>`;
         rows += `<div class="menu-item${ph ? " has-thumb" : ""}">${thumb}<span class="mi-name">${n}${tag ? `<span class="tag">${tag}</span>` : ""}</span><span class="mi-price">${p}</span><span class="mi-desc">${d}</span></div>`;
       });
@@ -159,11 +167,21 @@
     tabs.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (!btn) return;
-      tabs.querySelectorAll("button").forEach((x) => x.classList.remove("active"));
-      btn.classList.add("active");
+      setActive(btn);
       const el = document.getElementById(btn.dataset.target);
       if (el) el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     });
+    // scrollspy: the active pill follows the reader through the categories
+    if ("IntersectionObserver" in window) {
+      const spy = new IntersectionObserver((entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return;
+          const btn = tabs.querySelector(`button[data-target="${en.target.id}"]`);
+          if (btn && !btn.classList.contains("active")) setActive(btn);
+        });
+      }, { rootMargin: "-30% 0px -60% 0px", threshold: 0 });
+      body.querySelectorAll(".menu-cat").forEach((el) => spy.observe(el));
+    }
   }
 
   /* ---- sticky nav condense (menu page keeps a solid nav always) ---- */
@@ -182,6 +200,8 @@
       nav.classList.toggle("open", open);
       mm.classList.toggle("open", open);
       toggle.setAttribute("aria-expanded", String(open));
+      mm.toggleAttribute("inert", !open);
+      document.body.classList.toggle("nav-open", open);
       document.body.style.overflow = open ? "hidden" : "";
     };
     toggle.addEventListener("click", () => set(!mm.classList.contains("open")));
@@ -190,10 +210,37 @@
 
   /* ---- reveal on scroll ---- */
   if (!reduce && "IntersectionObserver" in window) {
+    let ioRevealed = false; // true once the observer has actually revealed something
     const io = new IntersectionObserver((entries) => {
-      entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
+      entries.forEach((en) => {
+        if (en.isIntersecting) { ioRevealed = true; en.target.classList.add("in"); io.unobserve(en.target); }
+      });
     }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
     document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+    // safety net: content must never stay hidden. If an element sits well inside
+    // the viewport and the observer has never revealed anything, it's broken —
+    // show everything and stop trusting it. Debounced so a healthy observer
+    // always gets to act first.
+    let rescueTimer = 0;
+    const rescueCheck = () => {
+      if (ioRevealed) { window.removeEventListener("scroll", scheduleRescue); return; }
+      const stuck = [...document.querySelectorAll(".reveal:not(.in)")].some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top < window.innerHeight * 0.75 && r.bottom > window.innerHeight * 0.25;
+      });
+      if (stuck) {
+        io.disconnect();
+        window.removeEventListener("scroll", scheduleRescue);
+        document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+      }
+    };
+    const scheduleRescue = () => {
+      if (ioRevealed) { window.removeEventListener("scroll", scheduleRescue); return; }
+      clearTimeout(rescueTimer);
+      rescueTimer = setTimeout(rescueCheck, 400);
+    };
+    setTimeout(rescueCheck, 2500);
+    window.addEventListener("scroll", scheduleRescue, { passive: true });
   } else {
     document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
   }
@@ -202,18 +249,28 @@
   const mag = document.getElementById("magnet");
   if (mag && !reduce && window.matchMedia("(pointer:fine)").matches) {
     let raf = 0;
+    // near-instant transform while tracking; the CSS var(--dur-fast) ease springs it home on leave
+    mag.addEventListener("pointerenter", () => {
+      mag.style.transition = "transform 0.1s linear, box-shadow 0.35s var(--ease-2)";
+      mag.style.willChange = "transform";
+    });
     mag.addEventListener("pointermove", (e) => {
       const r = mag.getBoundingClientRect();
       const x = (e.clientX - r.left - r.width / 2) * 0.25;
       const y = (e.clientY - r.top - r.height / 2) * 0.35;
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => { mag.style.transform = `translate(${Math.max(-7, Math.min(7, x))}px, ${Math.max(-6, Math.min(6, y))}px)`; });
+      raf = requestAnimationFrame(() => { mag.style.transform = `translate(${Math.max(-10, Math.min(10, x))}px, ${Math.max(-8, Math.min(8, y))}px)`; });
     });
-    mag.addEventListener("pointerleave", () => { cancelAnimationFrame(raf); mag.style.transform = ""; });
+    mag.addEventListener("pointerleave", () => {
+      cancelAnimationFrame(raf);
+      mag.style.transform = "";
+      mag.style.transition = "";
+      mag.style.willChange = "";
+    });
   }
 
   /* ---- live open/closed pill + today highlight ----
-     Consensus hours (Google/Yelp/Sauce agree): Wed 4-9pm, Fri/Sat till 11pm. */
+     Hours confirmed by Kareem (2026-07-11): Wed closed, Fri/Sat till 11pm. */
   const HOURS = (window.LILYS && window.LILYS.HOURS) ||
     { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] };
   // The restaurant runs on Florida time regardless of where the visitor is.
@@ -240,5 +297,9 @@
     mount.outerHTML = `<span class="pill ${open ? "open" : "shut"}"><i class="live"></i>${label}</span>`;
   }
   const row = document.querySelector(`#hoursTable tr[data-day="${day}"]`);
-  if (row) row.classList.add("today");
+  if (row) {
+    row.classList.add("today");
+    const dayCell = row.querySelector("th");
+    if (dayCell) dayCell.insertAdjacentHTML("beforeend", '<span class="sr-only"> (today)</span>');
+  }
 })();

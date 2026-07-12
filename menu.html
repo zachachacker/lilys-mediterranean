@@ -2,16 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><!-- REMOVE at production-domain cut — keeps the interim GitHub URL out of Google -->
 <title>Menu · Lily's Mediterranean Fresh Grill</title>
 <meta name="description" content="The full Lily's Mediterranean menu — mezze, wraps, flame-grilled platters, bowls and family specials. Indialantic, FL.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300;350;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUV8FyLNQOQZAnv9ZwIlOkuy91B.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUT8FyLNQOQZAnv9ZwNpOskzP9Ddt0.woff2">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="menu-page">
+<a class="skip-link" href="#menu">Skip to menu</a>
 <div class="grain" aria-hidden="true"></div>
 
 <header class="nav solid" id="nav">
@@ -31,11 +35,11 @@
       (321) 312-4444
     </a>
     <a class="btn" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Order Online <span class="arw">→</span></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <button class="nav-toggle" id="navToggle" aria-label="Site navigation" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
 </header>
 
-<div class="mobile-menu" id="mobileMenu">
+<div class="mobile-menu" id="mobileMenu" inert>
   <a href="index.html#story">Our Table</a>
   <a href="index.html#signatures">Signatures</a>
   <a href="menu.html">Menu</a>
@@ -47,11 +51,12 @@
 <section class="section dark menu-hero" id="menu">
   <div class="wrap">
     <div class="section-head">
-      <span class="eyebrow">Dine-in · takeout · catering</span>
-      <h2>The menu.</h2>
+      <span class="eyebrow">Halal · Kosher · dine-in · takeout · catering</span>
+      <h1>The menu.</h1>
       <p>Mezze to share, wraps for the beach, and platters straight off the grill. Vegan and gluten-free choices throughout.</p>
+      <div class="menu-status"><span id="statusMount"></span></div>
     </div>
-    <div class="menu-tabs" id="menuTabs" role="tablist" aria-label="Menu categories"></div>
+    <nav class="menu-tabs" id="menuTabs" aria-label="Menu categories"></nav>
     <div id="menuBody"></div>
     <p class="menu-note">Menu &amp; prices reflect the current Lily's Mediterranean menu. Please confirm allergen information with our staff before ordering.</p>
   </div>
@@ -60,14 +65,19 @@
 <section class="section" id="order">
   <div class="wrap order-grid">
     <div class="order-card hot">
-      <span class="oc-eyebrow">Online · powered by Sauce</span>
+      <span class="oc-eyebrow">Online · direct to our kitchen</span>
       <h3>Found what you fancy?</h3>
-      <p>Order for pickup at 2 5th Ave, or delivery across the beaches.</p>
+      <p><strong>Free delivery on orders over $60.</strong> Order for pickup at 2 5th Ave, or delivery across the beaches. Google Pay &amp; Venmo accepted.</p>
       <a class="btn" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Start an order <span class="arw">→</span></a>
+      <p class="partners">Also on
+        <a class="ink" href="https://www.ubereats.com/store/lilys-mediterranean-fresh-grill/752UXD00Qw-XS5lr6NQu6g" target="_blank" rel="noopener">Uber Eats</a> ·
+        <a class="ink" href="https://www.doordash.com/store/lily's-mediterranean-fresh-grill-indialantic-1455015/" target="_blank" rel="noopener">DoorDash</a> ·
+        <a class="ink" href="https://www.grubhub.com/restaurant/lilys-mediterranean-fresh-grill-2-5th-ave-indialantic/2515084" target="_blank" rel="noopener">Grubhub</a>
+      </p>
     </div>
     <div class="order-card">
-      <span class="oc-eyebrow">By phone · fastest for big orders</span>
-      <h3>Call the kitchen</h3>
+      <span class="oc-eyebrow">Catering &amp; big orders · by phone</span>
+      <h3>Catering? Call the kitchen.</h3>
       <p class="big-num">(321) 312-4444</p>
       <a class="btn dark" href="tel:+13213124444">Tap to call <span class="arw">→</span></a>
     </div>
@@ -91,7 +101,9 @@
         <li>2 5th Ave STE C</li>
         <li>Indialantic, FL 32903</li>
         <li><a class="ink" href="tel:+13213124444">(321) 312-4444</a></li>
-        <li>Mon–Sun 11am · Fri–Sat till 11pm · Wed closed</li>
+        <li>Mon–Tue, Thu &amp; Sun · 11am–10pm</li>
+        <li>Fri–Sat · 11am–11pm</li>
+        <li>Wed · Closed</li>
       </ul>
     </div>
     <div>
@@ -99,6 +111,7 @@
       <ul>
         <li><a class="ink" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Order online</a></li>
         <li><a class="ink" href="index.html">Home</a></li>
+        <li><a class="ink" href="tel:+13213124444">Catering — (321) 312-4444</a></li>
         <li><a class="ink" href="https://www.instagram.com/lilysmediterranean/" target="_blank" rel="noopener">Instagram</a></li>
         <li><a class="ink" href="mailto:info@lilysmediterranean.com">Email us</a></li>
       </ul>
@@ -106,7 +119,7 @@
   </div>
   <div class="footer-base">
     <span>© 2026 Lily's Mediterranean Fresh Grill</span>
-    <span>Website design preview · 2026</span>
+    <span>Halal &amp; kosher kitchen · Indialantic, FL</span>
   </div>
 </footer>
 

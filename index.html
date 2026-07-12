@@ -2,16 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><!-- REMOVE at production-domain cut — keeps the interim GitHub URL out of Google -->
 <title>Lily's Mediterranean Fresh Grill · Indialantic, FL</title>
 <meta name="description" content="Authentic, family-run Lebanese & Mediterranean grill on Florida's Space Coast. Flame-grilled platters, house-made hummus, gyros & mezze — fresh, never frozen. Order online or call (321) 312-4444.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300;350;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUV8FyLNQOQZAnv9ZwIlOkuy91B.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUT8FyLNQOQZAnv9ZwNpOskzP9Ddt0.woff2">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip-link" href="#top">Skip to content</a>
 <div class="grain" aria-hidden="true"></div>
 
 <!-- ===================================================== NAV -->
@@ -32,11 +36,11 @@
       (321) 312-4444
     </a>
     <a class="btn" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Order Online <span class="arw">→</span></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <button class="nav-toggle" id="navToggle" aria-label="Site navigation" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
 </header>
 
-<div class="mobile-menu" id="mobileMenu">
+<div class="mobile-menu" id="mobileMenu" inert>
   <a href="#story">Our Table</a>
   <a href="#signatures">Signatures</a>
   <a href="menu.html">Menu</a>
@@ -50,7 +54,7 @@
   <div class="hero-copy">
     <div class="hero-mark" aria-hidden="true">مشاوي</div>
     <div class="hero-copy-inner">
-      <span class="eyebrow">Flame-grilled · Mezze · Lebanese home cooking</span>
+      <span class="eyebrow"><span>Flame-grilled · Mezze · Lebanese home cooking</span></span>
       <h1><span class="hw">Fresh</span> <span class="hw">Mediterranean,</span> <span class="hw">on</span> <span class="hw">the</span> <span class="hw flame">Indialantic</span> <span class="hw">shore.</span></h1>
       <p class="hero-sub">A family-run Lebanese &amp; Mediterranean grill on Florida's Space Coast — char-grilled skewers, house-made hummus, warm pita. Real food, never frozen.</p>
       <div class="hero-cta">
@@ -59,12 +63,13 @@
       </div>
       <div class="hero-meta">
         <span id="statusMount"></span>
-        <span><i class="dot"></i> 4.6 ★ · 350+ reviews</span>
+        <a class="ink" href="https://www.google.com/maps/search/?api=1&query=Lily%27s+Mediterranean+Fresh+Grill+2+5th+Ave+Indialantic+FL+32903" target="_blank" rel="noopener"><i class="dot"></i> 4.6 ★ · 350+ reviews</a>
+        <span><i class="dot"></i> Halal · Kosher</span>
       </div>
     </div>
   </div>
   <figure class="hero-photo photo" aria-label="Bone-in lamb chops platter with garlic rice, hummus and salad">
-    <img src="assets/photos/lamb-chops-hummus-plate.webp" alt="Lamb chops platter with rice, grilled vegetables, hummus and pita at Lily's" fetchpriority="high">
+    <img src="assets/photos/hero-lamb-chops.webp" width="2200" height="1877" alt="Lamb chops platter with rice, grilled vegetables, hummus and pita at Lily's" fetchpriority="high">
     <figcaption><span>Bone-in lamb chops platter</span><span class="hp-price">$26.49</span></figcaption>
   </figure>
 </section>
@@ -112,54 +117,54 @@
       <a class="btn ghost" href="menu.html">See full menu <span class="arw">→</span></a>
     </div>
     <div class="rail" id="rail">
-      <article class="dish">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lamb-beef-gyro-wrap.png" alt="Lamb and beef gyro wrap on grilled pita"><span class="veg">Most loved</span></div>
+      <a class="dish" href="menu.html#cat-gyros-wraps">
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lamb-beef-gyro-wrap.webp" alt="Lamb and beef gyro wrap on grilled pita"><span class="veg">Most loved</span></div>
         <div class="dish-body">
           <h3>Lamb &amp; Beef Gyro Wrap</h3>
           <div class="price">$12.99</div>
           <p class="desc">Spiced lamb &amp; beef, feta and tzatziki — reviewers call it one of the best gyros in Brevard.</p>
         </div>
-      </article>
-      <article class="dish">
+      </a>
+      <a class="dish" href="menu.html#cat-appetizers">
         <div class="dish-img photo"><img loading="lazy" src="assets/photos/ultimate-hummus-pita-overhead.webp" alt="Lily's Ultimate Hummus topped with feta, olives and tomato, with pita"></div>
         <div class="dish-body">
           <h3>Lily's Ultimate Hummus</h3>
           <div class="price">$12.49</div>
           <p class="desc">House hummus crowned with olive oil, chickpeas, feta, olives, tomato and paprika.</p>
         </div>
-      </article>
-      <article class="dish">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lily-s-mixed-grill-platter.png" alt="Lily's mixed grill platter with skewers, shrimp and rice"></div>
+      </a>
+      <a class="dish" href="menu.html#cat-lily-s-platters">
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lily-s-mixed-grill-platter.webp" alt="Lily's mixed grill platter with skewers, shrimp and rice"></div>
         <div class="dish-body">
           <h3>Lily's Mixed Grill Platter</h3>
           <div class="price">$25.49</div>
           <p class="desc">Beef tenderloin, chicken tawouk, kafta and jumbo shrimp — with salad, hummus &amp; garlic sauce.</p>
         </div>
-      </article>
-      <article class="dish">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/batata-harrah.png" alt="Batata harrah — crisp potato cubes with herbs, lemon and tomato"><span class="veg">Vegan</span></div>
+      </a>
+      <a class="dish" href="menu.html#cat-appetizers">
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/batata-harrah.webp" alt="Batata harrah — crisp potato cubes with herbs, lemon and tomato"><span class="veg">Vegan</span></div>
         <div class="dish-body">
           <h3>Batata Harrah</h3>
           <div class="price">$9.49</div>
           <p class="desc">Potato cubes sautéed with garlic, cilantro, lemon and chili — "worth the visit alone."</p>
         </div>
-      </article>
-      <article class="dish">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/bone-in-lamb-chops-platter.png" alt="Bone-in lamb chops platter with rice, hummus and salad"></div>
+      </a>
+      <a class="dish" href="menu.html#cat-lily-s-platters">
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/bone-in-lamb-chops-platter.webp" alt="Bone-in lamb chops platter with rice, hummus and salad"></div>
         <div class="dish-body">
           <h3>Bone-In Lamb Chops</h3>
           <div class="price">$26.49</div>
           <p class="desc">Three marinated chops off the flame, with garlic rice and hummus. Gluten free.</p>
         </div>
-      </article>
-      <article class="dish">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/baklava.png" alt="Slice of homemade baklava with pistachio"></div>
+      </a>
+      <a class="dish" href="menu.html#cat-desserts">
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/baklava.webp" alt="Slice of homemade baklava with pistachio"></div>
         <div class="dish-body">
           <h3>Homemade Baklava</h3>
           <div class="price">$6.49</div>
           <p class="desc">Layered phyllo, nuts and honey, made in-house — the right way to finish.</p>
         </div>
-      </article>
+      </a>
     </div>
   </div>
 </section>
@@ -197,25 +202,30 @@
 <!-- ===================================================== PRESS QUOTE -->
 <section class="section deepbg quote-band" aria-label="Press">
   <div class="wrap quote-grid">
-    <div class="quote-stat reveal" aria-label="4.6 stars on Google">
+    <a class="quote-stat reveal" href="https://www.google.com/maps/search/?api=1&query=Lily%27s+Mediterranean+Fresh+Grill+2+5th+Ave+Indialantic+FL+32903" target="_blank" rel="noopener" aria-label="4.6 stars on Google — read our reviews">
       <span class="qs-num">4.6</span>
       <span class="qs-star">★</span>
       <span class="qs-sub">Google · 350+ reviews<br>5/5 Tripadvisor</span>
-    </div>
+    </a>
     <blockquote class="press-quote reveal d1">
       <p>"Simple, fresh, and made with care, Lily's proves that sometimes the best meals are the ones that <em>feel like home</em>."</p>
       <cite>— Gabriela Huselton, Treasure Coast Foodie</cite>
     </blockquote>
+    <figure class="quote-photo photo reveal d2">
+      <img loading="lazy" src="assets/photos/family-dining-booth.webp" width="750" height="750" alt="A family filling the corner booth at Lily's, plates across the table">
+      <figcaption>Regulars at the corner booth</figcaption>
+    </figure>
   </div>
 </section>
+<div class="tile-strip" aria-hidden="true"></div>
 
 <!-- ===================================================== MENU CTA (full-bleed food band) -->
 <section class="menu-band" id="menu">
-  <img class="menu-band-img" loading="lazy" src="assets/photos/family-mixed-grill.png" alt="">
+  <img class="menu-band-img" loading="lazy" src="assets/photos/family-mixed-grill.webp" alt="">
   <div class="menu-band-inner">
-    <span class="eyebrow">Thirteen categories · vegan &amp; gluten-free throughout</span>
-    <h2>Sixty-two dishes.<br>One menu.</h2>
-    <div class="menu-cta-actions reveal">
+    <span class="eyebrow reveal">Thirteen categories · vegan &amp; gluten-free throughout</span>
+    <h2 class="reveal d1">Sixty-two dishes.<br>One menu.</h2>
+    <div class="menu-cta-actions reveal d2">
       <a class="btn" href="menu.html">Browse the full menu <span class="arw">→</span></a>
       <a class="btn ghost" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Order online</a>
     </div>
@@ -243,8 +253,8 @@
         </p>
       </div>
       <div class="order-card reveal d1">
-        <span class="oc-eyebrow">By phone · fastest for big orders</span>
-        <h3>Call the kitchen</h3>
+        <span class="oc-eyebrow">Catering &amp; big orders · by phone</span>
+        <h3>Catering? Call the kitchen.</h3>
         <p class="big-num">(321) 312-4444</p>
         <p>Catering a party or a big family order? Give us a ring and we'll sort it.</p>
         <a class="btn dark" href="tel:+13213124444">Tap to call <span class="arw">→</span></a>
@@ -264,16 +274,16 @@
       <div class="visit-info reveal">
         <table class="hours-table" id="hoursTable" aria-label="Opening hours">
           <tbody>
-            <tr data-day="1"><td>Monday</td><td>11:00 AM – 10:00 PM</td></tr>
-            <tr data-day="2"><td>Tuesday</td><td>11:00 AM – 10:00 PM</td></tr>
-            <tr data-day="3" class="shut"><td>Wednesday</td><td>Closed</td></tr>
-            <tr data-day="4"><td>Thursday</td><td>11:00 AM – 10:00 PM</td></tr>
-            <tr data-day="5"><td>Friday</td><td>11:00 AM – 11:00 PM</td></tr>
-            <tr data-day="6"><td>Saturday</td><td>11:00 AM – 11:00 PM</td></tr>
-            <tr data-day="0"><td>Sunday</td><td>11:00 AM – 10:00 PM</td></tr>
+            <tr data-day="1"><th scope="row">Monday</th><td>11:00 AM – 10:00 PM</td></tr>
+            <tr data-day="2"><th scope="row">Tuesday</th><td>11:00 AM – 10:00 PM</td></tr>
+            <tr data-day="3" class="shut"><th scope="row">Wednesday</th><td>Closed</td></tr>
+            <tr data-day="4"><th scope="row">Thursday</th><td>11:00 AM – 10:00 PM</td></tr>
+            <tr data-day="5"><th scope="row">Friday</th><td>11:00 AM – 11:00 PM</td></tr>
+            <tr data-day="6"><th scope="row">Saturday</th><td>11:00 AM – 11:00 PM</td></tr>
+            <tr data-day="0"><th scope="row">Sunday</th><td>11:00 AM – 10:00 PM</td></tr>
           </tbody>
         </table>
-        <p class="amenities">Dine-in · Takeout · Curbside pickup · Delivery · Catering · Happy hour · Free Wi-Fi</p>
+        <p class="amenities">Halal · Kosher · Dine-in · Takeout · Curbside pickup · Delivery · Catering · Happy hour · Free Wi-Fi</p>
         <dl>
           <dt>Address</dt><dd>2 5th Ave STE C, Indialantic, FL 32903</dd>
           <dt>Phone</dt><dd><a class="ink" href="tel:+13213124444">(321) 312-4444</a></dd>
@@ -334,7 +344,9 @@
         <li>2 5th Ave STE C</li>
         <li>Indialantic, FL 32903</li>
         <li><a class="ink" href="tel:+13213124444">(321) 312-4444</a></li>
-        <li>Mon–Sun 11am · Fri–Sat till 11pm · Wed closed</li>
+        <li>Mon–Tue, Thu &amp; Sun · 11am–10pm</li>
+        <li>Fri–Sat · 11am–11pm</li>
+        <li>Wed · Closed</li>
       </ul>
     </div>
     <div>
@@ -342,6 +354,7 @@
       <ul>
         <li><a class="ink" href="https://www.lilysmediterraneanfl.com/order" target="_blank" rel="noopener">Order online</a></li>
         <li><a class="ink" href="menu.html">Full menu</a></li>
+        <li><a class="ink" href="tel:+13213124444">Catering — (321) 312-4444</a></li>
         <li><a class="ink" href="https://www.instagram.com/lilysmediterranean/" target="_blank" rel="noopener">Instagram</a></li>
         <li><a class="ink" href="mailto:info@lilysmediterranean.com">Email us</a></li>
       </ul>
@@ -349,7 +362,7 @@
   </div>
   <div class="footer-base">
     <span>© 2026 Lily's Mediterranean Fresh Grill</span>
-    <span>Website design preview · 2026</span>
+    <span>Halal &amp; kosher kitchen · Indialantic, FL</span>
   </div>
 </footer>
 
