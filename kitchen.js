@@ -20,8 +20,22 @@
   const OFFLINE_BANNER_AFTER_MS = 45000;
   const RECALL_WINDOW_MS = 60 * 60 * 1000;
   const REMIND_EVERY_MS = 30000;
+  const CLOSED_POLL_MS = 60000; // slow down overnight — saves battery + function quota
   // age thresholds per state, minutes → [warn, late]
   const AGE = { paid: [3, 6], making: [12, 18], ready: [10, 20] };
+  // Florida-time opening hours — keep in sync with data.js HOURS (0=Sun..6=Sat)
+  const HOURS = { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] };
+  const flNow = () => {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false }).formatToParts(new Date());
+    const get = (t) => parts.find((p) => p.type === t)?.value ?? "";
+    const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(get("weekday"));
+    return { day, hour: (parseInt(get("hour"), 10) % 24) + parseInt(get("minute"), 10) / 60 };
+  };
+  const kitchenOpen = () => {
+    const { day, hour } = flNow();
+    const t = HOURS[day];
+    return !!t && hour >= t[0] - 0.5 && hour < t[1] + 0.5; // half-hour grace both sides
+  };
 
   const app = document.getElementById("app");
   const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -73,12 +87,29 @@
       o.stop(t0 + dt + 0.7);
     });
   };
-  // soft reminder while anything sits un-started — no modal ack anywhere
+  // soft reminder while anything sits un-started (louder once a ticket is
+  // overdue-red) — no modal ack anywhere
   const syncReminder = () => {
     const anyNew = orders.some((o) => o.status === "paid");
-    if (anyNew && !remindTimer) remindTimer = setInterval(() => chime(0.22), REMIND_EVERY_MS);
+    if (anyNew && !remindTimer) {
+      remindTimer = setInterval(() => {
+        const anyLate = orders.some((o) => o.status === "paid" && ageClass(o) === "age-late");
+        chime(anyLate ? 0.45 : 0.22);
+      }, REMIND_EVERY_MS);
+    }
     if (!anyNew && remindTimer) { clearInterval(remindTimer); remindTimer = 0; }
   };
+
+  /* ---------------------------------------------------------- battery ---- */
+  let battery = null; // a dead tablet is a deaf kitchen — warn before it happens
+  if (navigator.getBattery) {
+    navigator.getBattery().then((b) => {
+      battery = b;
+      ["levelchange", "chargingchange"].forEach((ev) => b.addEventListener(ev, () => updateShell()));
+      updateShell();
+    }).catch(() => {});
+  }
+  const batteryLow = () => battery && !battery.charging && battery.level <= 0.2;
 
   /* -------------------------------------------------------- wake lock ---- */
   let wakeLock = null;
@@ -174,7 +205,12 @@
 
   const schedulePoll = () => {
     clearTimeout(pollTimer);
-    const delay = failCount === 0 ? POLL_MS : Math.min(5000 * 2 ** (failCount - 1), 30000);
+    const active = orders.some((o) => ["paid", "making", "ready"].includes(o.status));
+    const delay = failCount > 0
+      ? Math.min(5000 * 2 ** (failCount - 1), 30000)
+      : !kitchenOpen() && !active
+      ? CLOSED_POLL_MS
+      : POLL_MS;
     pollTimer = setTimeout(refresh, delay);
   };
 
@@ -305,11 +341,25 @@
 
   const offlineNow = () => failCount > 0 && lastOkAt && Date.now() - lastOkAt > OFFLINE_BANNER_AFTER_MS;
 
+  // today's numbers, straight off the board data (canceled excluded)
+  const todayStats = () => {
+    const today = new Date().toDateString();
+    const t = orders.filter((o) => o.status !== "canceled" && new Date(o.created_at).toDateString() === today);
+    const cents = t.reduce((s, o) => s + (o.demo ? 0 : o.total_cents), 0);
+    const demos = t.filter((o) => o.demo).length;
+    return { count: t.length, cents, demos };
+  };
+
   function shellHTML() {
+    const s = todayStats();
+    const statsLine = s.count
+      ? `today ${s.count} order${s.count === 1 ? "" : "s"}${s.cents ? ` · ${money(s.cents)}` : ""}${s.demos ? ` · ${s.demos} test` : ""}`
+      : "";
     return `
       <div class="k-head">
         <div class="k-brand">Lily<em>'s</em> Kitchen</div>
         <div class="k-head-meta">
+          ${statsLine ? `<span class="k-stamp">${statsLine}</span>` : ""}
           <span class="k-stamp" id="kStamp">updated ${lastOkAt ? clock(new Date(lastOkAt)) : "—"}</span>
           <span><i class="k-dot${failCount > 0 ? " err" : ""}"></i></span>
           ${wakeLock && !wakeLock.released ? "" : '<span title="Screen may sleep">☾</span>'}
@@ -319,7 +369,9 @@
         </div>
       </div>
       ${soundReady() ? "" : '<div class="k-banner sound" id="kSoundBanner">🔕 Tap anywhere to enable the new-order sound</div>'}
-      ${offlineNow() ? `<div class="k-banner offline">OFFLINE — showing orders as of ${clock(new Date(lastOkAt))}. Taps are saved and will sync.</div>` : ""}`;
+      ${batteryLow() ? `<div class="k-banner offline">🔋 Tablet battery at ${Math.round(battery.level * 100)}% and not charging — plug it in or the board goes dark</div>` : ""}
+      ${offlineNow() ? `<div class="k-banner offline">OFFLINE — showing orders as of ${clock(new Date(lastOkAt))}. Taps are saved and will sync.</div>` : ""}
+      ${!kitchenOpen() && !orders.some((o) => ["paid", "making", "ready"].includes(o.status)) ? '<div class="k-banner closed">Kitchen closed — board is resting, checking once a minute. New orders still ring through.</div>' : ""}`;
   }
 
   function undoHTML() {
@@ -432,10 +484,14 @@
     if (!o) return;
     const wrap = document.createElement("div");
     wrap.className = "k-sheet-wrap";
+    const refundLink = !o.demo && o.stripe_payment_intent
+      ? `<a class="plain" style="display:grid;place-items:center;min-height:52px;text-decoration:none;border-radius:8px;font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;font-size:15px" href="https://dashboard.stripe.com/payments/${esc(o.stripe_payment_intent)}" target="_blank" rel="noopener">Open in Stripe (refund)</a>`
+      : "";
     wrap.innerHTML = `
       <div class="k-sheet">
         <h3>${esc(o.code)} · ${esc(o.customer_name)}</h3>
         ${o.demo ? "" : '<p class="warn">Canceling does NOT refund the payment — issue the refund in the Stripe dashboard.</p>'}
+        ${refundLink}
         <button class="danger" id="sheetCancel">Cancel this order</button>
         <button class="plain" id="sheetClose">Never mind</button>
       </div>`;

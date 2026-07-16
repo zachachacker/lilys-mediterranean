@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const twelveHoursAgo = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     const { data, error } = await db
       .from("orders")
-      .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,demo")
+      .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,demo,stripe_payment_intent")
       .or(`status.in.(paid,making,ready),and(status.in.(done,canceled),created_at.gte.${twelveHoursAgo})`)
       .order("created_at", { ascending: true });
     if (error) return json({ error: "List failed" }, 500);
