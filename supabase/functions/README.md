@@ -13,7 +13,31 @@ redeploy it (Supabase MCP `deploy_edge_function`, or `supabase functions deploy 
 - `order-status` — order lookup for the confirmation page, keyed by the unguessable
   session id.
 - `kitchen-api` — list + advance orders for kitchen.html. Requires the
-  `x-kitchen-key` header matching `app_config.kitchen_key`.
+  `x-kitchen-key` header matching `app_config.kitchen_key`. Transition map allows
+  one-step undo/recall (see ALLOWED_FROM).
+- `reconcile` — safety net under the webhook: every 15 min (pg_cron job
+  `reconcile-orders`) it checks orders stuck in `pending` against Stripe and
+  recovers missed payments / cancels expired sessions. Dormant in demo mode.
+- `notify-order` — email-per-order backup channel behind the kitchen tablet.
+  Fired by DB triggers (`orders_notify_insert` / `orders_notify_update`) whenever
+  an order becomes paid. Dormant until configured (below). Idempotent via
+  `orders.notified_at`; skips orders older than 1h so enabling it never back-spams.
+
+## Turning on order emails (Resend — ~2 minutes)
+1. Create a free account at resend.com (100 emails/day free) and copy an API key.
+2. `update app_config set value='re_…' where key='resend_api_key';`
+   `update app_config set value='lilysmediterraneangrill@gmail.com' where key='notify_email';`
+3. Until a sending domain is verified in Resend, mail comes from
+   `onboarding@resend.dev` and Resend only delivers to the account owner's own
+   email — so use Zachary's email first, then verify the production domain and
+   set `notify_from` (e.g. `Lily's Orders <orders@lilysmediterranean.com>`) and
+   switch `notify_email` to Kareem's.
+
+## Monitoring
+A scheduled task `lilys-health-check` (Claude scheduled tasks, daily 15:30 UK)
+curls the order page, order-status, menu_items, and kitchen-api auth path, and
+pushes an alert if anything fails. For minute-level monitoring add UptimeRobot
+(free) on https://zachachacker.github.io/lilys-mediterranean/order.html.
 
 ## Going live with Kareem's Stripe account
 1. In Kareem's Stripe dashboard: get the **secret key** (`sk_live_…`).
