@@ -20,10 +20,12 @@ function timingSafeEqual(a: string, b: string): boolean {
   return out === 0;
 }
 
-// which current statuses may move to a given target
+// which current statuses may move to a given target — forward taps AND
+// one-step undo/recall (a mistap on a touchscreen must be recoverable)
 const ALLOWED_FROM: Record<string, string[]> = {
-  making: ["paid"],
-  ready: ["making"],
+  paid: ["making"],                   // undo "start making"
+  making: ["paid", "ready", "done"],  // advance, undo "ready", or recall a bumped ticket
+  ready: ["making", "done"],          // advance, or undo "picked up"
   done: ["ready"],
   canceled: ["paid", "making", "ready"],
 };

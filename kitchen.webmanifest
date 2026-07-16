@@ -1,0 +1,13 @@
+{
+  "name": "Lily's Kitchen",
+  "short_name": "Lily's KDS",
+  "start_url": "kitchen.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#121514",
+  "theme_color": "#121514",
+  "icons": [
+    { "src": "assets/kds-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/kds-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
