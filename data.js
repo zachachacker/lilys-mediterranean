@@ -17,19 +17,25 @@ window.LILYS = {
   phoneHref: "tel:+13213124444",
   address: "2 5th Ave STE C, Indialantic, FL 32903",
   email: "info@lilysmediterranean.com",
-  orderUrl: "https://www.lilysmediterraneanfl.com/order",
+  orderUrl: "order.html", // our own ordering — direct to the kitchen
   instagram: "https://www.instagram.com/lilysmediterranean/",
   directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=2+5th+Ave+STE+C+Indialantic+FL+32903",
   reviewsUrl: "https://www.google.com/maps/search/?api=1&query=Lily%27s+Mediterranean+Fresh+Grill+2+5th+Ave+Indialantic+FL+32903",
   delivery: {
-    promo: "Free delivery on orders above $60.",
     partners: [
       ["Uber Eats", "https://www.ubereats.com/store/lilys-mediterranean-fresh-grill/752UXD00Qw-XS5lr6NQu6g"],
       ["DoorDash", "https://www.doordash.com/store/lily's-mediterranean-fresh-grill-indialantic-1455015/"],
       ["Grubhub", "https://www.grubhub.com/restaurant/lilys-mediterranean-fresh-grill-2-5th-ave-indialantic/2515084"],
     ],
   },
-  payments: "Cards, Google Pay and Venmo (via our online ordering).",
+  payments: "Pay online by card when you order for pickup; cards accepted in store.",
+  // online ordering backend (anon key is public by design — safe to ship)
+  ORDERING: {
+    supabaseUrl: "https://hytvfqydahwsrcdbnvfq.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5dHZmcXlkYWh3c3JjZGJudmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDk3NDYsImV4cCI6MjA5OTc4NTc0Nn0.taAfp5xGFYdxyNxeszmxEt5Me-PPNfUbXfs4suLvXt0",
+    taxRate: 0.07, // FL 6% + Brevard 1% — confirm with Kareem
+    prepMinutes: "20–25",
+  },
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
   // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,
   // Thu 11-10, Fri/Sat 11-11, Sun 11-10.

@@ -129,6 +129,7 @@
     "garlic rice": "garlic-rice.png",
     "homemade baklava": "baklava.png", "ny cheesecake": "ny-cheesecake.png", "tiramisu": "tiramisu.png",
   };
+  window.LILYS_PHOTOS = PHOTOS; // order.js reuses the same thumbs
 
   /* ---- render menu ---- */
   const tabs = document.getElementById("menuTabs");

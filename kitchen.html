@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Kitchen · Lily's Orders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --char: #1A1E1C; --deep: #0E3A4A; --deep-2: #0a2b37; --foam: #F4F1E8;
+    --lemon: #E4A72E; --ember: #B4472B; --go: #7FBE93; --mist: #C9D6D3;
+    --ink: #071B23; --mono: "Space Mono", ui-monospace, monospace;
+    --sans: "Public Sans", -apple-system, sans-serif; --serif: "Fraunces", Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: var(--sans); background: var(--char); color: var(--foam);
+    min-height: 100dvh; padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+  button { font: inherit; cursor: pointer; border: none; border-radius: 6px; }
+  .k-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    flex-wrap: wrap; margin-bottom: 1.2rem;
+  }
+  .k-brand { font-family: var(--serif); font-size: 1.5rem; }
+  .k-brand em { color: var(--lemon); }
+  .k-sub { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; }
+  .k-meta { display: flex; gap: 0.8rem; align-items: center; font-family: var(--mono); font-size: 0.72rem; }
+  .k-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--go); display: inline-block; }
+  .k-dot.err { background: var(--ember); }
+  .k-mute { background: rgba(244,241,232,0.12); color: var(--foam); padding: 0.55em 1em; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* login */
+  .k-login {
+    max-width: 420px; margin: 18vh auto 0; background: linear-gradient(155deg, var(--deep), var(--deep-2));
+    padding: 2rem; border-radius: 10px; box-shadow: 0 40px 90px -30px rgba(7,27,35,0.8);
+  }
+  .k-login h1 { font-family: var(--serif); font-size: 1.8rem; margin-bottom: 0.4rem; }
+  .k-login p { font-size: 0.9rem; opacity: 0.75; margin-bottom: 1.4rem; }
+  .k-login input {
+    width: 100%; padding: 0.9em 1em; border-radius: 6px; border: 1px solid rgba(244,241,232,0.25);
+    background: rgba(7,27,35,0.5); color: var(--foam); font-family: var(--mono); font-size: 0.9rem;
+  }
+  .k-login button {
+    width: 100%; margin-top: 1rem; padding: 1em; background: var(--ember); color: var(--foam);
+    font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .k-login .k-err { color: #ffb3a0; font-size: 0.85rem; margin-top: 0.8rem; }
+
+  /* board */
+  .k-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start; }
+  @media (max-width: 900px) { .k-board { grid-template-columns: 1fr; } }
+  .k-col > h2 {
+    font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 0.6rem 0.2rem; display: flex; justify-content: space-between;
+  }
+  .k-col-new > h2 { color: var(--lemon); }
+  .k-col-making > h2 { color: #e8905a; }
+  .k-col-ready > h2 { color: var(--go); }
+  .k-cards { display: grid; gap: 0.8rem; }
+
+  .k-card {
+    background: linear-gradient(155deg, var(--deep), var(--deep-2));
+    border: 1px solid rgba(244,241,232,0.12); border-radius: 10px; padding: 1rem;
+  }
+  .k-card.fresh { border-color: var(--lemon); box-shadow: 0 0 0 1px var(--lemon), 0 18px 50px -20px rgba(228,167,46,0.35); }
+  .k-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; }
+  .k-code { font-family: var(--mono); font-size: 1.35rem; font-weight: 700; color: var(--lemon); }
+  .k-age { font-family: var(--mono); font-size: 0.72rem; opacity: 0.75; }
+  .k-age.late { color: #ffb3a0; opacity: 1; }
+  .k-cust { margin: 0.35rem 0 0.6rem; font-size: 0.9rem; }
+  .k-cust a { color: var(--mist); }
+  .k-items { border-top: 1px dashed rgba(244,241,232,0.2); padding-top: 0.6rem; display: grid; gap: 0.3rem; }
+  .k-item { display: flex; gap: 0.6rem; font-size: 1.02rem; }
+  .k-item b { font-family: var(--mono); color: var(--lemon); min-width: 2ch; }
+  .k-notes {
+    margin-top: 0.6rem; background: rgba(228,167,46,0.12); border-left: 3px solid var(--lemon);
+    padding: 0.5rem 0.7rem; font-size: 0.92rem; border-radius: 0 6px 6px 0;
+  }
+  .k-total { margin-top: 0.6rem; font-family: var(--mono); font-size: 0.8rem; opacity: 0.8; }
+  .k-demo { display: inline-block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(201,214,211,0.2); padding: 0.25em 0.6em; border-radius: 3px; margin-left: 0.5em; vertical-align: 0.15em; }
+  .k-actions { display: flex; gap: 0.6rem; margin-top: 0.9rem; }
+  .k-actions .go {
+    flex: 1; padding: 1em; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em;
+    background: var(--ember); color: var(--foam); font-size: 0.82rem;
+  }
+  .k-col-making .k-actions .go { background: #2E7D82; }
+  .k-col-ready .k-actions .go { background: var(--go); color: var(--char); }
+  .k-actions .x { background: transparent; color: rgba(244,241,232,0.55); font-size: 0.75rem; font-family: var(--mono); padding: 0 0.6em; }
+  .k-empty { opacity: 0.45; font-size: 0.9rem; padding: 1rem 0.2rem; font-style: italic; }
+
+  .k-done { margin-top: 1.6rem; }
+  .k-done summary { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.6; cursor: pointer; padding: 0.5rem 0.2rem; }
+  .k-done-line { display: flex; gap: 1rem; padding: 0.45rem 0.2rem; font-size: 0.85rem; opacity: 0.65; border-bottom: 1px solid rgba(244,241,232,0.08); }
+  .k-done-line .st-canceled { color: #ffb3a0; }
+
+  .k-ring {
+    position: fixed; inset: auto 1rem 1rem 1rem; z-index: 50;
+    background: var(--lemon); color: var(--char); border-radius: 10px; padding: 1rem 1.2rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    font-weight: 600; box-shadow: 0 30px 80px -20px rgba(228,167,46,0.6);
+    animation: ringpulse 1.2s ease-in-out infinite;
+  }
+  @keyframes ringpulse { 50% { transform: scale(1.015); } }
+  .k-ring button { background: var(--char); color: var(--foam); padding: 0.8em 1.4em; font-family: var(--mono); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="kitchen.js"></script>
+</body>
+</html>

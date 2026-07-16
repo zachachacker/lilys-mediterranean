@@ -98,14 +98,14 @@
     if (has(q, ["uber", "doordash", "door dash", "grubhub", "grub hub", "deliver"])) {
       const partners = L.delivery.partners.map(([n, u]) => link(u, n, true)).join(" · ");
       return {
-        html: `Delivery: order direct ${link(L.orderUrl, "on our site", true)} (best for the kitchen — and <strong>${esc(L.delivery.promo)}</strong>) or find us on ${partners}.`,
+        html: `Delivery comes via ${partners}. For pickup, ${link(L.orderUrl, "order right here on our site")} — it goes straight to the kitchen, ready in ~${L.ORDERING.prepMinutes} min.`,
         chips: ["Order online", "Call the kitchen"],
       };
     }
 
     if (has(q, ["order", "pickup", "pick up", "takeout", "take out", "online"])) {
       return {
-        html: `Two ways: ${link(L.orderUrl, "order online", true)} for pickup or delivery (${esc(L.delivery.promo)}), or call the kitchen at ${callLink()} — great for big or custom orders.`,
+        html: `Two ways: ${link(L.orderUrl, "order online for pickup")} — pay online, ready in ~${L.ORDERING.prepMinutes} min — or call the kitchen at ${callLink()}, great for big or custom orders.`,
         chips: ["Delivery options", "Best dishes"],
       };
     }
