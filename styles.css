@@ -879,7 +879,7 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .cb-form { display: flex; gap: 0.5rem; padding: 0.7rem; border-top: 1px solid var(--mist); background: #fff; }
 .cb-form input {
   flex: 1; border: 1px solid var(--mist); border-radius: 100px;
-  padding: 0.6em 1em; font: inherit; font-size: 0.85rem; background: var(--foam); color: var(--char);
+  padding: 0.6em 1em; font: inherit; font-size: 16px; background: var(--foam); color: var(--char);
 }
 .cb-form input:focus { outline: 2px solid var(--teal); outline-offset: 1px; }
 .cb-send {
@@ -960,7 +960,8 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .cart-form label { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink); display: grid; gap: 0.35rem; }
 .cart-form .cf-opt { text-transform: none; letter-spacing: 0; opacity: 0.7; }
 .cart-form input, .cart-form textarea {
-  font: inherit; font-family: var(--sans); font-size: 0.95rem;
+  /* 16px min — anything smaller makes iOS Safari zoom-and-pan on focus */
+  font: inherit; font-family: var(--sans); font-size: 16px;
   padding: 0.7em 0.9em; border: 1px solid var(--mist); border-radius: 4px;
   background: #fff; color: var(--char); width: 100%;
 }
@@ -982,7 +983,10 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .cart-bar[hidden] { display: none; }
 
 @media (max-width: 900px) {
-  .order-layout { grid-template-columns: 1fr; }
+  /* minmax(0,1fr) + min-width:0 so the scrolling category strip can't drag
+     the whole page wide (its min-content is ~1500px otherwise) */
+  .order-layout { grid-template-columns: minmax(0, 1fr); }
+  .order-menu-col, .cart-panel { min-width: 0; }
   .cart-panel { position: static; }
   .cart-bar { display: block; }
   .order-page { padding-bottom: 4.5rem; }
