@@ -1024,3 +1024,87 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .co-line span:last-child { font-family: var(--mono); white-space: nowrap; }
 .co-sub { color: color-mix(in srgb, var(--char) 65%, transparent); font-size: 0.85rem; }
 .co-total { border-top: 1px solid var(--mist); margin-top: 0.4rem; padding-top: 0.7rem; font-weight: 600; }
+
+
+/* ============================================================================
+   v2 — Cinematic Coast hero + polish (2026 redesign)
+   ========================================================================== */
+.hero.hero-cine {
+  min-height: 100svh; display: block; position: relative; overflow: hidden;
+  grid-template-columns: none;
+  background: linear-gradient(155deg, var(--deep) 8%, var(--deep-2) 70%, var(--ink));
+}
+.hero-cine .hero-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: 62% 50%; z-index: 0;
+  filter: saturate(1.08) contrast(1.05) brightness(0.9);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-cine .hero-bg { animation: heroZoom 20s var(--ease) both; }
+}
+@keyframes heroZoom { from { transform: scale(1.09); } to { transform: scale(1); } }
+.hero-cine .hero-scrim {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--ink) 94%, transparent) 0%, color-mix(in srgb, var(--deep) 80%, transparent) 32%, color-mix(in srgb, var(--ink) 18%, transparent) 66%, transparent 100%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 60%, transparent), transparent 18%, transparent 78%, color-mix(in srgb, var(--ink) 55%, transparent));
+}
+.hero-cine .hero-copy {
+  position: relative; z-index: 3; overflow: visible;
+  display: flex; align-items: center; min-height: 100svh;
+  padding: clamp(7rem, 14vh, 10rem) var(--bleed) clamp(5rem, 9vh, 7rem);
+}
+.hero-cine .hero-copy-inner { max-width: 640px; }
+.hero-cine .hero-mark { z-index: 1; color: color-mix(in srgb, var(--foam) 6%, transparent); }
+.hero-tag {
+  position: absolute; z-index: 3; right: var(--bleed); bottom: clamp(1.6rem, 4vh, 3rem);
+  margin: 0; display: inline-flex; align-items: center; gap: 1rem;
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--foam); background: color-mix(in srgb, var(--ink) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foam) 22%, transparent);
+  backdrop-filter: blur(6px); padding: 0.7em 1.1em; border-radius: 100px;
+}
+.hero-tag .hp-price { color: var(--lemon); }
+@media (max-width: 720px) { .hero-tag { display: none; } }
+.nav.solid { backdrop-filter: blur(8px); }
+
+
+/* ============================================================================
+   v2 — Menu & Order photographic hero bands + clearer ordering
+   ========================================================================== */
+.menu-page .menu-hero { position: relative; isolation: isolate; }
+.menu-page .menu-hero::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0;
+  height: clamp(300px, 42vh, 460px); z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 45%, transparent) 0%, color-mix(in srgb, var(--ink) 65%, transparent) 45%, var(--char) 100%),
+    url("assets/photos/ultimate-hummus-pita-overhead.webp");
+  background-size: cover; background-position: center 32%;
+}
+.order-page .menu-hero::before {
+  background-image:
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 50%, transparent) 0%, color-mix(in srgb, var(--ink) 68%, transparent) 45%, var(--char) 100%),
+    url("assets/photos/lily-s-mixed-grill-platter.webp");
+  background-position: center 38%;
+}
+.menu-page .menu-hero > .wrap { position: relative; z-index: 1; }
+.menu-page .menu-hero .section-head .eyebrow { color: var(--lemon); }
+.menu-page .menu-hero .section-head h1 { text-shadow: 0 4px 40px color-mix(in srgb, var(--ink) 55%, transparent); }
+/* the sticky category bar keeps a solid ground as it detaches from the band */
+.menu-page .menu-tabs { position: sticky; z-index: 45; }
+
+/* clearer ordering: solid ember Add + steppers on the order page */
+.order-page .oi-add {
+  background: var(--ember); color: var(--foam); border-color: var(--ember);
+  box-shadow: 0 8px 20px -12px color-mix(in srgb, var(--ember) 80%, transparent);
+}
+.order-page .oi-add:hover { background: color-mix(in srgb, var(--ember) 88%, black); color: var(--foam); border-color: transparent; }
+.order-page .oi-step { border-color: var(--ember); }
+.order-page .oi-step button { color: var(--ember); }
+.order-page .oi-step button:hover { background: color-mix(in srgb, var(--ember) 16%, transparent); }
+/* lift the cart panel so it reads as the checkout counter */
+.order-page .cart-panel { border: 1px solid var(--mist); }
+.order-page .cart-panel::before {
+  content: "Your counter"; display: block; margin-bottom: 0.5rem;
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal-ink);
+}
