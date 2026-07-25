@@ -71,6 +71,8 @@
   .add { font-size: 10.6pt; font-weight: 700; font-style: italic; color: #232323; }
   .tight .item { margin-bottom: 0.125in; }
   .note-top { font-size: 11pt; font-weight: 700; font-style: italic; margin-bottom: 0.16in; line-height: 1.35; }
+  /* section-level note sitting under a banner, as in the original */
+  .section-note { font-size: 10.8pt; font-weight: 700; color: var(--ink); margin: 0 0 0.16in 0.02in; }
 
   .pageno {
     position: absolute; right: 0.42in; bottom: 0.34in;
@@ -91,7 +93,7 @@
 
   .footnote {
     margin-top: auto; border-top: 2.5px solid var(--green); padding-top: 0.14in;
-    font-size: 10.6pt; font-weight: 700; line-height: 1.4;
+    font-size: 10.6pt; font-weight: 700; line-height: 1.4; color: var(--red);
   }
 </style>
 </head>
@@ -110,15 +112,14 @@
     </div>
 
     <div class="band-row"><span class="band">SIDES &amp; WINGS</span></div>
+    <div class="section-note">Choice of Buffalo sauce, BBQ or Garlic Parmesan</div>
     <div class="tight">
       <div class="item"><div class="line"><span class="nm">FRIES BASKET</span><span class="pr">$6.49</span></div></div>
       <div class="item"><div class="line"><span class="nm">SEASONED FRIES BASKET</span><span class="pr">$6.99</span></div></div>
       <div class="item"><div class="line"><span class="nm">SWEET POTATO FRENCH FRIES</span><span class="pr">$8.49</span></div></div>
       <div class="item"><div class="line"><span class="nm">GARLIC RICE</span><span class="pr">$5.99</span></div></div>
-      <div class="item" style="margin-top:0.1in"><div class="line"><span class="nm">CHICKEN WINGS (6 pieces)</span><span class="pr">$12.99</span></div>
-        <div class="ds">Choice of Buffalo, BBQ or Garlic Parmesan.</div></div>
-      <div class="item"><div class="line"><span class="nm">CHICKEN WINGS (12 pieces)</span><span class="pr">$20.99</span></div>
-        <div class="ds">Choice of Buffalo, BBQ or Garlic Parmesan.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN WINGS (6 pieces)</span><span class="pr">$12.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN WINGS (12 pieces)</span><span class="pr">$20.99</span></div></div>
     </div>
 
     <div class="band-row"><span class="band">DESSERTS</span></div>
