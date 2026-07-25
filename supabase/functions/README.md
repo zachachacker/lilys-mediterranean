@@ -87,6 +87,21 @@ pushes an alert if anything fails. For minute-level monitoring add UptimeRobot
 Edit `data.js`, then run `node scripts/sync-menu.mjs` and apply the SQL it prints —
 the server prices orders from `menu_items`, so the two must stay in sync.
 
+**Deploy `data.js` at the same time.** The order page builds its cart from
+`data.js` but the server charges from `menu_items`. Update one without the other
+and customers see prices the server won't honour, or dishes it will reject.
+
+Two rules that came out of the 2026-07-25 sync:
+
+- **Never tag an item `GF` if it is served with pita.** Kareem confirmed the
+  pita is not gluten free (gluten-free pita is a +$1.99 add-on). Platters and
+  family specials come with pita, so they carry no GF tag; the family specials
+  spell the exception out in their description instead. A stale gluten-free
+  badge is the one error here that can put someone in hospital.
+- **No price ranges.** `parsePrice` can't read `"$12.99–$19.99"`, so the item
+  lands at 1 cent and `orderable=false` — invisible to customers and unsellable.
+  Split it into separate items (see Chicken Wings 6 pc / 12 pc).
+
 ## Kitchen tablet
 Open `kitchen.html`, enter the kitchen key once (stored in `app_config.kitchen_key`).
 Sales tax rate lives in `app_config.tax_rate` (0.07 — confirm with Kareem) and is
