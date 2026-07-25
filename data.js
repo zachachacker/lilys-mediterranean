@@ -132,9 +132,9 @@ window.LILYS = {
     { c: "Family Specials", items: [
       ["Family Mixed Grill", "Three skewers each of chicken, tenderloin and kafta kabob with rice, batata harrah, hummus, garlic sauce, tzatziki and six pitas. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$84.99", ""],
       ["Family Mixed Gyro", "Lamb and chicken gyro meat with rice, batata harrah, Greek salad, tzatziki, hummus and six pitas. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$84.99", ""],
-      ["Family Mixed Shawarma", "Chicken and beef shawarma served family style with salad, hummus, garlic sauce and six pitas. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$84.99", ""],
-      ["Family Bone-In Lamb Chops", "Nine marinated lamb chops with garlic rice, house salad, hummus and six pitas. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$59.99", ""],
-      ["Family Falafel Platter", "Fresh falafel, salad, hummus, tahini sauce and pita for the table. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$53.99", ""],
+      ["Family Mixed Shawarma", "Chicken and beef shawarma served family style with batata harrah, salad, hummus, garlic sauce and six pitas. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$84.99", ""],
+      ["Family Bone-In Lamb Chops", "Nine marinated lamb chops with garlic rice, house salad, hummus and six pitas. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$84.99", ""],
+      ["Family Falafel Platter", "Fresh falafel, batata harrah, salad, hummus, tahini sauce and pita for the table. Gluten-free apart from the pita — gluten-free pita available +$1.99.", "$53.99", ""],
     ]},
     { c: "Burgers", items: [
       ["Angus Cheeseburger", "Angus beef patty, provolone, tomatoes, onion, mayo and ketchup.", "$14.49", ""],
