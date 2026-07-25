@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lily's Menu Booklet — corrected (17 × 11 print)</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Lily's menu booklet — 17x11in landscape spreads, imposed as in V.2:
+     sheet 1 [kids/sides/desserts | COVER], sheet 2 [p1 | p6],
+     sheet 3 [p5 | p2], sheet 4 [p3 | p4].
+     Corrections from the V.2 proofread are applied throughout. */
+  @page { size: 17in 11in; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  :root {
+    --green: #17693b;
+    --green-dark: #0f4f2c;
+    --red: #c8102e;
+    --ink: #1b1b1b;
+    --cream: #fdf6ec;
+    --cream-2: #f7ead6;
+  }
+  body { font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
+
+  .sheet {
+    width: 17in; height: 11in; display: flex; page-break-after: always;
+    background:
+      radial-gradient(120% 90% at 12% 4%, rgba(240,180,120,0.16), transparent 55%),
+      radial-gradient(110% 90% at 88% 96%, rgba(230,170,110,0.14), transparent 55%),
+      linear-gradient(160deg, var(--cream) 0%, var(--cream-2) 48%, var(--cream) 100%);
+    position: relative; overflow: hidden;
+  }
+  .sheet:last-child { page-break-after: auto; }
+  /* faint centre fold guide, as in the original spreads */
+  .sheet::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
+    width: 1px; background: rgba(27,27,27,0.10);
+  }
+  .page { width: 8.5in; height: 11in; padding: 0.55in 0.6in; position: relative; }
+
+  /* ---------------------------------------------------------- headers */
+  .band {
+    display: inline-block; background: var(--green); color: #fff;
+    font-weight: 800; font-size: 20pt; letter-spacing: 0.04em;
+    padding: 0.09in 0.34in 0.11in; border-radius: 0.28in 0.22in 0.3in 0.2in;
+    box-shadow: 0.03in 0.03in 0 rgba(15,79,44,0.25);
+  }
+  .band-row { display: flex; align-items: baseline; gap: 0.22in; margin: 0.16in 0 0.13in; }
+  .band-note { font-size: 9.5pt; font-weight: 700; font-style: italic; color: var(--ink); }
+
+  /* ------------------------------------------------------------ items */
+  .item { margin-bottom: 0.115in; }
+  .line { display: flex; align-items: baseline; gap: 0.09in; }
+  .nm { color: var(--red); font-weight: 800; font-size: 11.6pt; letter-spacing: 0.005em; }
+  .tag { color: var(--green); font-weight: 800; font-size: 10pt; white-space: nowrap; }
+  .pr { color: var(--red); font-weight: 800; font-size: 11.6pt; white-space: nowrap; margin-left: 0.05in; }
+  .ds { font-size: 8.9pt; font-weight: 600; line-height: 1.28; color: #232323; max-width: 6.9in; }
+  .add { font-size: 8.9pt; font-weight: 700; font-style: italic; color: #232323; }
+  .tight .item { margin-bottom: 0.075in; }
+  .note-top { font-size: 9.3pt; font-weight: 700; font-style: italic; margin-bottom: 0.12in; }
+
+  .pageno {
+    position: absolute; right: 0.42in; bottom: 0.34in;
+    width: 0.26in; height: 0.26in; border-radius: 50%;
+    background: var(--green); color: #fff; font-size: 9pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pageno.left { left: 0.42in; right: auto; }
+
+  /* ------------------------------------------------------------ cover */
+  .cover { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 0.7in; }
+  .cover img.logo { width: 3.1in; }
+  .cover .word { font-size: 76pt; font-weight: 800; color: var(--green); letter-spacing: 0.01em; margin: 0.1in 0 0; }
+  .cover img.platter { width: 6.6in; margin-top: 0.15in; }
+  .cover .tagline { font-size: 13pt; font-weight: 800; margin-top: 0.28in; }
+  .cover .legend { font-size: 11.5pt; font-weight: 800; color: var(--red); margin-top: 0.14in; }
+  .cover .legend span { color: var(--green); }
+
+  .footnote {
+    position: absolute; left: 0.6in; right: 0.6in; bottom: 0.44in;
+    border-top: 2px solid var(--green); padding-top: 0.11in;
+    font-size: 9pt; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================ SHEET 1: kids/sides/desserts | COVER -->
+<div class="sheet">
+  <div class="page">
+    <div class="band-row"><span class="band">KIDS MENU</span><span class="band-note">Served with fries</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">CHICKEN TENDERS (3 PCS.)</span><span class="pr">$10.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">KID BURGER</span><span class="pr">$10.49</span></div>
+        <div class="ds">Beef, cheese, mayo and ketchup.</div></div>
+      <div class="item"><div class="line"><span class="nm">KID CHEESE SANDWICH</span><span class="tag">(VG)</span><span class="pr">$7.99</span></div>
+        <div class="ds">Two slices of bread toasted with melted cheddar cheese.</div></div>
+    </div>
+
+    <div class="band-row"><span class="band">SIDES &amp; WINGS</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">FRIES BASKET</span><span class="pr">$6.49</span></div></div>
+      <div class="item"><div class="line"><span class="nm">SEASONED FRIES BASKET</span><span class="pr">$6.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">SWEET POTATO FRENCH FRIES</span><span class="pr">$8.49</span></div></div>
+      <div class="item"><div class="line"><span class="nm">GARLIC RICE</span><span class="pr">$5.99</span></div></div>
+      <div class="item" style="margin-top:0.1in"><div class="line"><span class="nm">CHICKEN WINGS (6 pieces)</span><span class="pr">$12.99</span></div>
+        <div class="ds">Choice of Buffalo, BBQ or Garlic Parmesan.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN WINGS (12 pieces)</span><span class="pr">$20.99</span></div>
+        <div class="ds">Choice of Buffalo, BBQ or Garlic Parmesan.</div></div>
+    </div>
+
+    <div class="band-row"><span class="band">DESSERTS</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">HOMEMADE BAKLAVA</span><span class="pr">$6.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">NY CHEESECAKE</span><span class="pr">$6.49</span></div></div>
+      <div class="item"><div class="line"><span class="nm">TIRAMISU</span><span class="pr">$7.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE VEGAN BROWNIE</span><span class="pr">$6.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE BANANA BREAD</span><span class="pr">$6.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE COCONUT CAKE</span><span class="pr">$6.99</span></div></div>
+    </div>
+
+    <div class="footnote">
+      Gluten-free pita available +$1.99 &nbsp;|&nbsp; Wrap combo +$4.99 (fries, rice or side salad + canned soda)<br>
+      Ask about our catering menu.
+    </div>
+  </div>
+
+  <div class="page cover">
+    <img class="logo" src="assets/logo.png" alt="Lily's Mediterranean Fresh Grill">
+    <div class="word">MENU</div>
+    <img class="platter" src="assets/platter.png" alt="Mixed grill platter">
+    <div class="tagline">Authentic Mediterranean Goodness, Served Fresh.</div>
+    <div class="legend"><span>VG</span> – Vegetarian &nbsp;|&nbsp; <span>G</span> – Gluten-Free &nbsp;|&nbsp; <span>V</span> – Vegan</div>
+  </div>
+</div>
+
+<!-- ============================================ SHEET 2: p1 best sellers/appetizers | p6 wraps -->
+<div class="sheet">
+  <div class="page">
+    <div class="band-row"><span class="band">BEST SELLERS</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">MIXED GRILL PLATTER</span><span class="pr">$23.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN SHAWARMA PLATTER</span><span class="pr">$18.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN SHAWARMA WRAP</span><span class="pr">$12.49</span></div></div>
+      <div class="item"><div class="line"><span class="nm">LAMB &amp; BEEF GYRO WRAP</span><span class="pr">$13.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN GYRO WRAP</span><span class="pr">$13.49</span></div></div>
+      <div class="item"><div class="line"><span class="nm">GRILLED CHICKEN BOWL</span><span class="pr">$16.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">FALAFEL BOWL</span><span class="tag">(V)</span><span class="pr">$14.99</span></div></div>
+    </div>
+
+    <div class="band-row"><span class="band">APPETIZERS</span></div>
+    <div class="item">
+      <div class="line"><span class="nm">LILY'S ULTIMATE HUMMUS</span><span class="tag">(VG)</span><span class="pr">$13.49</span></div>
+      <div class="ds">Creamy hummus topped with feta, olives, tomatoes and served with warm pita.</div>
+      <div class="add">Top with chicken, beef shawarma or gyro meat add $4.99. Add 2 falafel $2.49.</div>
+    </div>
+    <div class="item">
+      <div class="line"><span class="nm">HUMMUS</span><span class="tag">(V)</span><span class="pr">$9.49</span></div>
+      <div class="ds">Our classic creamy hummus with tahini, lemon and olive oil, served with warm pita.</div>
+      <div class="add">Top with chicken, beef shawarma or gyro meat add $4.99. Add 2 falafel $2.49.</div>
+    </div>
+    <div class="item">
+      <div class="line"><span class="nm">SPICY HUMMUS</span><span class="tag">(V)</span><span class="pr">$9.99</span></div>
+      <div class="ds">Our classic hummus with a flavorful spicy Mediterranean kick, served with pita.</div>
+      <div class="add">Top with chicken, beef shawarma or gyro meat add $4.99. Add 2 falafel $2.49.</div>
+    </div>
+    <div class="item">
+      <div class="line"><span class="nm">BABA GHANOUJ</span><span class="tag">(V)</span><span class="pr">$10.49</span></div>
+      <div class="ds">Smoky roasted eggplant blended with tahini, lemon and olive oil, served with pita.</div>
+    </div>
+    <div class="pageno left">1</div>
+  </div>
+
+  <div class="page">
+    <div class="band-row"><span class="band">WRAPS &bull; GYROS &bull; SUBS</span></div>
+    <div class="note-top">Add a side of fries, salad or rice +$4.29 &nbsp;|&nbsp; Gluten-free bread +$1.99</div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">CHICKEN SHAWARMA WRAP</span><span class="pr">$12.49</span></div>
+        <div class="ds">Marinated chicken, garlic sauce, pickles and lettuce.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEEF SHAWARMA WRAP</span><span class="pr">$14.99</span></div>
+        <div class="ds">Thinly sliced marinated beef with tomato, onion, turnip and tahini sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEEF KAFTA WRAP</span><span class="pr">$13.99</span></div>
+        <div class="ds">Seasoned ground beef chargrilled, with hummus, tomatoes, pickles, onion and tahini sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">MIXED SHAWARMA WRAP</span><span class="pr">$14.99</span></div>
+        <div class="ds">A mix of beef and chicken shawarma wrapped with hummus, pickles and tomatoes over garlic sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">LAMB &amp; BEEF GYRO WRAP (optional spicy)</span><span class="pr">$13.99</span></div>
+        <div class="ds">Mediterranean spiced gyro meat on pita with grilled green pepper, onion, feta, tomatoes and lettuce topped with tzatziki.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN GYRO WRAP (optional spicy)</span><span class="pr">$13.49</span></div>
+        <div class="ds">Seasoned chicken gyro with grilled pepper, onion, feta cheese, tomatoes, lettuce and tzatziki sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">GARLIC RICE CHICKEN WRAP</span><span class="pr">$15.49</span></div>
+        <div class="ds">Fried chicken and green pepper, provolone cheese, garlic rice, red onion, tomatoes and lettuce with mayo.</div></div>
+      <div class="item"><div class="line"><span class="nm">FALAFEL WRAP</span><span class="tag">(V)</span><span class="pr">$11.99</span></div>
+        <div class="ds">Crispy falafel topped with lettuce, tomatoes and pickles with tahini sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">FALAFEL GYRO STYLE WRAP</span><span class="tag">(VG)</span><span class="pr">$12.99</span></div>
+        <div class="ds">Crispy falafel, tomatoes, lettuce, feta cheese and tzatziki sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">HUMMUS &amp; TABBOULEH WRAP</span><span class="tag">(V)</span><span class="pr">$12.99</span></div>
+        <div class="ds">Fresh hummus and tabbouleh with pickles, wrapped in warm pita bread.</div></div>
+      <div class="item"><div class="line"><span class="nm">EGGPLANT &amp; CAULIFLOWER WRAP</span><span class="tag">(V)</span><span class="pr">$12.99</span></div>
+        <div class="ds">Fried eggplant and cauliflower, turnip, lettuce, tomatoes, hummus and pickles topped with tahini sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">PHILLY STEAK &amp; CHEESE SUB</span><span class="pr">$14.99</span></div>
+        <div class="ds">Strip steak, green pepper, onion, mushroom, mayo and provolone cheese.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN PHILLY CHEESESTEAK SUB</span><span class="pr">$14.99</span></div>
+        <div class="ds">Grilled chicken, sautéed bell peppers and onion topped with melted cheese.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN FAJITA SUB</span><span class="pr">$14.99</span></div>
+        <div class="ds">Seasoned chicken, grilled onion and green pepper, topped with guacamole and melted cheese.</div></div>
+    </div>
+    <div class="pageno">6</div>
+  </div>
+</div>
+
+<!-- ============================================ SHEET 3: p5 family/burgers/quesadillas | p2 apps cont/salads -->
+<div class="sheet">
+  <div class="page">
+    <div class="band-row"><span class="band">FAMILY SPECIALS</span><span class="band-note">Perfect for 4–6 guests</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">FAMILY MIXED GYRO</span><span class="tag">(G)</span><span class="pr">$84.99</span></div>
+        <div class="ds">A shareable feast of lamb and chicken gyro meat, rice, batata harrah, Greek salad, tzatziki sauce, hummus and 6 pitas.</div></div>
+      <div class="item"><div class="line"><span class="nm">FAMILY MIXED GRILL</span><span class="tag">(G)</span><span class="pr">$84.99</span></div>
+        <div class="ds">An assortment of 3 skewers each of chicken, tenderloin and kafta kabob, rice, batata harrah, hummus, garlic sauce, tzatziki sauce and 6 pitas.</div></div>
+      <div class="item"><div class="line"><span class="nm">FAMILY MIXED SHAWARMA</span><span class="tag">(G)</span><span class="pr">$84.99</span></div>
+        <div class="ds">Chicken and beef shawarma served family style with salad, hummus, garlic sauce and 6 pitas.</div></div>
+      <div class="item"><div class="line"><span class="nm">FAMILY FALAFEL PLATTER</span><span class="tag">(G)</span><span class="pr">$53.99</span></div>
+        <div class="ds">Fresh falafel, salad, hummus, tahini sauce and pita for the table.</div></div>
+      <div class="item"><div class="line"><span class="nm">FAMILY BONE-IN LAMB CHOPS PLATTER</span><span class="tag">(G)</span><span class="pr">$59.99</span></div>
+        <div class="ds">9 marinated lamb chops served with garlic rice, house salad, hummus and 6 pitas.</div></div>
+    </div>
+    <div class="note-top" style="margin-top:0.08in">Gluten-free applies to the dish itself — pita bread contains gluten. Gluten-free pita available +$1.99.</div>
+
+    <div class="band-row"><span class="band">BURGERS</span><span class="band-note">Served with fries</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">ANGUS CHEESEBURGER</span><span class="pr">$14.49</span></div>
+        <div class="ds">Angus beef patty, provolone cheese, tomatoes, onion, mayo and ketchup.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEEF KAFTA BURGER</span><span class="pr">$15.49</span></div>
+        <div class="ds">Kafta ground beef patty, lettuce, tomatoes, onion, mayo and ketchup.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN BURGER</span><span class="pr">$15.49</span></div>
+        <div class="ds">Seasoned chicken kafta, cheese, garlic sauce, lettuce and pickles.</div></div>
+    </div>
+
+    <div class="band-row"><span class="band">QUESADILLAS</span><span class="band-note">Served with sour cream &amp; salsa</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">CHEESE QUESADILLA</span><span class="pr">$9.49</span></div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN QUESADILLA</span><span class="pr">$11.99</span></div></div>
+      <div class="item"><div class="line"><span class="nm">STEAK QUESADILLA</span><span class="pr">$12.49</span></div></div>
+    </div>
+    <div class="pageno left">5</div>
+  </div>
+
+  <div class="page">
+    <div class="tight" style="margin-top:0.1in">
+      <div class="item"><div class="line"><span class="nm">CHEESE SPRING ROLL (5 pieces)</span><span class="tag">(VG)</span><span class="pr">$8.99</span></div>
+        <div class="ds">Phyllo rolls filled with mozzarella, feta and aromatic mint.</div></div>
+      <div class="item"><div class="line"><span class="nm">BATATA HARRAH</span><span class="tag">(V)</span><span class="pr">$9.49</span></div>
+        <div class="ds">Crispy potatoes sautéed with garlic, cilantro, lemon and chili flakes.</div></div>
+      <div class="item"><div class="line"><span class="nm">GRAPE LEAVES (5 pieces)</span><span class="tag">(V)</span><span class="pr">$8.99</span></div>
+        <div class="ds">Tender grape leaves stuffed with seasoned lemon-herb rice.</div></div>
+      <div class="item"><div class="line"><span class="nm">FALAFEL (4 pieces)</span><span class="tag">(V)</span><span class="pr">$7.49</span></div>
+        <div class="ds">A mixture of ground fava and chickpeas, deep-fried.</div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE KIBBEH (3 pieces)</span><span class="pr">$15.99</span></div>
+        <div class="ds">Crispy bulgur and beef shells filled with seasoned beef and pine nuts.</div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE SPINACH PIE (2 pieces)</span><span class="tag">(V)</span><span class="pr">$10.49</span></div>
+        <div class="ds">Flaky pastry stuffed with spinach, herbs and Mediterranean seasonings.</div></div>
+      <div class="item"><div class="line"><span class="nm">ULTIMATE COLD MEZZA</span><span class="tag">(V)</span><span class="pr">$25.99</span></div>
+        <div class="ds">A Mediterranean sampler featuring hummus, baba ghanouj, tabbouleh, falafel, grape leaves and 3 warm pitas.</div></div>
+      <div class="item"><div class="line"><span class="nm">MOUSSAKA</span><span class="tag">(V)</span><span class="pr">$13.99</span></div>
+        <div class="ds">Mediterranean-style baked eggplant, onion, garlic and tomato, rich in flavor and tradition.</div></div>
+      <div class="item"><div class="line"><span class="nm">MUHAMMARA</span><span class="tag">(V)</span><span class="pr">$9.99</span></div>
+        <div class="ds">A famous Mediterranean dip of roasted red pepper, walnut, bread crumbs and olive oil, served with pita.</div></div>
+    </div>
+
+    <div class="band-row"><span class="band">SALAD &amp; SOUP</span></div>
+    <div class="note-top">Top any salad with chicken, beef shawarma or gyro meat add $4.99 &nbsp;|&nbsp; Top with 2 falafel add $2.49</div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">GREEK SALAD</span><span class="tag">(VG)</span><span class="pr">$12.99</span></div>
+        <div class="ds">Fresh romaine, tomatoes, cucumbers, feta cheese, olives, pepperoncini and Greek dressing.</div></div>
+      <div class="item"><div class="line"><span class="nm">TABBOULEH</span><span class="tag">(V)</span><span class="pr">$15.99</span></div>
+        <div class="ds">Fresh parsley, tomatoes, cracked wheat, lemon juice and olive oil.</div></div>
+    </div>
+    <div class="pageno">2</div>
+  </div>
+</div>
+
+<!-- ============================================ SHEET 4: p3 salads/platters | p4 platters/bowls -->
+<div class="sheet">
+  <div class="page">
+    <div class="tight" style="margin-top:0.1in">
+      <div class="item"><div class="line"><span class="nm">FATTOUSH SALAD</span><span class="tag">(V)</span><span class="pr">$12.99</span></div>
+        <div class="ds">Crispy pita chips, lettuce, cucumber, tomato, onion, green pepper and our tangy sumac dressing.</div></div>
+      <div class="item"><div class="line"><span class="nm">CAESAR SALAD</span><span class="tag">(VG)</span><span class="pr">$12.49</span></div>
+        <div class="ds">Crisp romaine lettuce, parmesan cheese, croutons and Caesar dressing.</div></div>
+      <div class="item"><div class="line"><span class="nm">PRIEST'S SALAD (AL-RAHEB SALAD)</span><span class="tag">(V)</span><span class="pr">$15.99</span></div>
+        <div class="ds">Chunky smoky eggplant tossed with fresh vegetables, lemon, garlic and olive oil.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN CAESAR SALAD</span><span class="pr">$14.99</span></div>
+        <div class="ds">Classic Caesar salad topped with grilled marinated chicken.</div></div>
+      <div class="item"><div class="line"><span class="nm">SHRIMP CAESAR SALAD</span><span class="pr">$15.49</span></div>
+        <div class="ds">Fresh grilled shrimp served over a traditional Caesar salad.</div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE LENTIL SOUP</span><span class="tag">(V)</span><span class="pr">$8.99</span></div>
+        <div class="ds">Slow-cooked lentils blended with Mediterranean herbs and spices.</div></div>
+      <div class="item"><div class="line"><span class="nm">HOMEMADE PUMPKIN SOUP</span><span class="tag">(V)</span><span class="pr">$10.49</span></div>
+        <div class="ds">Creamy pumpkin soup seasoned with warm Mediterranean spices.</div></div>
+    </div>
+
+    <div class="band-row"><span class="band">LILY'S PLATTERS</span></div>
+    <div class="note-top">
+      All platters served with your choice of rice or fries, house salad and pita bread. (Optional spicy.)<br>
+      Add sautéed vegetables +$3.99 &nbsp;|&nbsp; Add fried eggplant +$3.99<br>
+      All platters are gluten-free apart from the pita — gluten-free pita available +$1.99.
+    </div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">LAMB &amp; BEEF GYRO PLATTER</span><span class="pr">$21.49</span></div>
+        <div class="ds">Seasoned lamb and beef gyro topped with feta cheese, grilled onion, tomato, green pepper and tzatziki sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">MIXED GRILL PLATTER</span><span class="pr">$23.99</span></div>
+        <div class="ds">3 skewers of chicken, tenderloin and kafta kabob. Served with hummus, small salad and garlic sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEST FRIEND PLATTER</span><span class="pr">$22.99</span></div>
+        <div class="ds">2 skewers of chicken kabob, tabbouleh, 2 grape leaves and garlic sauce.</div></div>
+    </div>
+    <div class="pageno left">3</div>
+  </div>
+
+  <div class="page">
+    <div class="tight" style="margin-top:0.1in">
+      <div class="item"><div class="line"><span class="nm">LILY'S MIXED GRILL PLATTER</span><span class="pr">$26.49</span></div>
+        <div class="ds">4 skewers of grilled chicken, tenderloin, kafta and shrimp. Served with hummus and garlic sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN SHAWARMA PLATTER</span><span class="pr">$18.99</span></div>
+        <div class="ds">Marinated chicken shawarma served with rice, salad and garlic sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEEF SHAWARMA PLATTER</span><span class="pr">$21.99</span></div>
+        <div class="ds">Tender shaved beef shawarma with traditional Mediterranean sides.</div></div>
+      <div class="item"><div class="line"><span class="nm">TAWOUK PLATTER (chicken kabob)</span><span class="pr">$20.99</span></div>
+        <div class="ds">2 marinated chicken skewers grilled over an open flame.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEEF KAFTA PLATTER</span><span class="pr">$17.99</span></div>
+        <div class="ds">2 skewers of seasoned ground beef, grilled and served with hummus.</div></div>
+      <div class="item"><div class="line"><span class="nm">BEEF KABOB PLATTER</span><span class="pr">$21.49</span></div>
+        <div class="ds">2 shish kabob skewers of tenderloin beef, served with a small house salad and hummus.</div></div>
+      <div class="item"><div class="line"><span class="nm">BONE-IN LAMB CHOPS PLATTER</span><span class="pr">$26.99</span></div>
+        <div class="ds">3 marinated lamb chops served with garlic rice, house salad and hummus.</div></div>
+      <div class="item"><div class="line"><span class="nm">JUMBO SHRIMP PLATTER</span><span class="pr">$24.99</span></div>
+        <div class="ds">2 skewers of grilled shrimp served with rice, salad, aioli and garlic sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">CHICKEN GYRO PLATTER</span><span class="pr">$19.99</span></div>
+        <div class="ds">Seasoned grilled chicken topped with feta cheese, grilled green pepper, onion and tzatziki sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">LAMB KABOB PLATTER</span><span class="pr">$25.99</span></div>
+        <div class="ds">2 skewers of juicy lamb seasoned with authentic herbs and spices, served with hummus.</div></div>
+    </div>
+
+    <div class="band-row"><span class="band">LILY'S BOWLS</span></div>
+    <div class="tight">
+      <div class="item"><div class="line"><span class="nm">GRILLED CHICKEN BOWL</span><span class="pr">$16.99</span></div>
+        <div class="ds">Grilled chicken served over rice with hummus, salad and garlic sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">FALAFEL BOWL</span><span class="tag">(V)</span><span class="pr">$14.99</span></div>
+        <div class="ds">Falafel served with rice, salad, hummus, pickles and tahini sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">SHRIMP BOWL</span><span class="pr">$18.49</span></div>
+        <div class="ds">Grilled shrimp served over rice with Mediterranean garlic aioli sauce.</div></div>
+      <div class="item"><div class="line"><span class="nm">EGGPLANT &amp; CAULIFLOWER BOWL</span><span class="tag">(V)</span><span class="pr">$15.99</span></div>
+        <div class="ds">Fried eggplant and cauliflower served over rice with hummus, house salad and tahini sauce.</div></div>
+    </div>
+    <div class="pageno">4</div>
+  </div>
+</div>
+
+</body>
+</html>
