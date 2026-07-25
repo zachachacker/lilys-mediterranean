@@ -73,8 +73,24 @@ Deno.serve(async (req) => {
     return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
   }
   const cfg = Object.fromEntries((config ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  // provider switch — Kareem chose Square (2026-07-25); Stripe stays a one-key
+  // flip. Demo mode ONLY when neither is configured (never a silent fallback).
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || cfg.stripe_secret_key || "";
-  const demo = !stripeKey;
+  const squareToken = Deno.env.get("SQUARE_ACCESS_TOKEN") || cfg.square_access_token || "";
+  const squareLocation = cfg.square_location_id || "";
+  const wanted = (cfg.payment_provider || "").trim().toLowerCase();
+  const squareReady = Boolean(squareToken && squareLocation);
+  const provider = wanted === "square" && squareReady ? "square"
+    : wanted === "stripe" && stripeKey ? "stripe"
+    : squareReady ? "square"
+    : stripeKey ? "stripe"
+    : "";
+  const demo = !provider;
+  // configured for Square but missing half the credentials = refuse loudly
+  if (!demo && wanted === "square" && !squareReady) {
+    console.error("square selected but access token / location id missing");
+    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
   const taxRate = Number(cfg.tax_rate ?? "0.07");
   if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 0.2) {
     console.error("bad tax_rate config:", cfg.tax_rate);
@@ -121,7 +137,11 @@ Deno.serve(async (req) => {
         tax_cents: tax,
         total_cents: total,
         demo,
-        stripe_session_id: demo ? `demo_${crypto.randomUUID()}` : null,
+        payment_provider: demo ? "demo" : provider,
+        // our own session token — the confirmation page looks orders up by it.
+        // Stripe overwrites this with its real session id below; Square has no
+        // redirect placeholder, so it carries this token through instead.
+        stripe_session_id: demo ? `demo_${crypto.randomUUID()}` : `sq_${crypto.randomUUID()}`,
       })
       .select("id,code,stripe_session_id")
       .single();
@@ -130,9 +150,73 @@ Deno.serve(async (req) => {
   }
   if (!order) return json({ error: "Could not create the order." }, 500);
 
+  const sid = (order as unknown as { stripe_session_id: string }).stripe_session_id;
+  const taxLabel = `FL sales tax (${+(taxRate * 100).toFixed(2)}%)`; // 0.07*100 → 7, not 7.000000000000001
+
   if (demo) {
-    const sid = (order as unknown as { stripe_session_id: string }).stripe_session_id;
     return json({ url: `order-confirmed.html?sid=${sid}`, demo: true, code: order.code });
+  }
+
+  /* ------------------------------------------------------------- Square ---
+     Square Payment Links. Unlike Stripe there's no {SESSION_ID} placeholder
+     for the redirect, so we mint our own token (sid) and carry it through. */
+  if (provider === "square") {
+    const apiVersion = cfg.square_api_version || "2025-01-23";
+    const money = (amount: number) => ({ amount, currency: "USD" });
+    const payload = {
+      idempotency_key: order.id, // one payment link per order, ever
+      order: {
+        location_id: squareLocation,
+        reference_id: order.code,
+        line_items: [
+          ...lines.map((l) => ({
+            name: l.name,
+            quantity: String(l.qty),
+            base_price_money: money(l.unit_cents),
+          })),
+          { name: taxLabel, quantity: "1", base_price_money: money(tax) },
+        ],
+      },
+      checkout_options: {
+        redirect_url: `${siteUrl}/order-confirmed.html?sid=${sid}`,
+        ask_for_shipping_address: false,
+      },
+      pre_populated_data: { buyer_phone_number: phone },
+    };
+
+    let link: { payment_link?: { url?: string; order_id?: string }; errors?: { detail?: string }[] };
+    try {
+      const resp = await fetch("https://connect.squareup.com/v2/online-checkout/payment-links", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${squareToken}`,
+          "Square-Version": apiVersion,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      link = await resp.json();
+      if (!resp.ok || !link.payment_link?.url) {
+        throw new Error(link?.errors?.[0]?.detail || `HTTP ${resp.status}`);
+      }
+    } catch (ex) {
+      await db.from("orders").update({ status: "canceled" }).eq("id", order.id);
+      console.error("square error:", ex instanceof Error ? ex.message : ex);
+      return json({ error: "Payment setup failed — please call us to order." }, 502);
+    }
+
+    // the webhook matches on Square's order id — if we can't record it, we'd
+    // take money we couldn't attach to a ticket, so fail before the customer pays
+    const { error: linkErr } = await db
+      .from("orders")
+      .update({ provider_order_id: link.payment_link.order_id ?? null })
+      .eq("id", order.id);
+    if (linkErr) {
+      console.error("square order link failed:", linkErr.message);
+      await db.from("orders").update({ status: "canceled" }).eq("id", order.id);
+      return json({ error: "Something went wrong — please try again." }, 500);
+    }
+    return json({ url: link.payment_link.url, demo: false, code: order.code });
   }
 
   // real Stripe Checkout session — card only (Apple/Google Pay ride on card);
@@ -156,8 +240,7 @@ Deno.serve(async (req) => {
   form.set(`line_items[${n}][quantity]`, "1");
   form.set(`line_items[${n}][price_data][currency]`, "usd");
   form.set(`line_items[${n}][price_data][unit_amount]`, String(tax));
-  const taxPct = +(taxRate * 100).toFixed(2); // 0.07*100 = 7.000000000000001 → 7
-  form.set(`line_items[${n}][price_data][product_data][name]`, `FL sales tax (${taxPct}%)`);
+  form.set(`line_items[${n}][price_data][product_data][name]`, taxLabel);
 
   let session: { id?: string; url?: string; error?: { message?: string } };
   try {

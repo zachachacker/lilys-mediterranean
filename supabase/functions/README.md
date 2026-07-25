@@ -23,6 +23,39 @@ redeploy it (Supabase MCP `deploy_edge_function`, or `supabase functions deploy 
   an order becomes paid. Dormant until configured (below). Idempotent via
   `orders.notified_at`; skips orders older than 1h so enabling it never back-spams.
 
+## Payment provider — Square (chosen 2026-07-25) or Stripe
+
+`app_config.payment_provider` = `square` | `stripe`. With neither provider's
+credentials filled in, ordering stays in DEMO mode (orders create as paid so
+the flow can be demoed). Demo is never a silent fallback from an error.
+
+**To switch Square on (do this on the call with Kareem):**
+1. Square Dashboard → Developer → your app → **Production access token** and
+   **Location ID**.
+2. `update app_config set value='<token>' where key='square_access_token';`
+   `update app_config set value='<location id>' where key='square_location_id';`
+3. Square Dashboard → Webhooks → add subscription:
+   - URL `https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1/square-webhook`
+   - events: `payment.created`, `payment.updated`
+   - copy the **signature key** →
+     `update app_config set value='<sig key>' where key='square_webhook_signature_key';`
+   - if the URL differs from the default, also set `square_webhook_url` to the
+     exact registered URL (the signature is computed over URL + body).
+4. Test with a real $1-ish order, then refund it in Square.
+
+Switching to Stripe later is one row: `payment_provider = 'stripe'` (its keys
+and webhook are already wired).
+
+> Zachary pastes these values himself — never share live payment credentials
+> in chat, and never send them to anyone who asks for them by message.
+
+## Website prices are +3% over the in-house menu
+Kareem's instruction (2026-07-25). `data.js` holds the printed in-house prices;
+`LILYS.onlineCents()` applies the markup (rounded to 5¢) for the menu page, the
+order page and `scripts/sync-menu.mjs`. **After any menu edit, re-run the sync**
+or the server will charge stale prices:
+`node scripts/sync-menu.mjs > /tmp/menu-sync.sql` then apply it.
+
 ## Turning on order emails (Resend — ~2 minutes)
 1. Create a free account at resend.com (100 emails/day free) and copy an API key.
 2. `update app_config set value='re_…' where key='resend_api_key';`
