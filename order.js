@@ -19,9 +19,11 @@
   const money = (cents) => `$${(cents / 100).toFixed(2)}`;
   // must match scripts/sync-menu.mjs
   const slug = (s) => s.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // in-house price string -> ONLINE cents (data.js applies the 3% markup);
+  // must stay in step with scripts/sync-menu.mjs, which prices the server table
   const parsePrice = (p) => {
     const m = /^\$(\d+)\.(\d{2})$/.exec(p);
-    return m ? Number(m[1]) * 100 + Number(m[2]) : null;
+    return m ? window.LILYS.onlineCents(Number(m[1]) * 100 + Number(m[2])) : null;
   };
 
   /* ------------------------------------------------ confirmation page ---- */
@@ -168,7 +170,7 @@
         return `<div class="menu-item order-item${ph ? " has-thumb" : ""}" data-item="${it.id}">
           ${thumb}
           <span class="mi-name">${esc(it.name)}${it.tag ? `<span class="tag">${it.tag}</span>` : ""}</span>
-          <span class="mi-price">${it.price}</span>
+          <span class="mi-price">${it.orderable ? money(it.cents) : it.price}</span>
           <span class="mi-desc">${esc(it.desc)}</span>
           <span class="oi-slot">${action}</span>
         </div>`;

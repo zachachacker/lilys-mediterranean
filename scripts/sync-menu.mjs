@@ -23,10 +23,11 @@ for (const cat of MENU) {
     const id = slug(name);
     if (seen.has(id)) throw new Error(`duplicate slug: ${id}`);
     seen.add(id);
-    // fixed prices only — ranges (e.g. wings "$12.99–$19.99") stay phone-order
+    // fixed prices only — ranges (e.g. wings "$12.99–$19.99") stay phone-order.
+    // data.js holds IN-HOUSE prices; the server charges the ONLINE price (+3%).
     const m = /^\$(\d+)\.(\d{2})$/.exec(price);
     const orderable = Boolean(m);
-    const cents = m ? Number(m[1]) * 100 + Number(m[2]) : 0;
+    const cents = m ? window.LILYS.onlineCents(Number(m[1]) * 100 + Number(m[2])) : 0;
     rows.push(
       `('${id}', '${esc(name)}', '${esc(desc)}', '${esc(cat.c)}', ${orderable ? cents : 1}, '${esc(tag)}', ${orderable})`
     );

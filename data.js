@@ -13,6 +13,21 @@ window.LILYS = {
     const hour = (parseInt(get("hour"), 10) % 24) + parseInt(get("minute"), 10) / 60;
     return { day: day >= 0 ? day : new Date().getDay(), hour };
   },
+  /* Website prices run 3% above the printed in-house menu (Kareem, 2026-07-25)
+     — it offsets the card fee. The MENU below always holds the IN-HOUSE prices
+     exactly as printed; every online surface (menu page, order page, and the
+     server's menu_items table via scripts/sync-menu.mjs) derives from these,
+     so what a customer sees can never drift from what they're charged.
+     Ranges / call-to-order items are left as printed — those are phone orders. */
+  onlineMarkup: 0.03,
+  onlineCents(inHouseCents) {
+    return Math.round((inHouseCents * (1 + this.onlineMarkup)) / 5) * 5; // nearest 5¢
+  },
+  onlinePrice(printed) {
+    const m = /^\$(\d+)\.(\d{2})$/.exec(printed);
+    if (!m) return printed;
+    return `$${(this.onlineCents(Number(m[1]) * 100 + Number(m[2])) / 100).toFixed(2)}`;
+  },
   phone: "(321) 312-4444",
   phoneHref: "tel:+13213124444",
   address: "2 5th Ave STE C, Indialantic, FL 32903",
