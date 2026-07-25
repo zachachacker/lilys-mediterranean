@@ -21,42 +21,56 @@
   }
   body { font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
 
+  /* marble ground + botanical line art are Kareem's own artwork, lifted from
+     his V.2 file so the corrected booklet matches his designer's look */
   .sheet {
     width: 17in; height: 11in; display: flex; page-break-after: always;
-    background:
-      radial-gradient(120% 90% at 12% 4%, rgba(240,180,120,0.16), transparent 55%),
-      radial-gradient(110% 90% at 88% 96%, rgba(230,170,110,0.14), transparent 55%),
-      linear-gradient(160deg, var(--cream) 0%, var(--cream-2) 48%, var(--cream) 100%);
+    background-image: url("assets/marble.png");
+    background-size: cover; background-position: center;
     position: relative; overflow: hidden;
   }
   .sheet:last-child { page-break-after: auto; }
-  /* faint centre fold guide, as in the original spreads */
-  .sheet::after {
-    content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
-    width: 1px; background: rgba(27,27,27,0.10);
+  .page {
+    width: 8.5in; height: 11in; padding: 0.62in 0.62in 0.5in; position: relative;
+    display: flex; flex-direction: column;
   }
-  .page { width: 8.5in; height: 11in; padding: 0.55in 0.6in; position: relative; }
+  /* scattered produce illustrations at the page corners */
+  .page::before, .page::after {
+    content: ""; position: absolute; pointer-events: none; opacity: 0.4; z-index: 0;
+  }
+  .page::before {
+    top: -0.15in; right: -0.1in; width: 3.5in; height: 2.1in;
+    background: url("assets/bot-tr.png") no-repeat top right / contain;
+  }
+  .page::after {
+    bottom: -0.1in; left: -0.15in; width: 3.3in; height: 2.1in;
+    background: url("assets/bot-bl.png") no-repeat bottom left / contain;
+  }
+  .page > * { position: relative; z-index: 1; }
 
   /* ---------------------------------------------------------- headers */
+  /* painted brush banner, matching the original's rough-edged strokes */
   .band {
-    display: inline-block; background: var(--green); color: #fff;
-    font-weight: 800; font-size: 20pt; letter-spacing: 0.04em;
-    padding: 0.09in 0.34in 0.11in; border-radius: 0.28in 0.22in 0.3in 0.2in;
-    box-shadow: 0.03in 0.03in 0 rgba(15,79,44,0.25);
+    display: inline-block; color: #fff;
+    font-weight: 800; font-size: 24pt; letter-spacing: 0.03em; line-height: 1;
+    padding: 0.15in 0.42in 0.19in;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 90' preserveAspectRatio='none'%3E%3Cpath d='M10,28 C44,12 92,19 152,13 C216,7 274,17 328,11 C358,8 384,17 396,23 C400,33 399,53 394,70 C378,80 348,73 318,78 C258,87 196,75 136,81 C92,85 46,79 14,70 C4,60 3,42 10,28 Z' fill='%2317693b'/%3E%3Cpath d='M18,74 C70,84 150,79 210,83 C160,88 78,86 22,80 Z' fill='%2317693b' opacity='0.75'/%3E%3C/svg%3E");
+    background-size: 100% 100%; background-repeat: no-repeat;
   }
-  .band-row { display: flex; align-items: baseline; gap: 0.22in; margin: 0.16in 0 0.13in; }
-  .band-note { font-size: 9.5pt; font-weight: 700; font-style: italic; color: var(--ink); }
+  .band-row { display: flex; align-items: center; gap: 0.26in; margin: 0.24in 0 0.18in; }
+  .band-row:first-child { margin-top: 0; }
+  .band-note { font-size: 11.5pt; font-weight: 700; font-style: italic; color: var(--ink); }
 
   /* ------------------------------------------------------------ items */
-  .item { margin-bottom: 0.115in; }
-  .line { display: flex; align-items: baseline; gap: 0.09in; }
-  .nm { color: var(--red); font-weight: 800; font-size: 11.6pt; letter-spacing: 0.005em; }
-  .tag { color: var(--green); font-weight: 800; font-size: 10pt; white-space: nowrap; }
-  .pr { color: var(--red); font-weight: 800; font-size: 11.6pt; white-space: nowrap; margin-left: 0.05in; }
-  .ds { font-size: 8.9pt; font-weight: 600; line-height: 1.28; color: #232323; max-width: 6.9in; }
-  .add { font-size: 8.9pt; font-weight: 700; font-style: italic; color: #232323; }
-  .tight .item { margin-bottom: 0.075in; }
-  .note-top { font-size: 9.3pt; font-weight: 700; font-style: italic; margin-bottom: 0.12in; }
+  .item { margin-bottom: 0.17in; }
+  .line { display: flex; align-items: baseline; gap: 0.13in; }
+  .nm { color: var(--red); font-weight: 800; font-size: 14.2pt; letter-spacing: 0.005em; }
+  .tag { color: var(--green); font-weight: 800; font-size: 12pt; white-space: nowrap; }
+  .pr { color: var(--red); font-weight: 800; font-size: 14.2pt; white-space: nowrap; margin-left: 0.16in; }
+  .ds { font-size: 10.6pt; font-weight: 600; line-height: 1.3; color: #232323; max-width: 7.1in; margin-top: 0.02in; }
+  .add { font-size: 10.6pt; font-weight: 700; font-style: italic; color: #232323; }
+  .tight .item { margin-bottom: 0.125in; }
+  .note-top { font-size: 11pt; font-weight: 700; font-style: italic; margin-bottom: 0.16in; line-height: 1.35; }
 
   .pageno {
     position: absolute; right: 0.42in; bottom: 0.34in;
@@ -67,18 +81,17 @@
   .pageno.left { left: 0.42in; right: auto; }
 
   /* ------------------------------------------------------------ cover */
-  .cover { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 0.7in; }
-  .cover img.logo { width: 3.1in; }
-  .cover .word { font-size: 76pt; font-weight: 800; color: var(--green); letter-spacing: 0.01em; margin: 0.1in 0 0; }
-  .cover img.platter { width: 6.6in; margin-top: 0.15in; }
-  .cover .tagline { font-size: 13pt; font-weight: 800; margin-top: 0.28in; }
-  .cover .legend { font-size: 11.5pt; font-weight: 800; color: var(--red); margin-top: 0.14in; }
+  .cover { align-items: center; text-align: center; padding-top: 0.85in; }
+  .cover img.logo { width: 3.4in; }
+  .cover .word { font-size: 88pt; font-weight: 800; color: var(--green); letter-spacing: 0.01em; margin: 0.06in 0 0; line-height: 0.95; }
+  .cover img.platter { width: 7in; margin-top: 0.18in; }
+  .cover .tagline { font-size: 15pt; font-weight: 800; margin-top: auto; }
+  .cover .legend { font-size: 13pt; font-weight: 800; color: var(--red); margin-top: 0.16in; padding-bottom: 0.2in; }
   .cover .legend span { color: var(--green); }
 
   .footnote {
-    position: absolute; left: 0.6in; right: 0.6in; bottom: 0.44in;
-    border-top: 2px solid var(--green); padding-top: 0.11in;
-    font-size: 9pt; font-weight: 700;
+    margin-top: auto; border-top: 2.5px solid var(--green); padding-top: 0.14in;
+    font-size: 10.6pt; font-weight: 700; line-height: 1.4;
   }
 </style>
 </head>
