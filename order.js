@@ -278,10 +278,6 @@
     btn.textContent = "Setting up payment…";
     submitting = true;
     try {
-      // closed-day test bypass (go-live runbook): ?test=<secret> in the URL is
-      // forwarded to the server, which checks it against app_config. Carries
-      // no meaning for anyone without the configured secret.
-      const testToken = new URLSearchParams(location.search).get("test");
       const r = await fetch(`${FN}/create-checkout`, {
         method: "POST",
         headers: HDRS,
@@ -290,7 +286,6 @@
           name,
           phone,
           notes: $("cfNotes").value.trim(),
-          ...(testToken ? { test_token: testToken } : {}),
         }),
       });
       const j = await r.json();

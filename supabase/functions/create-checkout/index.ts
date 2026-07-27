@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  let body: { items?: CartLine[]; name?: string; phone?: string; notes?: string; test_token?: string };
+  let body: { items?: CartLine[]; name?: string; phone?: string; notes?: string };
   try {
     body = await req.json();
   } catch {
@@ -60,8 +60,14 @@ Deno.serve(async (req) => {
 
   const name = (body.name ?? "").trim().slice(0, 80);
   const phone = (body.phone ?? "").trim().slice(0, 25);
-  const notes = (body.notes ?? "").trim().slice(0, 500) || null;
-  const testTokenProvided = (body.test_token ?? "").trim().slice(0, 64);
+  // Closed-day test bypass carry (B-4): the secret rides the POST body, typed
+  // into the notes box as "#test:<value>" at order time — never a URL, never
+  // anything the site serves. The syntax is stripped from the stored notes
+  // whether or not the value matches, so a secret is never persisted or shown.
+  const notesRaw = (body.notes ?? "").trim().slice(0, 500);
+  const testMatch = notesRaw.match(/^#test:(\S+)\s*/);
+  const testTokenProvided = testMatch ? testMatch[1] : "";
+  const notes = (testMatch ? notesRaw.slice(testMatch[0].length).trim() : notesRaw) || null;
   const items = Array.isArray(body.items) ? body.items : [];
 
   if (name.length < 2) return json({ error: "Please tell us your name for pickup." }, 400);

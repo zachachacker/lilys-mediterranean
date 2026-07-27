@@ -76,7 +76,13 @@ Deno.test("drift: create-checkout code generator is unchanged", async () => {
 
 Deno.test("drift: create-checkout closed-day test bypass is unchanged", async () => {
   const src = await read("create-checkout/index.ts");
-  assertStringIncludes(src, `const testTokenProvided = (body.test_token ?? "").trim().slice(0, 64);`);
+  assertStringIncludes(src, `const notesRaw = (body.notes ?? "").trim().slice(0, 500);`);
+  assertStringIncludes(src, `const testMatch = notesRaw.match(/^#test:(\\S+)\\s*/);`);
+  assertStringIncludes(src, `const testTokenProvided = testMatch ? testMatch[1] : "";`);
+  assertStringIncludes(
+    src,
+    `const notes = (testMatch ? notesRaw.slice(testMatch[0].length).trim() : notesRaw) || null;`,
+  );
   assertStringIncludes(src, `const testOrderToken = (cfg.test_order_token ?? "").trim();`);
   assertStringIncludes(
     src,
@@ -96,11 +102,13 @@ Deno.test("drift: create-checkout closed-day test bypass is unchanged", async ()
   );
 });
 
-Deno.test("drift: order.js forwards the ?test= URL param as test_token", async () => {
+Deno.test("drift: order.js carries NO bypass plumbing — the secret rides only the notes text (B-4)", async () => {
+  // order.js legitimately reads ?sid= and ?canceled= — the ban is on the
+  // bypass secret specifically, not on query strings in general.
   const repo = new URL("../../", root);
   const orderJs = await Deno.readTextFile(new URL("order.js", repo));
-  assertStringIncludes(orderJs, `const testToken = new URLSearchParams(location.search).get("test");`);
-  assertStringIncludes(orderJs, "...(testToken ? { test_token: testToken } : {}),");
+  assert(!orderJs.includes("test_token"), "order.js must not name a test_token field");
+  assert(!orderJs.includes(`get("test")`), "order.js must not read a test secret from the URL");
 });
 
 Deno.test("drift: create-checkout validation block is unchanged", async () => {

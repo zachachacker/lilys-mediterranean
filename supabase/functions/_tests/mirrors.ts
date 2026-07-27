@@ -89,17 +89,24 @@ export function makeCode(len = 4, prefix = "LM"): string {
   return `${prefix}-${s}`;
 }
 
-/* ── create-checkout — closed-day test bypass (2026-07-28) ──────────────────
-   Faithful TRANSCRIPTION of the testOrder decision and the opening-hours
-   gate composition. The real code reads testTokenProvided from the body
-   (.trim().slice(0,64)) and testOrderToken from app_config (.trim());
-   timingSafeEqualStr here is byte-identical to the helper create-checkout
+/* ── create-checkout — closed-day test bypass (2026-07-28, B-4 revision) ────
+   Faithful TRANSCRIPTIONS. The secret is typed into the notes box as
+   "#test:<value>" (POST body only — B-4): extractTestToken mirrors the
+   notes-parse exactly (notesRaw arrives already .trim().slice(0,500));
+   decideTestOrder mirrors the decision; hoursGateRefuses the gate.
+   timingSafeEqualStr is byte-identical to the helper create-checkout
    carries (same family as kitchen-api:14-21 / square-webhook:11-18).      */
+export function extractTestToken(notesRaw: string): { token: string; notes: string | null } {
+  const testMatch = notesRaw.match(/^#test:(\S+)\s*/);
+  const testTokenProvided = testMatch ? testMatch[1] : "";
+  const notes = (testMatch ? notesRaw.slice(testMatch[0].length).trim() : notesRaw) || null;
+  return { token: testTokenProvided, notes };
+}
+
 export function decideTestOrder(opts: { demo: boolean; cfgToken: string; provided: string }): boolean {
   const testOrderToken = (opts.cfgToken ?? "").trim();
-  const testTokenProvided = (opts.provided ?? "").trim().slice(0, 64);
-  return !opts.demo && testOrderToken.length > 0 && testTokenProvided.length > 0 &&
-    timingSafeEqualStr(testTokenProvided, testOrderToken);
+  return !opts.demo && testOrderToken.length > 0 && opts.provided.length > 0 &&
+    timingSafeEqualStr(opts.provided, testOrderToken);
 }
 
 export function hoursGateRefuses(opts: { demo: boolean; testOrder: boolean; open: boolean }): boolean {

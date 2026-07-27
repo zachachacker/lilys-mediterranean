@@ -49,23 +49,30 @@ and webhook are already wired).
 ## Closed-day test order (go-live runbook)
 
 When the restaurant is closed, real orders are refused with 409. For the
-go-live test on a closed day, set `app_config.test_order_token` and open the
-site with that value in the URL — the order then rides the **full live path**
-(real Square charge, real webhook, real kitchen ticket; refund it afterwards)
-and is loudly marked: order code `TEST-…` and notes prefixed
-`[SYSTEM TEST ORDER]`. Public traffic without the token stays refused exactly
-as before, and in demo mode the token does nothing.
+go-live test on a closed day, set `app_config.test_order_token`, then place a
+normal order typing the secret at the **start of the notes box** — the order
+then rides the **full live path** (real Square charge, real webhook, real
+kitchen ticket; refund it afterwards) and is loudly marked: order code
+`TEST-…` and notes prefixed `[SYSTEM TEST ORDER]`. Public traffic without the
+secret stays refused exactly as before, and in demo mode it does nothing.
 
 1. `insert into app_config (key,value) values ('test_order_token','<long random string>')
    on conflict (key) do update set value=excluded.value;`
-2. Order via `https://<site>/order.html?test=<the same value>`.
+2. Order normally; in the notes box type, first thing:
+   `#test:<the same value>` — anything after a space is kept as the real note.
+   The secret travels only in the POST body (never a URL — B-4) and is
+   stripped server-side before the notes are stored, match or no match.
 3. **Delete the row right after the test:**
    `delete from app_config where key='test_order_token';`
+4. **Verify the revocation with your own eyes (B-6):** repeat the same
+   out-of-hours order attempt, `#test:` and all, and watch it get the
+   ordinary "We're closed right now" refusal before walking away.
 
-The token lives only in `app_config` (this repo is publicly served — nothing
+The secret lives only in `app_config` (this repo is publicly served — nothing
 secret can live in code), is compared timing-safe server-side, and unlocks
-nothing except the opening-hours refusal. Per client, always generate a fresh
-value; never reuse one.
+nothing except the opening-hours refusal. A wrong value gets the identical
+refusal everyone else gets (B-5). Per client, always generate a fresh value;
+never reuse one.
 
 > Zachary pastes these values himself — never share live payment credentials
 > in chat, and never send them to anyone who asks for them by message.

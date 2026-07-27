@@ -9,9 +9,47 @@
  * Tier 0 — inert. Pure functions via mirrors.ts; no network, no database.
  */
 import { assert, assertEquals } from "jsr:@std/assert@1";
-import { CODE_ALPHABET, decideTestOrder, hoursGateRefuses, makeCode } from "./mirrors.ts";
+import { CODE_ALPHABET, decideTestOrder, extractTestToken, hoursGateRefuses, makeCode } from "./mirrors.ts";
 
 const TOKEN = "a-long-random-runbook-token";
+
+/* ── the carry: "#test:<value>" typed into the notes box (B-4) ──────────── */
+
+Deno.test("carry: token extracted from the head of notes; the rest survives as the real note", () => {
+  const r = extractTestToken(`#test:${TOKEN} extra garlic sauce please`);
+  assertEquals(r.token, TOKEN);
+  assertEquals(r.notes, "extra garlic sauce please");
+});
+
+Deno.test("carry: token alone → empty notes become null", () => {
+  const r = extractTestToken(`#test:${TOKEN}`);
+  assertEquals(r.token, TOKEN);
+  assertEquals(r.notes, null);
+});
+
+Deno.test("carry: the syntax is stripped from stored notes even when the value is WRONG — a secret is never persisted", () => {
+  const r = extractTestToken("#test:wrong-guess my actual note");
+  assertEquals(r.token, "wrong-guess");
+  assertEquals(r.notes, "my actual note", "the guess does not reach the kitchen ticket");
+});
+
+Deno.test("carry: no syntax → no token, notes pass through untouched", () => {
+  const r = extractTestToken("extra garlic sauce please");
+  assertEquals(r.token, "");
+  assertEquals(r.notes, "extra garlic sauce please");
+});
+
+Deno.test("carry: syntax mid-notes does NOT trigger — start-anchored on purpose", () => {
+  const r = extractTestToken(`please hurry #test:${TOKEN}`);
+  assertEquals(r.token, "");
+  assertEquals(r.notes, `please hurry #test:${TOKEN}`);
+});
+
+Deno.test("carry: '#test:' with no value is not a match", () => {
+  const r = extractTestToken("#test: my note");
+  assertEquals(r.token, "");
+  assertEquals(r.notes, "#test: my note");
+});
 
 /* ── the token decision ─────────────────────────────────────────────────── */
 
@@ -38,11 +76,10 @@ Deno.test("bypass: both sides empty is NOT a match — empty never unlocks anyth
   assertEquals(decideTestOrder({ demo: false, cfgToken: "", provided: "" }), false);
 });
 
-Deno.test("bypass: carried token is sliced to 64 chars — an over-long config token can never match", () => {
+Deno.test("bypass: long tokens match whole — no truncation to create false accepts or rejects", () => {
   const long = "x".repeat(80);
-  assertEquals(decideTestOrder({ demo: false, cfgToken: long, provided: long }), false, "80-char config vs 64-char slice");
-  const exact64 = "y".repeat(64);
-  assertEquals(decideTestOrder({ demo: false, cfgToken: exact64, provided: exact64 + "overflow" }), true, "slice makes the carried token 64 chars, matching a 64-char config");
+  assertEquals(decideTestOrder({ demo: false, cfgToken: long, provided: long }), true);
+  assertEquals(decideTestOrder({ demo: false, cfgToken: long, provided: long.slice(0, 64) }), false, "a truncated guess is just a wrong token");
 });
 
 /* ── the opening-hours gate composition ─────────────────────────────────── */
