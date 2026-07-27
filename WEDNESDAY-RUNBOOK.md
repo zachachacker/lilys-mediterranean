@@ -184,7 +184,9 @@ the kitchen screen.
 > **If it is refused with "We're closed right now", the token did not match.** A typo
 > looks exactly like the bypass not working. Check the notes line starts with `#test:`
 > with no leading space, and that the value matches the row exactly. A wrong token
-> fails safe — it never creates a real order by accident.
+> fails safe — it never creates a real order by accident, and the `#test:` line is
+> stripped from the notes whether the value matched or not, so a typo never ends up
+> printed on the kitchen ticket either.
 
 Generate a fresh value; never reuse one. It lives only in `app_config` — this repo
 is publicly served, so no secret can live in code.
