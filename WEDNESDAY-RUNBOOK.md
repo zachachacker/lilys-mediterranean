@@ -105,6 +105,11 @@ update app_config set value = '…location id…'    where key = 'square_locatio
 update app_config set value = '…signature key…'  where key = 'square_webhook_signature_key';
 ```
 
+**Order matters if you are ever setting `payment_provider` in the same batch: set
+the provider FIRST, credentials after.** Provider blank while any credential is set
+skips every refusal guard and falls silently to demo mode — orders `paid` for `$0`
+on a site that looks live. Never leave that combination on the table, even briefly.
+
 All three are required. The signature key is not optional paperwork — without it the
 webhook rejects every delivery, so cards get charged while orders sit `pending`
 forever, invisible to the kitchen.
@@ -148,7 +153,13 @@ insert into app_config (key, value) values ('test_order_token', '<long random st
 on conflict (key) do update set value = excluded.value;
 ```
 
-Then order via `https://<site>/order.html?test=<the same value>`.
+> ⚠️ **The way the token is carried is being revised — do not rely on the URL form
+> below.** `?test=` leaks the secret into browser history, analytics and the Referer
+> header sent to Square. Rivet is changing it. Everything else in this step is
+> settled; only this line moves. **Confirm the current method before the day.**
+
+Then order using the current carry method (provisionally
+`https://<site>/order.html?test=<the same value>`).
 
 That single order rides the **full live path** — real Square charge, real webhook,
 real kitchen ticket — and is loudly marked: order code starts `TEST-` instead of
@@ -199,6 +210,11 @@ select count(*) as token_rows from app_config where key = 'test_order_token';
 
 `0` is the only acceptable answer. While that row exists, anyone holding the value
 can place a real order outside opening hours.
+
+**Then prove it functionally, not just by counting rows.** Attempt one ordinary
+out-of-hours order on the site — no token. It must be refused with *"We're closed
+right now."* If it goes through, the bypass is still open. **Do not walk away until
+you have seen that refusal.**
 
 ## Step 10 — ABORT
 
