@@ -69,8 +69,38 @@ Deno.test("drift: kitchen-api uses ALLOWED_FROM[to] as the FROM-set", async () =
 Deno.test("drift: create-checkout code generator is unchanged", async () => {
   const src = await read("create-checkout/index.ts");
   assertStringIncludes(src, `const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";`);
+  assertStringIncludes(src, `function makeCode(len = 4, prefix = "LM"): string {`);
   assertStringIncludes(src, `for (const b of bytes) s += CODE_ALPHABET[b % CODE_ALPHABET.length];`);
-  assertStringIncludes(src, "return `LM-${s}`;");
+  assertStringIncludes(src, "return `${prefix}-${s}`;");
+});
+
+Deno.test("drift: create-checkout closed-day test bypass is unchanged", async () => {
+  const src = await read("create-checkout/index.ts");
+  assertStringIncludes(src, `const testTokenProvided = (body.test_token ?? "").trim().slice(0, 64);`);
+  assertStringIncludes(src, `const testOrderToken = (cfg.test_order_token ?? "").trim();`);
+  assertStringIncludes(
+    src,
+    `const testOrder = !demo && testOrderToken.length > 0 && testTokenProvided.length > 0 &&
+    timingSafeEqual(testTokenProvided, testOrderToken);`,
+  );
+  assertStringIncludes(src, `if (!demo && !testOrder && !openNow()) {`);
+  assertStringIncludes(src, "code: makeCode(attempt < 2 ? 4 : 5, testOrder ? \"TEST\" : \"LM\"),");
+  assertStringIncludes(src, "notes: testOrder ? `[SYSTEM TEST ORDER] ${notes ?? \"\"}`.trim() : notes,");
+  // the compare helper create-checkout carries must stay byte-identical to the family
+  assertStringIncludes(
+    src,
+    `function timingSafeEqual(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  if (ea.length !== eb.length) return false;`,
+  );
+});
+
+Deno.test("drift: order.js forwards the ?test= URL param as test_token", async () => {
+  const repo = new URL("../../", root);
+  const orderJs = await Deno.readTextFile(new URL("order.js", repo));
+  assertStringIncludes(orderJs, `const testToken = new URLSearchParams(location.search).get("test");`);
+  assertStringIncludes(orderJs, "...(testToken ? { test_token: testToken } : {}),");
 });
 
 Deno.test("drift: create-checkout validation block is unchanged", async () => {

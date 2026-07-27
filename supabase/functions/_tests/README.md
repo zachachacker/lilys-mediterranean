@@ -22,6 +22,9 @@ deno test --allow-read supabase/functions/_tests/
 - `provider_test.ts` — named scenarios for the readiness gate (SECURITY.md
   M-1/M-2, fixed 2026-07-28): named-but-unconfigured providers refuse with 503;
   demo mode only when no provider is named.
+- `bypass_test.ts` — the closed-day test-order bypass (replaces runbook Step 5):
+  token matrix, hours-gate composition, TEST- marking; the public stays refused
+  and the bypass never bridges into demo.
 - `escaping_test.ts` — the five `esc()` variants and `telHref()`.
 
 `--allow-read` only. No `--allow-net`, no `--allow-env`, no `--allow-write`.

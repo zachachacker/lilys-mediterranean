@@ -46,6 +46,27 @@ the flow can be demoed). Demo is never a silent fallback from an error.
 Switching to Stripe later is one row: `payment_provider = 'stripe'` (its keys
 and webhook are already wired).
 
+## Closed-day test order (go-live runbook)
+
+When the restaurant is closed, real orders are refused with 409. For the
+go-live test on a closed day, set `app_config.test_order_token` and open the
+site with that value in the URL — the order then rides the **full live path**
+(real Square charge, real webhook, real kitchen ticket; refund it afterwards)
+and is loudly marked: order code `TEST-…` and notes prefixed
+`[SYSTEM TEST ORDER]`. Public traffic without the token stays refused exactly
+as before, and in demo mode the token does nothing.
+
+1. `insert into app_config (key,value) values ('test_order_token','<long random string>')
+   on conflict (key) do update set value=excluded.value;`
+2. Order via `https://<site>/order.html?test=<the same value>`.
+3. **Delete the row right after the test:**
+   `delete from app_config where key='test_order_token';`
+
+The token lives only in `app_config` (this repo is publicly served — nothing
+secret can live in code), is compared timing-safe server-side, and unlocks
+nothing except the opening-hours refusal. Per client, always generate a fresh
+value; never reuse one.
+
 > Zachary pastes these values himself — never share live payment credentials
 > in chat, and never send them to anyone who asks for them by message.
 

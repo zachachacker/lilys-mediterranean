@@ -28,11 +28,21 @@ function openNow(): boolean {
 }
 
 const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ"; // no 0/O/1/I/L
-function makeCode(len = 4): string {
+function makeCode(len = 4, prefix = "LM"): string {
   const bytes = crypto.getRandomValues(new Uint8Array(len));
   let s = "";
   for (const b of bytes) s += CODE_ALPHABET[b % CODE_ALPHABET.length];
-  return `LM-${s}`;
+  return `${prefix}-${s}`;
+}
+
+// byte-identical to kitchen-api/index.ts:14-21 and square-webhook/index.ts:11-18
+function timingSafeEqual(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  if (ea.length !== eb.length) return false;
+  let out = 0;
+  for (let i = 0; i < ea.length; i++) out |= ea[i] ^ eb[i];
+  return out === 0;
 }
 
 type CartLine = { id: string; qty: number };
@@ -41,7 +51,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  let body: { items?: CartLine[]; name?: string; phone?: string; notes?: string };
+  let body: { items?: CartLine[]; name?: string; phone?: string; notes?: string; test_token?: string };
   try {
     body = await req.json();
   } catch {
@@ -51,6 +61,7 @@ Deno.serve(async (req) => {
   const name = (body.name ?? "").trim().slice(0, 80);
   const phone = (body.phone ?? "").trim().slice(0, 25);
   const notes = (body.notes ?? "").trim().slice(0, 500) || null;
+  const testTokenProvided = (body.test_token ?? "").trim().slice(0, 64);
   const items = Array.isArray(body.items) ? body.items : [];
 
   if (name.length < 2) return json({ error: "Please tell us your name for pickup." }, 400);
@@ -119,8 +130,18 @@ Deno.serve(async (req) => {
   }
   const siteUrl = (cfg.site_url ?? "").replace(/\/$/, "");
 
-  // demo orders may be placed while closed (for showing Kareem); real ones may not
-  if (!demo && !openNow()) {
+  // Closed-day test bypass (go-live runbook): a real, charged, visibly-marked
+  // order for Zachary's live test. The secret lives ONLY in app_config — this
+  // repo is publicly served, so it can never live in code. It must match
+  // exactly, it skips nothing except the opening-hours refusal below, and in
+  // demo mode it does nothing at all.
+  const testOrderToken = (cfg.test_order_token ?? "").trim();
+  const testOrder = !demo && testOrderToken.length > 0 && testTokenProvided.length > 0 &&
+    timingSafeEqual(testTokenProvided, testOrderToken);
+
+  // demo orders may be placed while closed (for showing Kareem); real ones may
+  // not — except a token-carrying test order, which rides the full live path
+  if (!demo && !testOrder && !openNow()) {
     return json({ error: "We're closed right now — online ordering opens with the kitchen." }, 409);
   }
 
@@ -148,11 +169,13 @@ Deno.serve(async (req) => {
     const { data, error } = await db
       .from("orders")
       .insert({
-        code: makeCode(attempt < 2 ? 4 : 5),
+        // test orders are loudly marked: TEST- code (kitchen board, confirmation
+        // page, Square reference) and a notes tag the kitchen ticket shows
+        code: makeCode(attempt < 2 ? 4 : 5, testOrder ? "TEST" : "LM"),
         status: demo ? "paid" : "pending",
         customer_name: name,
         customer_phone: phone,
-        notes,
+        notes: testOrder ? `[SYSTEM TEST ORDER] ${notes ?? ""}`.trim() : notes,
         items: lines,
         subtotal_cents: subtotal,
         tax_cents: tax,

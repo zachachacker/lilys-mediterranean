@@ -79,13 +79,31 @@ export const ALLOWED_FROM: Record<string, string[]> = {
   canceled: ["paid", "making", "ready"],
 };
 
-/* ── create-checkout/index.ts:29-35 ───────────────────────────────────── */
+/* ── create-checkout/index.ts:29-36 — prefix param added for TEST- marking
+      of closed-day test orders (2026-07-28) ──────────────────────────────── */
 export const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ"; // no 0/O/1/I/L
-export function makeCode(len = 4): string {
+export function makeCode(len = 4, prefix = "LM"): string {
   const bytes = crypto.getRandomValues(new Uint8Array(len));
   let s = "";
   for (const b of bytes) s += CODE_ALPHABET[b % CODE_ALPHABET.length];
-  return `LM-${s}`;
+  return `${prefix}-${s}`;
+}
+
+/* ── create-checkout — closed-day test bypass (2026-07-28) ──────────────────
+   Faithful TRANSCRIPTION of the testOrder decision and the opening-hours
+   gate composition. The real code reads testTokenProvided from the body
+   (.trim().slice(0,64)) and testOrderToken from app_config (.trim());
+   timingSafeEqualStr here is byte-identical to the helper create-checkout
+   carries (same family as kitchen-api:14-21 / square-webhook:11-18).      */
+export function decideTestOrder(opts: { demo: boolean; cfgToken: string; provided: string }): boolean {
+  const testOrderToken = (opts.cfgToken ?? "").trim();
+  const testTokenProvided = (opts.provided ?? "").trim().slice(0, 64);
+  return !opts.demo && testOrderToken.length > 0 && testTokenProvided.length > 0 &&
+    timingSafeEqualStr(testTokenProvided, testOrderToken);
+}
+
+export function hoursGateRefuses(opts: { demo: boolean; testOrder: boolean; open: boolean }): boolean {
+  return !opts.demo && !opts.testOrder && !opts.open;
 }
 
 /* ── escaping variants ────────────────────────────────────────────────── */
