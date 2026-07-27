@@ -248,9 +248,14 @@ there · Step 8 shows `demo = true` · Step 8 stays `pending` past a minute.
 update app_config set value = '' where key = 'square_access_token';
 ```
 
-**Stop there.** The site returns 503 and takes no money. Offline is the goal, not
-a side effect — aborting means stop charging cards, and a 503 does that instantly
-and unambiguously.
+**Stop there.** No card can be charged after this.
+
+Confirm it: one order attempt returns **"Ordering is temporarily unavailable"**.
+
+*If you are aborting because Step 0 never passed, the old code is still deployed and
+you will see a demo order instead. That charges nobody either — you are simply back
+where you started. Either way no card can be charged, which is the only thing an
+abort has to achieve.*
 
 Then delete the test token (Step 9) if you set one.
 
