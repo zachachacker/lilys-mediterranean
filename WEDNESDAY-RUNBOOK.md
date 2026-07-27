@@ -154,29 +154,40 @@ from (
 ## Step 7 — Unlock your test order on a closed day
 
 Real orders are refused when the kitchen is closed, and **Wednesday is closed**.
-No code edit and no redeploy — set a one-off secret, use it, delete it.
+No code edit, no redeploy. Set a secret, use it once, delete it.
+
+**1. Set the token** (any long random string, **no spaces**):
 
 ```sql
 insert into app_config (key, value) values ('test_order_token', '<long random string>')
 on conflict (key) do update set value = excluded.value;
 ```
 
-> ⚠️ **The way the token is carried is being revised — do not rely on the URL form
-> below.** `?test=` leaks the secret into browser history, analytics and the Referer
-> header sent to Square. Rivet is changing it. Everything else in this step is
-> settled; only this line moves. **Confirm the current method before the day.**
+**2. Order normally on the site.** In the **notes box**, the *very first thing* you
+type must be:
 
-Then order using the current carry method (provisionally
-`https://<site>/order.html?test=<the same value>`).
+```
+#test:<the same value>
+```
 
-That single order rides the **full live path** — real Square charge, real webhook,
-real kitchen ticket — and is loudly marked: order code starts `TEST-` instead of
-`LM-`, and the notes carry `[SYSTEM TEST ORDER]`. It skips **nothing** except the
-opening-hours refusal. Public traffic without the token stays refused exactly as
-before, and in demo mode the token does nothing at all.
+Anything after a space becomes an ordinary note. There is no special URL — the
+secret never appears in a link, browser history, or the Referer header sent to
+Square.
 
-Generate a fresh random value; never reuse one. It lives only in `app_config` —
-this repo is publicly served, so no secret can live in code.
+**3. What you should see.** The order rides the **full live path** — real Square
+charge, real webhook, real kitchen ticket. It is marked everywhere: order code
+`TEST-XXXX` instead of `LM-XXXX` (on the site, the confirmation page and the Square
+reference) and `[SYSTEM TEST ORDER]` on the ticket notes. The token itself is
+stripped before the order is saved, so the secret never reaches the database or
+the kitchen screen.
+
+> **If it is refused with "We're closed right now", the token did not match.** A typo
+> looks exactly like the bypass not working. Check the notes line starts with `#test:`
+> with no leading space, and that the value matches the row exactly. A wrong token
+> fails safe — it never creates a real order by accident.
+
+Generate a fresh value; never reuse one. It lives only in `app_config` — this repo
+is publicly served, so no secret can live in code.
 
 ## Step 8 — One real order, on a real card
 
