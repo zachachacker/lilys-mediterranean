@@ -1,7 +1,8 @@
 // Lily's — create an order + Stripe Checkout session.
 // Prices come from public.menu_items (server truth), never from the client.
-// With no Stripe key configured (app_config.stripe_secret_key), runs in DEMO
-// mode: the order is created as paid immediately so the full flow can be shown.
+// With no payment provider configured at all, runs in DEMO mode: the order is
+// created as paid immediately so the full flow can be shown. A provider that
+// is NAMED but not fully configured refuses with 503 — it never falls back.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -78,19 +79,39 @@ Deno.serve(async (req) => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || cfg.stripe_secret_key || "";
   const squareToken = Deno.env.get("SQUARE_ACCESS_TOKEN") || cfg.square_access_token || "";
   const squareLocation = cfg.square_location_id || "";
+  // same source order as square-webhook — readiness must test the exact key the
+  // webhook will use, or "ready" and "able to mark orders paid" can disagree
+  const squareSigKey = Deno.env.get("SQUARE_WEBHOOK_SIGNATURE_KEY") || cfg.square_webhook_signature_key || "";
   const wanted = (cfg.payment_provider || "").trim().toLowerCase();
-  const squareReady = Boolean(squareToken && squareLocation);
+  // all THREE Square values or we are not live: without the signature key the
+  // webhook 503s every delivery, so cards get charged and orders sit `pending`
+  // forever, invisible to the kitchen board
+  const squareReady = Boolean(squareToken && squareLocation && squareSigKey);
+  // a NAMED provider that isn't fully configured is a hard stop BEFORE demo is
+  // computed — demo mode exists only for when nobody asked for a provider
+  if (wanted === "square" && !squareReady) {
+    const missing = [
+      !squareToken && "access token",
+      !squareLocation && "location id",
+      !squareSigKey && "webhook signature key",
+    ].filter(Boolean).join(", ");
+    console.error(`square selected but not fully configured — missing: ${missing}`);
+    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
+  if (wanted === "stripe" && !stripeKey) {
+    console.error("stripe selected but secret key missing");
+    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
+  if (wanted && wanted !== "square" && wanted !== "stripe") {
+    console.error(`unknown payment_provider "${wanted}" — refusing rather than guessing`);
+    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
   const provider = wanted === "square" && squareReady ? "square"
     : wanted === "stripe" && stripeKey ? "stripe"
     : squareReady ? "square"
     : stripeKey ? "stripe"
     : "";
   const demo = !provider;
-  // configured for Square but missing half the credentials = refuse loudly
-  if (!demo && wanted === "square" && !squareReady) {
-    console.error("square selected but access token / location id missing");
-    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
-  }
   const taxRate = Number(cfg.tax_rate ?? "0.07");
   if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 0.2) {
     console.error("bad tax_rate config:", cfg.tax_rate);

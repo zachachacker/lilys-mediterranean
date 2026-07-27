@@ -87,7 +87,14 @@ Deno.test("drift: create-checkout validation block is unchanged", async () => {
 
 Deno.test("drift: create-checkout provider/demo decision is unchanged", async () => {
   const src = await read("create-checkout/index.ts");
-  assertStringIncludes(src, `const squareReady = Boolean(squareToken && squareLocation);`);
+  assertStringIncludes(
+    src,
+    `const squareSigKey = Deno.env.get("SQUARE_WEBHOOK_SIGNATURE_KEY") || cfg.square_webhook_signature_key || "";`,
+  );
+  assertStringIncludes(src, `const squareReady = Boolean(squareToken && squareLocation && squareSigKey);`);
+  assertStringIncludes(src, `if (wanted === "square" && !squareReady) {`);
+  assertStringIncludes(src, `if (wanted === "stripe" && !stripeKey) {`);
+  assertStringIncludes(src, `if (wanted && wanted !== "square" && wanted !== "stripe") {`);
   assertStringIncludes(
     src,
     `const provider = wanted === "square" && squareReady ? "square"
@@ -97,7 +104,6 @@ Deno.test("drift: create-checkout provider/demo decision is unchanged", async ()
     : "";`,
   );
   assertStringIncludes(src, `const demo = !provider;`);
-  assertStringIncludes(src, `if (!demo && wanted === "square" && !squareReady) {`);
   assertStringIncludes(src, `status: demo ? "paid" : "pending",`);
 });
 

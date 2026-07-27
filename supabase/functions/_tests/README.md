@@ -19,6 +19,9 @@ deno test --allow-read supabase/functions/_tests/
 - `transitions_test.ts` — all 36 order-status transitions.
 - `validation_test.ts` — `create-checkout` input validation + the demo-mode
   provider-selection truth table.
+- `provider_test.ts` — named scenarios for the readiness gate (SECURITY.md
+  M-1/M-2, fixed 2026-07-28): named-but-unconfigured providers refuse with 503;
+  demo mode only when no provider is named.
 - `escaping_test.ts` — the five `esc()` variants and `telHref()`.
 
 `--allow-read` only. No `--allow-net`, no `--allow-env`, no `--allow-write`.

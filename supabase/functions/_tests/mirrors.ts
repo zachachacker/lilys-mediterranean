@@ -148,13 +148,16 @@ export function validateCheckoutBody(body: {
   return { ok: true, name, phone, notes, items };
 }
 
-/* ── create-checkout/index.ts:76-93 ───────────────────────────────────────
-   Faithful TRANSCRIPTION of the provider-selection / demo-mode decision.
-   `guard503` is the "refuse loudly" branch at :90.                       */
+/* ── create-checkout/index.ts:79-116 ──────────────────────────────────────
+   Faithful TRANSCRIPTION of the provider-selection / demo-mode decision,
+   post readiness-gate fix (M-1/M-2, 2026-07-28): squareReady now requires
+   all THREE Square values (token, location, webhook signature key), and a
+   NAMED but not-fully-configured provider refuses with 503 BEFORE demo is
+   computed. `refused503` covers all three refusal branches.              */
 export type ProviderDecision = {
   provider: "" | "square" | "stripe";
   demo: boolean;
-  guard503: boolean;
+  refused503: boolean;
   status: "paid" | "pending" | "n/a — request refused";
 };
 
@@ -162,11 +165,18 @@ export function decideProvider(opts: {
   wanted: string;
   squareToken: string;
   squareLocation: string;
+  squareSigKey: string;
   stripeKey: string;
 }): ProviderDecision {
-  const { squareToken, squareLocation, stripeKey } = opts;
+  const { squareToken, squareLocation, squareSigKey, stripeKey } = opts;
   const wanted = (opts.wanted || "").trim().toLowerCase();
-  const squareReady = Boolean(squareToken && squareLocation);
+  const squareReady = Boolean(squareToken && squareLocation && squareSigKey);
+  const refused503 = (wanted === "square" && !squareReady) ||
+    (wanted === "stripe" && !stripeKey) ||
+    (wanted !== "" && wanted !== "square" && wanted !== "stripe");
+  if (refused503) {
+    return { provider: "", demo: false, refused503, status: "n/a — request refused" };
+  }
   const provider = wanted === "square" && squareReady
     ? "square"
     : wanted === "stripe" && stripeKey
@@ -177,11 +187,10 @@ export function decideProvider(opts: {
     ? "stripe"
     : "";
   const demo = !provider;
-  const guard503 = !demo && wanted === "square" && !squareReady;
   return {
     provider: provider as ProviderDecision["provider"],
     demo,
-    guard503,
-    status: guard503 ? "n/a — request refused" : demo ? "paid" : "pending",
+    refused503,
+    status: demo ? "paid" : "pending",
   };
 }
