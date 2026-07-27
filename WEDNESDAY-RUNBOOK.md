@@ -43,7 +43,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
   -d '{"items":[],"name":"Deploy probe","phone":"3213124444"}'
 ```
 
-- **`503`** → fixed version is live. Continue. (Ordering is now *down* until Step 5 —
+- **`503`** → fixed version is live. Continue. (Ordering is now *down* until the credentials land in Step 4 —
   that is expected and it is why this is the same morning, not earlier.)
 - **`400`** → old version still live. The deploy did not take. **Do not continue.**
 
