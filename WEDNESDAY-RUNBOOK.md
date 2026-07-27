@@ -41,14 +41,22 @@ Everything below assumes the fixed version is live. **Prove it before continuing
 curl -s -o /dev/null -w "%{http_code}\n" -X POST \
   "https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1/create-checkout" \
   -H "Authorization: Bearer <anon key from data.js>" -H "Content-Type: application/json" \
-  -d '{"items":[],"name":"Deploy probe","phone":"3213124444"}'
+  -d '{"items":[{"id":"deploy-probe-not-a-real-item","qty":1}],"name":"Deploy probe","phone":"3213124444"}'
 ```
 
-- **`503`** → fixed version is live. Continue. (Ordering is now *down* until the credentials land in Step 4 —
-  that is expected and it is why this is the same morning, not earlier.)
+- **`503`** → fixed version is live. Continue. (Ordering is now *down* until the
+  credentials land in Step 4 — expected, and why this is the same morning.)
 - **`400`** → old version still live. The deploy did not take. **Do not continue.**
 
-This probe creates no order either way.
+The cart is deliberately *structurally valid but names an item that does not exist*.
+That matters: an **empty** cart is rejected at `:75`, before the provider guard at
+`:109`, so it returns 400 on both versions and can never tell them apart. A valid
+cart with an unknown item passes `:75`, hits the guard on the fixed version (**503**),
+and on the old version sails past it to the menu lookup and is refused there (**400**).
+
+It creates no order either way — the unknown item is rejected at `:164`, before the
+insert. Verified against the live function: returns
+`400 "Sorry — an item in your cart isn't available online."`
 
 ## Step 1 — Revoke the public write grants (before any SQL-editor work)
 
