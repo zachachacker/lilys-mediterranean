@@ -3,7 +3,8 @@
 Follow this top to bottom. **Step 0 must succeed before anything else means what it
 says.** If anything reads wrong, Step 10 is the abort and nothing is lost by using it.
 
-**Wednesday is Lily's closed day.** Handled in Step 7 — not optional.
+**Wednesday is Lily's closed day.** Handled in Step 7 with a one-off token —
+no code edit, no redeploy.
 
 ---
 
@@ -137,16 +138,26 @@ from (
   deployed the site is refusing orders with a 503 right now, so no customer is being
   harmed — but nobody can order either. Fix it or abort.
 
-## Step 7 — Let your test order through on a closed day
+## Step 7 — Unlock your test order on a closed day
 
-Real orders are refused outside opening hours and **Wednesday is closed**
-(`HOURS` day 3 is `null` in `create-checkout`). Without this, your own test card is
-refused at the counter.
+Real orders are refused when the kitchen is closed, and **Wednesday is closed**.
+No code edit and no redeploy — set a one-off secret, use it, delete it.
 
-*A narrower mechanism may replace this — one that lets your test through without
-opening the shop to the public. If it has landed, use that instead.* Otherwise, the
-blunt version: set day `3` to `[11, 22]` in `create-checkout`, redeploy, and revert
-immediately after Step 9.
+```sql
+insert into app_config (key, value) values ('test_order_token', '<long random string>')
+on conflict (key) do update set value = excluded.value;
+```
+
+Then order via `https://<site>/order.html?test=<the same value>`.
+
+That single order rides the **full live path** — real Square charge, real webhook,
+real kitchen ticket — and is loudly marked: order code starts `TEST-` instead of
+`LM-`, and the notes carry `[SYSTEM TEST ORDER]`. It skips **nothing** except the
+opening-hours refusal. Public traffic without the token stays refused exactly as
+before, and in demo mode the token does nothing at all.
+
+Generate a fresh random value; never reuse one. It lives only in `app_config` —
+this repo is publicly served, so no secret can live in code.
 
 ## Step 8 — One real order, on a real card
 
@@ -169,36 +180,53 @@ Must read:
 Then confirm the ticket appears on the kitchen screen, and that the order email
 arrives **without** a `[TEST]` prefix.
 
-## Step 9 — Refund it, and revert the hours
+## Step 9 — Refund it, and delete the test token
 
 Refund in **Square Dashboard → Transactions**. Not on the tablet — cancelling a
 ticket does **not** return money.
 
-Then revert Step 7 and **see the closed message with your own eyes**: try to order
-on the site; it must say *"We're closed right now — online ordering opens with the
-kitchen."* If it takes the order, the revert did not deploy. Do not leave until
-you have seen that message.
+Then remove the unlock:
+
+```sql
+delete from app_config where key = 'test_order_token';
+```
+
+Confirm it is gone before you walk away:
+
+```sql
+select count(*) as token_rows from app_config where key = 'test_order_token';
+```
+
+`0` is the only acceptable answer. While that row exists, anyone holding the value
+can place a real order outside opening hours.
 
 ## Step 10 — ABORT
 
 Abort if: Step 0 does not return 503 · Step 6 reads false and you cannot fix it
-there · Step 8 shows `demo = true` · Step 8 stays `pending` past a minute · you
-cannot confirm the Step 9 revert.
+there · Step 8 shows `demo = true` · Step 8 stays `pending` past a minute.
 
-**How to abort safely — this changed with the Step 0 deploy.** Blanking the access
-token alone now leaves the site **503, ordering offline**. To return it to a working
-demo-mode site, blank the *provider*:
+**How to abort:**
 
 ```sql
-update app_config set value = '' where key = 'payment_provider';
+update app_config set value = '' where key = 'square_access_token';
 ```
 
-That makes the system stop believing it should be live, so it serves demo mode —
-charging nobody — while you sort things out. Then revert Step 7's hours.
+**Stop there.** The site returns 503 and takes no money. Offline is the goal, not
+a side effect — aborting means stop charging cards, and a 503 does that instantly
+and unambiguously.
+
+Then delete the test token (Step 9) if you set one.
+
+> **Do not blank `payment_provider`.** An earlier draft of this page said to, and it
+> was wrong in both directions. With the credentials already pasted, blanking it
+> skips every refusal guard while `squareReady` stays true — the site remains **fully
+> live and keeps charging real cards**, having removed only the guard. Blank the
+> token as well and you land in demo mode instead: orders insert as `paid` for `$0`
+> and print real tickets for food nobody paid for. Neither is an abort.
+>
+> `payment_provider` must not be blanked at any point on Wednesday.
 
 Aborting costs a day. Going live half-configured costs Kareem real food.
-
----
 
 ## Known gaps he is accepting on day one
 
@@ -233,6 +261,7 @@ State these to Kareem rather than letting him find them.
 ## The one line to remember
 
 > Deploy and see the **503** → grants → Resend → all three values → gate reads **true**
-> → real order flips to **paid**, not just `demo = false` → refund in **Square** →
-> revert the hours and **see the closed message**.
-> Abort by blanking `payment_provider`, not the token.
+> → test token in → real order flips to **paid**, not just `demo = false` → refund in
+> **Square** → **delete the test token**.
+>
+> Abort = blank the **access token** and stop at the 503. Never blank `payment_provider`.
