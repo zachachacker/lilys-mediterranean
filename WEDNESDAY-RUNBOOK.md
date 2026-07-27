@@ -1,11 +1,9 @@
 # Wednesday go-live — the only page you need at the counter
 
-Follow this top to bottom. Do not skip the check in Step 4; it is the one that
-stops you giving food away. If anything reads wrong, **Step 7 is the abort** and
-nothing is lost by using it.
+Follow this top to bottom. **Step 0 must succeed before anything else means what it
+says.** If anything reads wrong, Step 10 is the abort and nothing is lost by using it.
 
-**Wednesday is Lily's closed day.** That matters — see Step 5. It is handled, but
-it is not optional.
+**Wednesday is Lily's closed day.** Handled in Step 7 — not optional.
 
 ---
 
@@ -15,26 +13,74 @@ it is not optional.
 
 1. `square_access_token` — Square Dashboard → Developer → your app → **Production**
 2. `square_location_id` — same screen
-3. `square_webhook_signature_key` — Square Dashboard → Developer → **Webhooks**, after
-   adding the endpoint in Step 2
+3. `square_webhook_signature_key` — from Step 3, after adding the webhook endpoint
 
 **From you:**
 
-4. The **real domain** you want customers on (e.g. `https://lilysmediterranean.com`),
-   if the domain is cutting over the same day
-5. A **Resend API key** + the email that should receive order alerts
-   (free account at resend.com, 2 minutes) — see Step 6 for why this matters
+4. The **real domain** for `site_url`, if the domain cuts over the same day
+5. A **Resend API key** and the email that should receive order alerts
+   (free at resend.com, ~2 minutes) — **get this before you travel**, it is Step 2
+   and it is the alarm that catches the two worst mistakes
 
-**Already done, nothing to do:**
-
-- Menu is synced — 81 items, all orderable, prices verified against the printed menu
-- `payment_provider` is already set to `square`
-- Site, ordering, kitchen screen, print menus all built and tested
-- Nothing is deployed on anything of Kareem's yet
+**Already done, nothing to do:** menu synced (81 items, prices verified against the
+printed menu), `payment_provider` already `square`, site/ordering/kitchen screen/print
+menus all built and tested, nothing yet deployed on anything of Kareem's.
 
 ---
 
-## Step 1 — Register the webhook in Square
+## Step 0 — Deploy the fixed checkout, and prove it landed
+
+Deploy `create-checkout` (commit `e403f71`). Until this is live, a half-finished
+credential paste **silently serves demo mode** — a site that looks completely live
+and charges nobody. After it, the same mistake **refuses loudly with a 503** instead.
+
+Everything below assumes the fixed version is live. **Prove it before continuing:**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST \
+  "https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1/create-checkout" \
+  -H "Authorization: Bearer <anon key from data.js>" -H "Content-Type: application/json" \
+  -d '{"items":[],"name":"Deploy probe","phone":"3213124444"}'
+```
+
+- **`503`** → fixed version is live. Continue. (Ordering is now *down* until Step 5 —
+  that is expected and it is why this is the same morning, not earlier.)
+- **`400`** → old version still live. The deploy did not take. **Do not continue.**
+
+This probe creates no order either way.
+
+## Step 1 — Revoke the public write grants (before any SQL-editor work)
+
+Do this *before* you start pasting, not after — it protects the session in which a
+mistake would happen.
+
+```sql
+revoke insert, update, delete, truncate on public.orders     from anon, authenticated;
+revoke insert, update, delete, truncate on public.app_config from anon, authenticated;
+revoke insert, update, delete, truncate on public.menu_items from anon, authenticated;
+revoke select on public.orders, public.app_config from anon, authenticated;
+```
+
+Safe: nothing in the browser touches these tables directly — every read and write
+goes through an Edge Function on the service role. Verified.
+
+## Step 2 — Connect Resend (before the credentials, deliberately)
+
+```sql
+update app_config set value = 're_…'          where key = 'resend_api_key';
+update app_config set value = 'you@email.com'  where key = 'notify_email';
+```
+
+**Why this comes first.** The per-order email prefixes its subject with `[TEST]`
+whenever the order is a demo order. That makes it the one *automatic* detector of
+both disasters: if you are accidentally still in demo mode, the alarm literally
+arrives in your inbox saying `[TEST]`. Connect it afterwards and no alarm exists
+during the exact window the system is most likely to be half-configured.
+
+Use **your own** email first — until a sending domain is verified, Resend only
+delivers to the account owner.
+
+## Step 3 — Register the webhook in Square
 
 Square Dashboard → Developer → Webhooks → Add endpoint.
 
@@ -43,16 +89,14 @@ Square Dashboard → Developer → Webhooks → Add endpoint.
 - Events: `payment.created` **and** `payment.updated`
 - Save, then copy the **Signature key**
 
-> The signature is computed over **the URL plus the body**. One wrong character —
-> a trailing slash, `http` instead of `https` — and every real payment fails
-> verification while the customer's card is still charged. If Square displays a
-> different URL to the one above, stop and set `app_config.square_webhook_url` to
-> the exact string Square shows.
+> The signature is computed over **the URL plus the body**. One wrong character — a
+> trailing slash, `http` for `https` — and every real payment fails verification
+> while the customer's card is still charged. If Square shows a different URL,
+> stop and set `app_config.square_webhook_url` to exactly what Square displays.
 
-## Step 2 — Paste all three values, in one sitting
+## Step 4 — Paste all three values, in one sitting
 
-Supabase → SQL Editor. **Do not stop halfway.** A half-finished paste is the
-single most dangerous state this system has.
+**Do not stop halfway.**
 
 ```sql
 update app_config set value = '…access token…'   where key = 'square_access_token';
@@ -60,19 +104,22 @@ update app_config set value = '…location id…'    where key = 'square_locatio
 update app_config set value = '…signature key…'  where key = 'square_webhook_signature_key';
 ```
 
-## Step 3 — Point the site at the real domain
+All three are required. The signature key is not optional paperwork — without it the
+webhook rejects every delivery, so cards get charged while orders sit `pending`
+forever, invisible to the kitchen.
 
-**Do this in the same sitting as Step 2 if the domain is going live today.**
+## Step 5 — Point the site at the real domain
+
 Square sends the customer here after they pay. Miss it and every paying customer
-lands on the GitHub URL for their receipt — it looks broken.
+lands on the GitHub URL for their receipt.
 
 ```sql
 update app_config set value = 'https://lilysmediterranean.com' where key = 'site_url';
 ```
 
-No trailing slash. Skip this step only if the domain is *not* cutting over today.
+No trailing slash. Skip only if the domain is not cutting over today.
 
-## Step 4 — THE GATE. Run this and read it.
+## Step 6 — THE GATE. Run it and read it.
 
 ```sql
 select
@@ -86,47 +133,24 @@ from (
 ```
 
 - `all_three_set = true` → continue
-- `all_three_set = false` → **STOP.** `still_missing` names what to go back and paste.
+- `all_three_set = false` → **STOP.** `still_missing` names what to paste. With Step 0
+  deployed the site is refusing orders with a 503 right now, so no customer is being
+  harmed — but nobody can order either. Fix it or abort.
 
-> Why this is the gate and not a formality: if any one of the three is missing,
-> the code resolves to demo mode and the "refuse loudly" guard is **skipped**,
-> because that guard only runs when the system already believes it is live.
-> Verified in `create-checkout` — a half-set config produces a site that looks
-> completely live and charges nobody. There is no error and no warning.
+## Step 7 — Let your test order through on a closed day
 
-## Step 5 — Open Wednesday temporarily (closed-day workaround)
-
-Real orders are refused outside opening hours (`create-checkout` returns 409), and
-**Wednesday is `null` in the hours table**. Without this, your own test card is
+Real orders are refused outside opening hours and **Wednesday is closed**
+(`HOURS` day 3 is `null` in `create-checkout`). Without this, your own test card is
 refused at the counter.
 
-`supabase/functions/create-checkout/index.ts`, line ~16 — change day `3`:
+*A narrower mechanism may replace this — one that lets your test through without
+opening the shop to the public. If it has landed, use that instead.* Otherwise, the
+blunt version: set day `3` to `[11, 22]` in `create-checkout`, redeploy, and revert
+immediately after Step 9.
 
-```ts
-// BEFORE
-const HOURS: Record<number, [number, number] | null> = { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] };
-// AFTER — go-live test only
-const HOURS: Record<number, [number, number] | null> = { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: [11, 22], 4: [11, 22], 5: [11, 23], 6: [11, 23] };
-```
+## Step 8 — One real order, on a real card
 
-Redeploy `create-checkout`. **Revert immediately after Step 6** — change `3` back
-to `null` and redeploy again.
-
-**Verify the revert** before you walk away:
-
-```sql
--- must return the closed-message error, not an order
-select 'run a real order attempt on the site instead' as check_by_hand;
-```
-
-Simplest honest check: try to place an order on the site after reverting. It must
-say *"We're closed right now — online ordering opens with the kitchen."* If it
-takes the order, the revert did not deploy. **Do not leave the counter until you
-have seen that message.**
-
-## Step 6 — One real order, on a real card
-
-Place the smallest real item as a genuine order and pay it.
+Smallest real item, paid with a real card.
 
 ```sql
 select code, status, demo, payment_provider, total_cents, provider_order_id, provider_payment_id
@@ -135,35 +159,44 @@ from orders order by created_at desc limit 1;
 
 Must read:
 
-- `demo = false` — **if this says `true`, you are still in demo mode. Go back to Step 2.**
+- `demo = false` — **`true` means you are still in demo mode. Stop, go back to Step 4.**
 - `payment_provider = 'square'`
-- `status = 'paid'` — starts `pending`, flips within seconds when the webhook lands.
-  **Still `pending` after a minute means the webhook URL or signature is wrong** → Step 1.
-- `provider_order_id` and `provider_payment_id` both filled in
+- `status = 'paid'` — **wait for this.** It starts `pending` and flips within seconds
+  when the webhook lands. Seeing `demo = false` is *not* enough; if it stays `pending`
+  past a minute your webhook URL or signature is wrong → Step 3.
+- `provider_order_id` and `provider_payment_id` both filled
 
-Then check the ticket appears on the kitchen screen.
+Then confirm the ticket appears on the kitchen screen, and that the order email
+arrives **without** a `[TEST]` prefix.
 
-**Refund it in the Square Dashboard → Transactions.** Not on the tablet — cancelling
-a ticket on the tablet does **not** return the money.
+## Step 9 — Refund it, and revert the hours
 
-## Step 7 — ABORT
+Refund in **Square Dashboard → Transactions**. Not on the tablet — cancelling a
+ticket does **not** return money.
 
-Abort if **any** of these is true:
+Then revert Step 7 and **see the closed message with your own eyes**: try to order
+on the site; it must say *"We're closed right now — online ordering opens with the
+kitchen."* If it takes the order, the revert did not deploy. Do not leave until
+you have seen that message.
 
-- Step 4 reads `all_three_set = false` and you cannot fix it there and then
-- Step 6 shows `demo = true`
-- Step 6 stays `pending` for more than a minute
-- You cannot confirm the Step 5 revert
+## Step 10 — ABORT
 
-**How to abort safely:** blank the Square token. That returns the system to demo
-mode, where it charges nobody, and no customer can be harmed while you sort it out.
+Abort if: Step 0 does not return 503 · Step 6 reads false and you cannot fix it
+there · Step 8 shows `demo = true` · Step 8 stays `pending` past a minute · you
+cannot confirm the Step 9 revert.
+
+**How to abort safely — this changed with the Step 0 deploy.** Blanking the access
+token alone now leaves the site **503, ordering offline**. To return it to a working
+demo-mode site, blank the *provider*:
 
 ```sql
-update app_config set value = '' where key = 'square_access_token';
+update app_config set value = '' where key = 'payment_provider';
 ```
 
-Then revert the Wednesday hours change. Aborting costs you a day. Going live
-half-configured costs Kareem real food, and it is invisible while it happens.
+That makes the system stop believing it should be live, so it serves demo mode —
+charging nobody — while you sort things out. Then revert Step 7's hours.
+
+Aborting costs a day. Going live half-configured costs Kareem real food.
 
 ---
 
@@ -172,35 +205,34 @@ half-configured costs Kareem real food, and it is invisible while it happens.
 State these to Kareem rather than letting him find them.
 
 1. **No automatic payment recovery on Square.** The 15-minute reconcile job only
-   understands Stripe (it filters on `stripe_session_id`, which Square orders do
-   not have). It cannot damage Square orders — it simply never sees them. If a
-   webhook is ever missed, nothing sweeps it up. Watch for orders stuck `pending`:
+   understands Stripe — it filters on `stripe_session_id`, which Square orders never
+   have, so it cannot damage them but never examines them either. If a webhook is
+   ever missed, nothing sweeps it up. Watch for:
    ```sql
    select count(*) from orders where status='pending' and created_at < now() - interval '15 minutes';
    ```
-   Anything above zero for long means money is landing without orders confirming.
+   Above zero for long means money is landing without orders confirming.
 
-   *Decision: not fixing this before Wednesday.* Writing and deploying a Square
-   reconciliation path two days out, untested against real Square traffic, adds
-   more risk than the gap it closes. Revisit once the webhook has proven itself
-   over a week of real orders.
+   *Decision: not building this before Wednesday.* An untested recovery path deployed
+   two days out adds more risk than the gap it closes. Revisit once the webhook has
+   proven itself over a week of real traffic.
 
-2. **A refund in Square is invisible here.** The order still reads `paid` forever.
-   Square's dashboard is the source of truth for refunds, not the kitchen screen.
+2. **A refund in Square is invisible here.** The order reads `paid` forever. Square's
+   dashboard is the source of truth for refunds, not the kitchen screen.
 
 3. **A cancelled order can still be paid.** If the kitchen cancels a ticket and the
-   customer then pays the link, Square takes the money and the order stays
-   cancelled. If anyone ever says "I paid and you have no order" — check Square →
-   Transactions directly.
+   customer then pays the link, Square takes the money and the order stays cancelled.
+   If anyone says "I paid and you have no order" — check Square → Transactions.
 
-4. **Order emails are off** unless Step 5's Resend key is set. Without it the kitchen
-   tablet is the *only* place an order appears. If it sleeps, an order can be missed
-   with nothing to catch it. Five minutes to set up; strongly worth doing.
+4. **The kitchen board holds real customer names and phone numbers** from the first
+   real order. Do not screenshot it, share the screen, or show it at a door once live.
+   Use the fake-ticket captures in `~/Projects/demos/kitchen-capture/` instead.
 
 ---
 
 ## The one line to remember
 
-> All three values in → run the gate → `demo = false` on a real order → refund it in
-> **Square** → revert the Wednesday hours and **see the closed message with your own eyes**.
-> If `demo = true` anywhere, you are giving food away.
+> Deploy and see the **503** → grants → Resend → all three values → gate reads **true**
+> → real order flips to **paid**, not just `demo = false` → refund in **Square** →
+> revert the hours and **see the closed message**.
+> Abort by blanking `payment_provider`, not the token.
