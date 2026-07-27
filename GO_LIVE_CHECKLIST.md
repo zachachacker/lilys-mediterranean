@@ -71,6 +71,18 @@ update app_config set value = '…signature key…'      where key = 'square_web
 -- update app_config set value = '…exact url…'       where key = 'square_webhook_url';
 ```
 
+## Step 2b — Point `site_url` at the real domain (easy to forget)
+
+Square sends the customer to `site_url` after they pay (`create-checkout:181`).
+If the production domain goes live and this still holds the GitHub URL, every
+paying customer lands on the wrong host for their receipt.
+
+```sql
+update app_config set value = 'https://lilysmediterranean.com' where key = 'site_url';
+```
+
+No trailing slash. Skip only if the domain is not cutting over yet.
+
 ## Step 3 — Run the ALL-THREE check (this is the gate)
 
 Paste this into the SQL Editor. It shows only whether each value is set — never
@@ -96,6 +108,9 @@ from (
 
 1. During opening hours (real orders are refused when closed), go to the live
    order page and place the smallest real item as a genuine order.
+   > **Lily's is CLOSED on Wednesdays** (`HOURS` day 3 is `null`). On a Wednesday
+   > this step is impossible without temporarily opening that day in
+   > `create-checkout` and reverting straight after — see `WEDNESDAY-RUNBOOK.md`.
 2. Pay it with a **real card** (a $5-ish item; you will refund it in Step 5).
 3. Check the database:
 
@@ -137,8 +152,9 @@ person watching for them:
 1. **A cancelled order can still be paid.** If a customer opens the payment link,
    the kitchen cancels the ticket, and the customer then pays, Square takes the
    money but the order stays cancelled and the payment is silently dropped — and
-   nothing sweeps Square to catch it (the automatic recovery job only understands
-   Stripe, not Square). If a customer ever says "I paid but you have no order,"
+   nothing sweeps Square to catch it. The recovery job only understands Stripe —
+   `reconcile` filters on `stripe_session_id`, which Square orders never have, so
+   it cannot damage them but never examines them either. If a customer ever says "I paid but you have no order,"
    check Square → Transactions directly.
 
 2. **A refund in Square is invisible to this app.** The order will still read
