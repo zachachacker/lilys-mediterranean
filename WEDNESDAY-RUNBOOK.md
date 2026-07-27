@@ -241,6 +241,13 @@ Then delete the test token (Step 9) if you set one.
 > and print real tickets for food nobody paid for. Neither is an abort.
 >
 > `payment_provider` must not be blanked at any point on Wednesday.
+>
+> It is worth knowing *why* it looks like the right lever, so nobody re-derives it:
+> blanking the provider genuinely does return the site to demo mode — **but only
+> while all three credential rows are still empty.** That is its state today, which
+> is exactly why it reads as safe and tests as safe. The moment a single credential
+> exists it inverts into the two failures above. It is a pre-credential convenience,
+> never a safety lever.
 
 Aborting costs a day. Going live half-configured costs Kareem real food.
 
