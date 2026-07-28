@@ -97,9 +97,11 @@ update app_config set value = 'you@email.com'  where key = 'notify_email';
   value genuinely dropped once Step 0 shipped — the fixed code now refuses a
   half-config loudly with a 503 instead of pretending — so the gate at Step 6 and the
   `demo = false` check at Step 8 cover the same ground manually.
-- **A missed webhook still has no automatic signal.** This one is *not* covered
-  elsewhere. If Square's delivery fails, the order sits `pending`, invisible, and
-  nothing tells you. The manual check is in the day-one gaps below.
+- **The daily digest** goes with it.
+
+*Not affected, despite appearances:* a missed webhook. The email fires when an order
+**becomes paid** — a missed webhook means it never becomes paid, so no email would
+have fired either way. That exposure is gap 1 and it is unchanged by this decision.
 
 ## Step 3 — Register the webhook in Square
 
@@ -317,13 +319,17 @@ State these to Kareem rather than letting him find them.
    real order. Do not screenshot it, share the screen, or show it at a door once live.
    Use the fake-ticket captures in `~/Projects/demos/kitchen-capture/` instead.
 
-5. **No automatic order alarm at all** — email alerts are deferred (Step 2). The
-   tablet is the only surface. Combined with gap 1, a missed webhook is silent in both
-   directions: nothing sweeps it, and nothing emails you. Check by hand at the end of
-   any busy service:
-   ```sql
-   select count(*) from orders where status='pending' and created_at < now() - interval '15 minutes';
-   ```
+5. **The kitchen tablet is the only place orders appear** — email alerts are
+   deferred (Step 2), so there is no backup delivery channel and no daily digest.
+
+   **Self-recovering, and worth knowing why:** the board has no time bound on live
+   orders (`paid`, `making`, `ready` persist until someone advances them; only
+   finished ones age off after 12 hours). An order that arrives while the tablet is
+   asleep or offline is still sitting there when it wakes. The customer waits longer;
+   nothing is lost.
+
+   **Say this to Kareem rather than letting him discover it:** *"The tablet is the
+   only place orders show up, so someone needs to be watching it during service."*
 
 ---
 
