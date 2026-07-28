@@ -19,9 +19,7 @@ no code edit, no redeploy.
 **From you:**
 
 4. The **real domain** for `site_url`, if the domain cuts over the same day
-5. A **Resend API key** and the email that should receive order alerts
-   (free at resend.com, ~2 minutes) — **get this before you travel**, it is Step 2
-   and it is the alarm that catches the two worst mistakes
+5. *(Nothing else. Email alerts are deferred — see Step 2.)*
 
 **Already done, nothing to do:** menu synced (81 items, prices verified against the
 printed menu), `payment_provider` already `square`, site/ordering/kitchen screen/print
@@ -73,21 +71,35 @@ revoke select on public.orders, public.app_config from anon, authenticated;
 Safe: nothing in the browser touches these tables directly — every read and write
 goes through an Edge Function on the service role. Verified.
 
-## Step 2 — Connect Resend (before the credentials, deliberately)
+## Step 2 — Email alerts — DEFERRED, skip today
+
+Zachary's call: order-alert emails are off the critical path for Wednesday. **Do
+nothing at this step.** The step number is kept so every reference below still points
+where it says it does.
+
+*(The step numbers are deliberately not re-flowed. Renumbering a page like this is how
+cross-references go stale, and stale pointers on this page have already caused two
+defects.)*
+
+To switch it on later — a five-minute job, any day:
 
 ```sql
 update app_config set value = 're_…'          where key = 'resend_api_key';
 update app_config set value = 'you@email.com'  where key = 'notify_email';
 ```
 
-**Why this comes first.** The per-order email prefixes its subject with `[TEST]`
-whenever the order is a demo order. That makes it the one *automatic* detector of
-both disasters: if you are accidentally still in demo mode, the alarm literally
-arrives in your inbox saying `[TEST]`. Connect it afterwards and no alarm exists
-during the exact window the system is most likely to be half-configured.
+**What you give up by deferring** — stated plainly, not as an argument to reverse it:
 
-Use **your own** email first — until a sending domain is verified, Resend only
-delivers to the account owner.
+- **The kitchen tablet is the only place an order appears.** If it sleeps, loses
+  Wi-Fi, or nobody is looking, an order can be missed with nothing to catch it.
+- **No `[TEST]`-subject detector.** The per-order email prefixes `[TEST]` on demo
+  orders, which would have been an automatic "you are still in demo mode" alarm. Its
+  value genuinely dropped once Step 0 shipped — the fixed code now refuses a
+  half-config loudly with a 503 instead of pretending — so the gate at Step 6 and the
+  `demo = false` check at Step 8 cover the same ground manually.
+- **A missed webhook still has no automatic signal.** This one is *not* covered
+  elsewhere. If Square's delivery fails, the order sits `pending`, invisible, and
+  nothing tells you. The manual check is in the day-one gaps below.
 
 ## Step 3 — Register the webhook in Square
 
@@ -305,11 +317,19 @@ State these to Kareem rather than letting him find them.
    real order. Do not screenshot it, share the screen, or show it at a door once live.
    Use the fake-ticket captures in `~/Projects/demos/kitchen-capture/` instead.
 
+5. **No automatic order alarm at all** — email alerts are deferred (Step 2). The
+   tablet is the only surface. Combined with gap 1, a missed webhook is silent in both
+   directions: nothing sweeps it, and nothing emails you. Check by hand at the end of
+   any busy service:
+   ```sql
+   select count(*) from orders where status='pending' and created_at < now() - interval '15 minutes';
+   ```
+
 ---
 
 ## The one line to remember
 
-> Deploy and see the **503** → grants → Resend → all three values → gate reads **true**
+> Deploy and see the **503** → grants → all three values → gate reads **true**
 > → test token in → real order flips to **paid**, not just `demo = false` → refund in
 > **Square** → **delete the test token**.
 >
