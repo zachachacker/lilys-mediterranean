@@ -33,12 +33,15 @@ Deploy `create-checkout` (commit `e403f71`). Until this is live, a half-finished
 credential paste **silently serves demo mode** — a site that looks completely live
 and charges nobody. After it, the same mistake **refuses loudly with a 503** instead.
 
-Everything below assumes the fixed version is live. **Prove it before continuing:**
+Everything below assumes the fixed version is live. **Prove it before continuing** —
+this is copy-pasteable as-is; the key in it is the public anon key already shipped in
+`data.js`, not a secret:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST \
   "https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1/create-checkout" \
-  -H "Authorization: Bearer <anon key from data.js>" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5dHZmcXlkYWh3c3JjZGJudmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDk3NDYsImV4cCI6MjA5OTc4NTc0Nn0.taAfp5xGFYdxyNxeszmxEt5Me-PPNfUbXfs4suLvXt0" \
+  -H "Content-Type: application/json" \
   -d '{"items":[{"id":"deploy-probe-not-a-real-item","qty":1}],"name":"Deploy probe","phone":"3213124444"}'
 ```
 
