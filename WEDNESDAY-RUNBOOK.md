@@ -131,9 +131,10 @@ update app_config set value = '…signature key…'  where key = 'square_webhook
 ```
 
 **Order matters if you are ever setting `payment_provider` in the same batch: set
-the provider FIRST, credentials after.** Provider blank while any credential is set
-skips every refusal guard and falls silently to demo mode — orders `paid` for `$0`
-on a site that looks live. Never leave that combination on the table, even briefly.
+the provider FIRST, credentials after.** A blank provider skips every refusal guard.
+With credentials **partly** set that falls silently to demo mode; with **all three**
+set it goes fully live and charges cards. Neither is what you want. Never leave that
+combination on the table, even briefly.
 
 All three are required. The signature key is not optional paperwork — without it the
 webhook rejects every delivery, so cards get charged while orders sit `pending`
@@ -199,11 +200,13 @@ stripped before the order is saved, so the secret never reaches the database or
 the kitchen screen.
 
 > **If it is refused with "We're closed right now", the token did not match.** A typo
-> looks exactly like the bypass not working. Check the notes line starts with `#test:`
-> with no leading space, and that the value matches the row exactly. A wrong token
-> fails safe — it never creates a real order by accident, and the `#test:` line is
-> stripped from the notes whether the value matched or not, so a typo never ends up
-> printed on the kitchen ticket either.
+> looks exactly like the bypass not working. Check the line starts with `#test:` and
+> that the value matches the row exactly.
+>
+> A wrong **value** with the right `#test:` prefix is stripped and never reaches the
+> ticket. A mistyped **prefix** isn't recognised at all — it's treated as an ordinary
+> note, so what you typed would be stored and printed. On a closed day the order is
+> refused before it's saved; on an open day it isn't.
 
 Generate a fresh value; never reuse one. It lives only in `app_config` — this repo
 is publicly served, so no secret can live in code.
