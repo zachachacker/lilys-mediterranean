@@ -1,10 +1,21 @@
-# Wednesday go-live — the only page you need at the counter
+# Go-live — the only page you need at the counter
+
+*(Filename still says Wednesday for historical reasons — other documents point at it.
+The procedure below works on any day.)*
 
 Follow this top to bottom. **Step 0 must succeed before anything else means what it
 says.** If anything reads wrong, Step 10 is the abort and nothing is lost by using it.
 
-**Wednesday is Lily's closed day.** Handled in Step 7 with a one-off token —
-no code edit, no redeploy.
+**First, check the clock in Florida.** Real orders are refused outside opening hours,
+so whether you need Step 7 depends entirely on when you test:
+
+| Florida local time | Lily's | Step 7 |
+|---|---|---|
+| Mon, Tue, Thu 11:00–22:00 · Fri, Sat 11:00–23:00 · Sun 11:00–22:00 | **open** | **skip it** |
+| any Wednesday, or outside those hours | **closed** | **required** |
+
+Florida is 5 hours behind the UK, 6 behind Spain. A 20:00 UK call is 15:00 in
+Indialantic — open, so no token needed.
 
 ---
 
@@ -169,10 +180,14 @@ from (
   deployed the site is refusing orders with a 503 right now, so no customer is being
   harmed — but nobody can order either. Fix it or abort.
 
-## Step 7 — Unlock your test order on a closed day
+## Step 7 — Unlock your test order (ONLY if the kitchen is closed)
 
-Real orders are refused when the kitchen is closed, and **Wednesday is closed**.
-No code edit, no redeploy. Set a secret, use it once, delete it.
+**Check the table at the top first.** If Lily's is open when you place the test order,
+**skip this entire step** — a normal order goes straight through, and Step 9 loses its
+token deletion too. This step exists only for a closed day or out-of-hours test.
+
+Real orders are refused when the kitchen is closed. No code edit, no redeploy: set a
+secret, use it once, delete it.
 
 **1. Set the token** (any long random string, **no spaces**):
 
@@ -237,7 +252,7 @@ arrives **without** a `[TEST]` prefix.
 Refund in **Square Dashboard → Transactions**. Not on the tablet — cancelling a
 ticket does **not** return money.
 
-Then remove the unlock:
+Then remove the unlock — **only if you used Step 7**; skip if the kitchen was open:
 
 ```sql
 delete from app_config where key = 'test_order_token';
