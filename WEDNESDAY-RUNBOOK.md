@@ -14,8 +14,15 @@ so whether you need Step 7 depends entirely on when you test:
 | Mon, Tue, Thu 11:00–22:00 · Fri, Sat 11:00–23:00 · Sun 11:00–22:00 | **open** | **skip it** |
 | any Wednesday, or outside those hours | **closed** | **required** |
 
-Florida is 5 hours behind the UK, 6 behind Spain. A 20:00 UK call is 15:00 in
-Indialantic — open, so no token needed.
+**Don't convert in your head — the day changes too, not just the hour.** Between
+midnight and ~06:00 where you are, Florida is still on *yesterday*. Get both from one
+place:
+
+```bash
+TZ=America/New_York date "+%A %H:%M"
+```
+
+Use that weekday and that time in the table above, and nothing else.
 
 ---
 
@@ -218,6 +225,9 @@ the kitchen screen.
 > looks exactly like the bypass not working. Check the line starts with `#test:` and
 > that the value matches the row exactly.
 >
+> **If you skipped Step 7 and see this, you did not get a token wrong — you got the
+> day wrong.** Re-run the clock check at the top.
+>
 > A wrong **value** with the right `#test:` prefix is stripped and never reaches the
 > ticket. A mistyped **prefix** isn't recognised at all — it's treated as an ordinary
 > note, so what you typed would be stored and printed. On a closed day the order is
@@ -260,17 +270,31 @@ delete from app_config where key = 'test_order_token';
 
 Confirm it is gone before you walk away:
 
+**Run this check every time, even if you skipped Step 7:**
+
 ```sql
 select count(*) as token_rows from app_config where key = 'test_order_token';
 ```
 
-`0` is the only acceptable answer. While that row exists, anyone holding the value
-can place a real order outside opening hours.
+`0` is the only acceptable answer — **stop if it isn't.** This is unconditional on
+purpose. A row left behind by an earlier, abandoned attempt grants nothing while the
+kitchen is open, so nothing ever reveals it — but it grants real out-of-hours ordering
+every night from close until 11:00, and all day Wednesday, indefinitely. The one
+moment you would notice is this check, so it runs whether or not you set a token
+today.
 
 **Then prove it functionally, not just by counting rows.** Attempt one ordinary
 out-of-hours order on the site — no token. It must be refused with *"We're closed
 right now."* If it goes through, the bypass is still open. **Do not walk away until
 you have seen that refusal.**
+
+> **Worth knowing, and it's your call.** A closed day was quietly doing security work
+> nobody designed: between pasting the credentials and confirming the test order,
+> nobody *except* the token holder could place a real order. On an open day that lock
+> is gone — from Step 4 onward the site takes real money from anyone with the URL, for
+> the whole window. Running the sequence before 11:00 Florida time restores it for
+> free and keeps Steps 7 and 9, which are already built and reviewed. Or accept the
+> window: it is short, and the URL is not public yet.
 
 ## Step 10 — ABORT
 
