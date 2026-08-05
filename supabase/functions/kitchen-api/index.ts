@@ -47,11 +47,47 @@ Deno.serve(async (req) => {
     return json({ error: "Wrong kitchen key" }, 401);
   }
 
-  let body: { action?: string; id?: string; to?: string };
+  let body: { action?: string; id?: string; to?: string; available?: boolean };
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON" }, 400);
+  }
+
+  /* ---- stock control ---------------------------------------------------
+     86'ing an item. The switch is menu_items.orderable, which create-checkout
+     already enforces server-side — this only exposes it to the tablet. */
+  if (body.action === "stock") {
+    const { data, error } = await db
+      .from("menu_items")
+      .select("id,name,category,orderable")
+      .order("category")
+      .order("name");
+    if (error) {
+      console.error("stock list failed:", error.message);
+      return json({ error: "Temporarily unavailable" }, 503);
+    }
+    return json({ items: data ?? [] });
+  }
+
+  if (body.action === "set_stock") {
+    const id = typeof body.id === "string" ? body.id : "";
+    if (!id || typeof body.available !== "boolean") {
+      return json({ error: "Bad request" }, 400);
+    }
+    // .select() so a bad id is a 404 rather than a silent no-op — the tablet
+    // must never show a toggle as flipped when nothing changed
+    const { data, error } = await db
+      .from("menu_items")
+      .update({ orderable: body.available })
+      .eq("id", id)
+      .select("id,orderable");
+    if (error) {
+      console.error("set_stock failed:", error.message);
+      return json({ error: "Temporarily unavailable" }, 503);
+    }
+    if (!(data ?? []).length) return json({ error: "Unknown item" }, 404);
+    return json({ ok: true, id, available: data[0].orderable });
   }
 
   if (body.action === "list") {

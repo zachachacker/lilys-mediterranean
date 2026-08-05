@@ -124,7 +124,10 @@
   L.MENU.forEach((cat) =>
     cat.items.forEach(([name, desc, price, tag]) => {
       const cents = parsePrice(price);
-      ITEMS.push({ id: slug(name), name, desc, price, cents, tag, cat: cat.c, orderable: cents !== null });
+      // `orderable` = can be bought online at all (has a fixed price).
+      // `inStock`   = the kitchen hasn't 86'd it today. Fetched below; assume
+      // in stock until told otherwise so a slow network never hides the menu.
+      ITEMS.push({ id: slug(name), name, desc, price, cents, tag, cat: cat.c, orderable: cents !== null, inStock: true });
     })
   );
   const byId = new Map(ITEMS.map((it) => [it.id, it]));
@@ -139,6 +142,54 @@
       if (byId.get(id)?.orderable && Number.isInteger(qty) && qty > 0) cart.set(id, Math.min(qty, 20));
     });
   } catch { /* fresh cart */ }
+
+  /* ---- live availability ------------------------------------------------
+     The kitchen can mark an item out of stock; the server already refuses it
+     at checkout. Without this the customer only finds out after filling a
+     basket, so read the same switch here and grey it out up front.
+     Failure is deliberately silent: if this call fails everything stays
+     purchasable and the server is still the backstop. */
+  async function loadAvailability() {
+    try {
+      const r = await fetch(`${L.ORDERING.supabaseUrl}/rest/v1/menu_items?select=id,orderable`, {
+        headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` },
+      });
+      if (!r.ok) return;
+      const rows = await r.json();
+      if (!Array.isArray(rows)) return;
+      let changed = false;
+      rows.forEach((row) => {
+        const it = byId.get(row.id);
+        if (it && it.inStock !== row.orderable) { it.inStock = !!row.orderable; changed = true; }
+      });
+      // an out-of-stock item already in the basket has to go, and be seen to go
+      let dropped = 0;
+      [...cart.keys()].forEach((id) => {
+        if (byId.get(id) && !byId.get(id).inStock) { cart.delete(id); dropped++; }
+      });
+      if (dropped) {
+        saveCart();
+        showErr(`${dropped} item${dropped > 1 ? "s" : ""} in your basket sold out and ${dropped > 1 ? "have" : "has"} been removed.`);
+      }
+      if (!changed && !dropped) return;
+
+      // patch the rows in place — the menu is built once inline, so there is
+      // no whole-page re-render to call here
+      ITEMS.forEach((it) => {
+        const row = document.querySelector(`.order-item[data-item="${it.id}"]`);
+        if (!row) return;
+        row.classList.toggle("soldout", !it.inStock);
+        const slot = row.querySelector(".oi-slot");
+        if (!slot) return;
+        if (!it.inStock) slot.innerHTML = `<span class="oi-soldout">Sold out today</span>`;
+        else if (it.orderable && !slot.querySelector(".oi-action")) {
+          slot.innerHTML = `<span class="oi-action" data-id="${it.id}"></span>`;
+        }
+      });
+      renderActions();
+      renderCart();
+    } catch { /* offline — server still refuses at checkout */ }
+  }
   const saveCart = () => localStorage.setItem(CART_KEY, JSON.stringify([...cart]));
 
   const subtotal = () => [...cart].reduce((s, [id, qty]) => s + byId.get(id).cents * qty, 0);
@@ -164,10 +215,12 @@
         const thumb = ph
           ? `<span class="mi-thumb photo"><img loading="lazy" decoding="async" width="58" height="58" src="assets/photos/thumbs/${ph.replace(/\.png$/, ".webp")}" alt=""></span>`
           : `<span class="mi-thumb none" aria-hidden="true"></span>`;
-        const action = it.orderable
+        const action = !it.inStock
+          ? `<span class="oi-soldout">Sold out today</span>`
+          : it.orderable
           ? `<span class="oi-action" data-id="${it.id}"></span>`
           : `<a class="oi-call ink" href="tel:+13213124444">Call to order</a>`;
-        return `<div class="menu-item order-item${ph ? " has-thumb" : ""}" data-item="${it.id}">
+        return `<div class="menu-item order-item${ph ? " has-thumb" : ""}${it.inStock ? "" : " soldout"}" data-item="${it.id}">
           ${thumb}
           <span class="mi-name">${esc(it.name)}${it.tag ? `<span class="tag">${it.tag}</span>` : ""}</span>
           <span class="mi-price">${it.orderable ? money(it.cents) : it.price}</span>
@@ -326,4 +379,11 @@
   });
 
   renderCart();
+
+  // last, so every render helper it calls is already initialised. Also re-run
+  // on wake: a phone left open overnight would otherwise show yesterday's stock.
+  loadAvailability();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") loadAvailability();
+  });
 })();

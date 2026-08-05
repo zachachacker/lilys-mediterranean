@@ -1108,3 +1108,18 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
   content: "Your counter"; display: block; margin-bottom: 0.5rem;
   font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal-ink);
 }
+
+
+/* ---- sold out (kitchen 86'd the item) --------------------------------------
+   Deliberately still legible and still priced: a greyed-out dish people can
+   see is a dish they ask for tomorrow. Only the buy action goes away. */
+.order-item.soldout .mi-name,
+.order-item.soldout .mi-price,
+.order-item.soldout .mi-desc { opacity: 0.45; }
+.order-item.soldout .mi-thumb { opacity: 0.3; filter: grayscale(1); }
+.oi-soldout {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #a8322a; border: 1px solid rgba(168, 50, 42, 0.35);
+  border-radius: 999px; padding: 0.28rem 0.6rem; white-space: nowrap;
+}
