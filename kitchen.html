@@ -214,6 +214,31 @@
     .k-main { grid-template-columns: 1fr; }
     .k-rail { border-left: none; border-top: 1px solid var(--line); min-height: 0; }
   }
+
+  /* ---- 86 sheet ---------------------------------------------------------
+     Overlay, not a view swap — the board stays put underneath. Rows are big
+     because this gets tapped by someone holding a pan. */
+  #kStockWrap { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.62); display:flex; }
+  .k-sheet { margin:auto; width:min(760px, 94vw); max-height:88vh; background:#161a18;
+    border:1px solid rgba(255,255,255,0.14); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; }
+  .k-sheet-head { display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.12); flex:none; }
+  .k-sheet-head h2 { font-size:1.15rem; margin:0; color:#f4f1ea; }
+  .k-sheet-x { background:#2a9d5c; color:#08130c; border:0; border-radius:8px;
+    font-weight:700; font-size:0.95rem; padding:0.6rem 1.3rem; cursor:pointer; }
+  .k-sheet-body { overflow-y:auto; padding:12px 14px 20px; -webkit-overflow-scrolling:touch; }
+  .k-sheet-note { color:#9aa39d; font-size:0.85rem; margin:2px 4px 12px; line-height:1.45; }
+  .k-stock-cat { color:#7f8a84; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase;
+    margin:16px 4px 6px; }
+  .k-stock-row { width:100%; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; background:#1d2320; border:1px solid rgba(255,255,255,0.09); border-radius:10px;
+    padding:0.85rem 1rem; margin-bottom:6px; cursor:pointer; text-align:left; }
+  .k-stock-row .n { color:#f4f1ea; font-size:1rem; }
+  .k-stock-row .s { color:#2a9d5c; font-size:0.78rem; font-weight:700; letter-spacing:0.06em;
+    text-transform:uppercase; white-space:nowrap; }
+  .k-stock-row.off { background:#241a19; border-color:rgba(200,80,70,0.35); }
+  .k-stock-row.off .n { color:#9aa39d; text-decoration:line-through; }
+  .k-stock-row.off .s { color:#d9705f; }
 </style>
 </head>
 <body>

@@ -364,6 +364,7 @@
           <span><i class="k-dot${failCount > 0 ? " err" : ""}"></i></span>
           ${wakeLock && !wakeLock.released ? "" : '<span title="Screen may sleep">☾</span>'}
           <button class="k-tool" id="kSound" title="Test sound">${soundReady() ? "♪" : "🔕"}</button>
+          <button class="k-tool" id="kStock" title="Mark items out of stock">86</button>
           <button class="k-tool" id="kFull" title="Fullscreen" ${document.fullscreenElement ? "hidden" : ""}>⛶</button>
           <span class="k-clock" id="kClock">${clock(new Date())}</span>
         </div>
@@ -396,11 +397,80 @@
   function wireShell() {
     document.getElementById("kSound")?.addEventListener("click", () => { ensureAudio(); setTimeout(() => chime(), 80); });
     document.getElementById("kSoundBanner")?.addEventListener("click", () => ensureAudio());
+    document.getElementById("kStock")?.addEventListener("click", openStock);
     document.getElementById("kFull")?.addEventListener("click", () => document.documentElement.requestFullscreen?.().catch(() => {}));
     document.getElementById("kUndoBtn")?.addEventListener("click", doUndo);
   }
 
   let lastSnapshot = "";
+  /* ---- 86 / stock -------------------------------------------------------
+     An overlay rather than a view swap: the order board must never disappear
+     while someone is mid-service. Availability is menu_items.orderable, the
+     same switch create-checkout enforces and the order page reads. */
+  let stockItems = null;
+
+  async function openStock() {
+    let wrap = document.getElementById("kStockWrap");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.id = "kStockWrap";
+      document.body.appendChild(wrap);
+    }
+    wrap.innerHTML = `<div class="k-sheet"><div class="k-sheet-head">
+        <h2>Out of stock</h2><button class="k-sheet-x" id="kStockX">Done</button>
+      </div><div class="k-sheet-body"><p class="k-none">Loading the menu…</p></div></div>`;
+    document.getElementById("kStockX").addEventListener("click", closeStock);
+    try {
+      const { items } = await call({ action: "stock" });
+      stockItems = items || [];
+      paintStock();
+    } catch (e) {
+      if (e.auth) { closeStock(); logout(e.message); return; }
+      wrap.querySelector(".k-sheet-body").innerHTML =
+        `<p class="k-none">Couldn't load the menu. Check the connection and try again.</p>`;
+    }
+  }
+
+  function closeStock() {
+    document.getElementById("kStockWrap")?.remove();
+    stockItems = null;
+  }
+
+  function paintStock() {
+    const body = document.querySelector("#kStockWrap .k-sheet-body");
+    if (!body) return;
+    const out = stockItems.filter((i) => !i.orderable).length;
+    const cats = [...new Set(stockItems.map((i) => i.category))];
+    body.innerHTML = `
+      <p class="k-sheet-note">${out ? `${out} item${out > 1 ? "s" : ""} marked out of stock.` : "Everything is on."}
+        Tapping an item hides it from the website straight away.</p>
+      ${cats.map((c) => `
+        <div class="k-stock-cat">${esc(c)}</div>
+        ${stockItems.filter((i) => i.category === c).map((i) => `
+          <button class="k-stock-row${i.orderable ? "" : " off"}" data-stock="${esc(i.id)}">
+            <span class="n">${esc(i.name)}</span>
+            <span class="s">${i.orderable ? "On" : "Out of stock"}</span>
+          </button>`).join("")}`).join("")}`;
+    body.querySelectorAll("[data-stock]").forEach((btn) =>
+      btn.addEventListener("click", () => toggleStock(btn.dataset.stock)));
+  }
+
+  async function toggleStock(id) {
+    const it = stockItems?.find((i) => i.id === id);
+    if (!it) return;
+    const want = !it.orderable;
+    it.orderable = want;      // optimistic — a tap must feel instant on a tablet
+    paintStock();
+    try {
+      const r = await call({ action: "set_stock", id, available: want });
+      if (typeof r.available === "boolean" && r.available !== want) { it.orderable = r.available; paintStock(); }
+    } catch (e) {
+      it.orderable = !want;   // put it back; never leave a toggle lying
+      paintStock();
+      if (e.auth) { closeStock(); logout(e.message); }
+    }
+  }
+
   function renderBoard() {
     if (!key) return renderLogin();
     if (!document.getElementById("kBoard")) {
