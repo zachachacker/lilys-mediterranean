@@ -219,3 +219,40 @@ export function decideProvider(opts: {
     status: demo ? "paid" : "pending",
   };
 }
+
+/* ── create-checkout/index.ts — promotions engine ─────────────────────── */
+export type Promo = {
+  id: string; kind: string; label: string;
+  item_id?: string | null; buy_qty?: number | null; free_qty?: number | null;
+  percent?: number | null; min_subtotal_cents?: number | null;
+};
+export type PLine = { id: string; qty: number; unit_cents: number };
+
+export function applyPromotions(lines: PLine[], promos: Promo[]) {
+  const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
+  const applied: { id: string; label: string; cents: number }[] = [];
+  let discount = 0;
+
+  for (const p of promos.filter((x) => x.kind === "bogo")) {
+    const buy = Math.floor(Number(p.buy_qty ?? 0));
+    const free = Math.floor(Number(p.free_qty ?? 0));
+    if (!p.item_id || buy <= 0 || free <= 0 || free > buy) continue;
+    const line = lines.find((l) => l.id === p.item_id);
+    if (!line) continue;
+    const sets = Math.floor(line.qty / buy);
+    const cents = sets * free * line.unit_cents;
+    if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
+  }
+
+  const afterItem = Math.max(0, subtotal - discount);
+  for (const p of promos.filter((x) => x.kind === "percent_over")) {
+    const pct = Number(p.percent ?? 0);
+    const min = Number(p.min_subtotal_cents ?? 0);
+    if (!(pct > 0 && pct <= 100) || afterItem < min || afterItem <= 0) continue;
+    const cents = Math.round((afterItem * pct) / 100);
+    if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
+  }
+
+  discount = Math.min(discount, subtotal);
+  return { subtotal, discount, applied };
+}

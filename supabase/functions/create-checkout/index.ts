@@ -47,6 +47,55 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 type CartLine = { id: string; qty: number };
 
+/* ── promotions ──────────────────────────────────────────────────────────
+   Discounts are computed HERE, on the server, from the same line prices the
+   order is built from. The browser may show a discount but never decides one:
+   whatever it sends is ignored. Two kinds only, matching what Kareem asked
+   for — a general rules engine is not in scope and would be a bigger surface
+   to get wrong on the money path.
+
+     bogo          buy `buy_qty` of one item, the cheapest `free_qty` are free
+     percent_over  `percent` off once the subtotal reaches `min_subtotal_cents`
+
+   Order matters: item-level (bogo) applies first and reduces the subtotal that
+   percent_over is then measured against, so "10% off over $70" is judged on
+   what the customer is actually paying. Discount can never exceed subtotal. */
+type Promo = {
+  id: string; kind: string; label: string;
+  item_id?: string | null; buy_qty?: number | null; free_qty?: number | null;
+  percent?: number | null; min_subtotal_cents?: number | null;
+};
+type PLine = { id: string; qty: number; unit_cents: number };
+
+function applyPromotions(lines: PLine[], promos: Promo[]) {
+  const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
+  const applied: { id: string; label: string; cents: number }[] = [];
+  let discount = 0;
+
+  for (const p of promos.filter((x) => x.kind === "bogo")) {
+    const buy = Math.floor(Number(p.buy_qty ?? 0));
+    const free = Math.floor(Number(p.free_qty ?? 0));
+    if (!p.item_id || buy <= 0 || free <= 0 || free > buy) continue;
+    const line = lines.find((l) => l.id === p.item_id);
+    if (!line) continue;
+    const sets = Math.floor(line.qty / buy);
+    const cents = sets * free * line.unit_cents;
+    if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
+  }
+
+  const afterItem = Math.max(0, subtotal - discount);
+  for (const p of promos.filter((x) => x.kind === "percent_over")) {
+    const pct = Number(p.percent ?? 0);
+    const min = Number(p.min_subtotal_cents ?? 0);
+    if (!(pct > 0 && pct <= 100) || afterItem < min || afterItem <= 0) continue;
+    const cents = Math.round((afterItem * pct) / 100);
+    if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
+  }
+
+  discount = Math.min(discount, subtotal);
+  return { subtotal, discount, applied };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -165,9 +214,28 @@ Deno.serve(async (req) => {
     lines.push({ id: m.id, name: m.name, qty: l.qty, unit_cents: m.price_cents });
   }
 
-  const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
-  const tax = Math.round(subtotal * taxRate);
-  const total = subtotal + tax;
+  // active promotions, read server-side. A failed read must not silently drop
+  // a discount the customer was shown, so it is a hard error rather than [].
+  let promos: Promo[] = [];
+  {
+    const nowIso = new Date().toISOString();
+    const { data, error } = await db
+      .from("promotions")
+      .select("id,kind,label,item_id,buy_qty,free_qty,percent,min_subtotal_cents")
+      .eq("active", true)
+      .or(`starts_at.is.null,starts_at.lte.${nowIso}`)
+      .or(`ends_at.is.null,ends_at.gte.${nowIso}`);
+    if (error) {
+      console.error("promotions read failed:", error.message);
+      return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+    }
+    promos = (data ?? []) as Promo[];
+  }
+
+  const { subtotal, discount, applied } = applyPromotions(lines, promos);
+  // tax on what is actually paid, not the pre-discount figure
+  const tax = Math.round((subtotal - discount) * taxRate);
+  const total = subtotal - discount + tax;
 
   // insert with a fresh code; retry on the (unlikely) code collision
   let order: { id: string; code: string } | null = null;
@@ -184,6 +252,8 @@ Deno.serve(async (req) => {
         notes: testOrder ? `[SYSTEM TEST ORDER] ${notes ?? ""}`.trim() : notes,
         items: lines,
         subtotal_cents: subtotal,
+        discount_cents: discount,
+        discounts: applied.length ? applied : null,
         tax_cents: tax,
         total_cents: total,
         demo,

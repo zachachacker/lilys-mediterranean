@@ -382,6 +382,29 @@
 
   // last, so every render helper it calls is already initialised. Also re-run
   // on wake: a phone left open overnight would otherwise show yesterday's stock.
+  /* ---- offers ------------------------------------------------------------
+     Shows WHAT is on, never the arithmetic. The discount itself is computed
+     once, on the server, from the same prices the order is built from — so
+     there is no second copy of the money logic here to drift out of step with
+     it. The customer sees the real figure on the payment page. */
+  async function loadOffers() {
+    const box = document.getElementById("offers");
+    if (!box) return;
+    try {
+      const r = await fetch(
+        `${L.ORDERING.supabaseUrl}/rest/v1/promotions?select=label&active=eq.true`,
+        { headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` } });
+      if (!r.ok) return;
+      const rows = await r.json();
+      if (!Array.isArray(rows) || !rows.length) return;
+      box.innerHTML = `<div class="offers-t">On right now</div>` +
+        rows.map((o) => `<div class="offer">${esc(o.label)}</div>`).join("") +
+        `<div class="offers-n">Taken off automatically at checkout.</div>`;
+      box.hidden = false;
+    } catch { /* no offers shown; nothing is lost */ }
+  }
+
+  loadOffers();
   loadAvailability();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") loadAvailability();

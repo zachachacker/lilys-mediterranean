@@ -184,3 +184,12 @@ Deno.test("drift: main.js still interpolates menu name/desc WITHOUT esc()", asyn
   );
   assertStringIncludes(mainJs, '<span class="mi-desc">${d}</span>');
 });
+
+Deno.test("drift: create-checkout promotions engine is unchanged", async () => {
+  const src = await read("create-checkout/index.ts");
+  // the two lines that decide money: order of application, and the ceiling
+  assertStringIncludes(src, "const afterItem = Math.max(0, subtotal - discount);");
+  assertStringIncludes(src, "discount = Math.min(discount, subtotal);");
+  // tax must be charged on the discounted amount
+  assertStringIncludes(src, "const tax = Math.round((subtotal - discount) * taxRate);");
+});
