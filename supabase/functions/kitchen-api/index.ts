@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     return json({ error: "Wrong kitchen key" }, 401);
   }
 
-  let body: { action?: string; id?: string; to?: string; available?: boolean };
+  let body: { action?: string; id?: string; to?: string; available?: boolean; active?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -88,6 +88,42 @@ Deno.serve(async (req) => {
     }
     if (!(data ?? []).length) return json({ error: "Unknown item" }, 404);
     return json({ ok: true, id, available: data[0].orderable });
+  }
+
+  /* ---- offers ----------------------------------------------------------
+     Switching a promotion on or off, and nothing else. Creating or editing one
+     deliberately stays off the tablet: a mistyped percentage here comes out of
+     the till on every order that follows, and it would be typed one-handed by
+     someone holding a pan. The shapes are authored once, then switched. */
+  if (body.action === "promos") {
+    const { data, error } = await db
+      .from("promotions")
+      .select("id,kind,label,active,item_id,buy_qty,free_qty,percent,min_subtotal_cents,starts_at,ends_at")
+      .order("kind")
+      .order("label");
+    if (error) {
+      console.error("promos list failed:", error.message);
+      return json({ error: "Temporarily unavailable" }, 503);
+    }
+    return json({ promos: data ?? [], now: new Date().toISOString() });
+  }
+
+  if (body.action === "set_promo") {
+    const id = typeof body.id === "string" ? body.id : "";
+    if (!id || typeof body.active !== "boolean") return json({ error: "Bad request" }, 400);
+    // .select() for the same reason set_stock does it — an unknown id must be a
+    // 404, never a toggle that shows as flipped while nothing changed
+    const { data, error } = await db
+      .from("promotions")
+      .update({ active: body.active })
+      .eq("id", id)
+      .select("id,active");
+    if (error) {
+      console.error("set_promo failed:", error.message);
+      return json({ error: "Temporarily unavailable" }, 503);
+    }
+    if (!(data ?? []).length) return json({ error: "Unknown offer" }, 404);
+    return json({ ok: true, id, active: data[0].active });
   }
 
   if (body.action === "list") {

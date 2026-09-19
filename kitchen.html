@@ -218,7 +218,7 @@
   /* ---- 86 sheet ---------------------------------------------------------
      Overlay, not a view swap — the board stays put underneath. Rows are big
      because this gets tapped by someone holding a pan. */
-  #kStockWrap { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.62); display:flex; }
+  #kStockWrap, #kPromoWrap { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.62); display:flex; }
   .k-sheet { margin:auto; width:min(760px, 94vw); max-height:88vh; background:#161a18;
     border:1px solid rgba(255,255,255,0.14); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; }
   .k-sheet-head { display:flex; align-items:center; justify-content:space-between;
@@ -239,6 +239,21 @@
   .k-stock-row.off { background:#241a19; border-color:rgba(200,80,70,0.35); }
   .k-stock-row.off .n { color:#9aa39d; text-decoration:line-through; }
   .k-stock-row.off .s { color:#d9705f; }
+
+  /* ---- offers sheet -----------------------------------------------------
+     Reuses the 86 sheet's shell. Rows never strike through: an offer that is
+     off is the normal resting state, not a problem to flag. */
+  .k-promo-row { width:100%; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; background:#1d2320; border:1px solid rgba(255,255,255,0.09); border-radius:10px;
+    padding:0.85rem 1rem; margin-bottom:6px; cursor:pointer; text-align:left; }
+  .k-promo-row .t { display:block; color:#f4f1ea; font-size:1rem; }
+  .k-promo-row .d { display:block; color:#9aa39d; font-size:0.8rem; margin-top:3px; line-height:1.35; }
+  .k-promo-row .s { color:#7f8a84; font-size:0.78rem; font-weight:700; letter-spacing:0.06em;
+    text-transform:uppercase; white-space:nowrap; }
+  .k-promo-row.on { border-color:rgba(42,157,92,0.5); }
+  .k-promo-row.on .s { color:#2a9d5c; }
+  .k-promo-row .warn { color:#e0b15c; }
+
 </style>
 </head>
 <body>

@@ -365,6 +365,7 @@
           ${wakeLock && !wakeLock.released ? "" : '<span title="Screen may sleep">☾</span>'}
           <button class="k-tool" id="kSound" title="Test sound">${soundReady() ? "♪" : "🔕"}</button>
           <button class="k-tool" id="kStock" title="Mark items out of stock">86</button>
+          <button class="k-tool" id="kPromo" title="Switch offers on and off">%</button>
           <button class="k-tool" id="kFull" title="Fullscreen" ${document.fullscreenElement ? "hidden" : ""}>⛶</button>
           <span class="k-clock" id="kClock">${clock(new Date())}</span>
         </div>
@@ -398,6 +399,7 @@
     document.getElementById("kSound")?.addEventListener("click", () => { ensureAudio(); setTimeout(() => chime(), 80); });
     document.getElementById("kSoundBanner")?.addEventListener("click", () => ensureAudio());
     document.getElementById("kStock")?.addEventListener("click", openStock);
+    document.getElementById("kPromo")?.addEventListener("click", openOffers);
     document.getElementById("kFull")?.addEventListener("click", () => document.documentElement.requestFullscreen?.().catch(() => {}));
     document.getElementById("kUndoBtn")?.addEventListener("click", doUndo);
   }
@@ -468,6 +470,106 @@
       it.orderable = !want;   // put it back; never leave a toggle lying
       paintStock();
       if (e.auth) { closeStock(); logout(e.message); }
+    }
+  }
+
+  /* ---- offers -----------------------------------------------------------
+     Same overlay as the 86 sheet, same reason. Kareem switches a pre-authored
+     offer on or off; he cannot author one here. The discount arithmetic only
+     ever runs server-side in create-checkout, so nothing on this screen can
+     change what a customer is charged beyond whether an offer applies at all. */
+  let promos = null;
+  let promosNow = 0;
+
+  function promoDesc(p) {
+    if (p.kind === "bogo") {
+      return p.buy_qty === 1 && p.free_qty === 1
+        ? "Buy one, get one free"
+        : `Buy ${p.buy_qty}, get ${p.free_qty} free`;
+    }
+    return `${p.percent}% off orders over ${money(p.min_subtotal_cents)}`;
+  }
+
+  // An offer switched on outside its own dates is the one genuinely confusing
+  // state here: the row reads as running when it isn't. Say so on the row
+  // rather than letting someone wonder why nobody is getting the discount.
+  function promoWindow(p) {
+    const from = p.starts_at ? Date.parse(p.starts_at) : NaN;
+    const to = p.ends_at ? Date.parse(p.ends_at) : NaN;
+    if (!Number.isNaN(to) && to <= promosNow) return "finished";
+    if (!Number.isNaN(from) && from > promosNow) return "not started yet";
+    return null;
+  }
+
+  async function openOffers() {
+    let wrap = document.getElementById("kPromoWrap");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.id = "kPromoWrap";
+      document.body.appendChild(wrap);
+    }
+    wrap.innerHTML = `<div class="k-sheet"><div class="k-sheet-head">
+        <h2>Offers</h2><button class="k-sheet-x" id="kPromoX">Done</button>
+      </div><div class="k-sheet-body"><p class="k-none">Loading offers…</p></div></div>`;
+    document.getElementById("kPromoX").addEventListener("click", closeOffers);
+    try {
+      const r = await call({ action: "promos" });
+      promos = r.promos || [];
+      promosNow = Date.parse(r.now) || Date.now();
+      paintOffers();
+    } catch (e) {
+      if (e.auth) { closeOffers(); logout(e.message); return; }
+      wrap.querySelector(".k-sheet-body").innerHTML =
+        `<p class="k-none">Couldn't load the offers. Check the connection and try again.</p>`;
+    }
+  }
+
+  function closeOffers() {
+    document.getElementById("kPromoWrap")?.remove();
+    promos = null;
+  }
+
+  function paintOffers() {
+    const body = document.querySelector("#kPromoWrap .k-sheet-body");
+    if (!body) return;
+    if (!promos.length) {
+      body.innerHTML = `<p class="k-sheet-note">No offers set up yet. Ask Zachary to add one
+        and it will appear here ready to switch on.</p>`;
+      return;
+    }
+    const on = promos.filter((p) => p.active).length;
+    body.innerHTML = `
+      <p class="k-sheet-note">${on ? `${on} offer${on > 1 ? "s" : ""} running.` : "No offers running."}
+        Switching one on applies it to new website orders straight away. It never
+        changes an order that has already been paid for.</p>
+      ${promos.map((p) => {
+        const w = p.active ? promoWindow(p) : null;
+        return `
+        <button class="k-promo-row${p.active ? " on" : ""}" data-promo="${esc(p.id)}">
+          <span>
+            <span class="t">${esc(p.label)}</span>
+            <span class="d">${esc(promoDesc(p))}${w ? ` <span class="warn">— on, but ${esc(w)}</span>` : ""}</span>
+          </span>
+          <span class="s">${p.active ? "On" : "Off"}</span>
+        </button>`;
+      }).join("")}`;
+    body.querySelectorAll("[data-promo]").forEach((btn) =>
+      btn.addEventListener("click", () => togglePromo(btn.dataset.promo)));
+  }
+
+  async function togglePromo(id) {
+    const p = promos?.find((x) => x.id === id);
+    if (!p) return;
+    const want = !p.active;
+    p.active = want;          // optimistic, like the 86 sheet — a tap must feel instant
+    paintOffers();
+    try {
+      const r = await call({ action: "set_promo", id, active: want });
+      if (typeof r.active === "boolean" && r.active !== want) { p.active = r.active; paintOffers(); }
+    } catch (e) {
+      p.active = !want;       // put it back; never leave a toggle lying about the money path
+      paintOffers();
+      if (e.auth) { closeOffers(); logout(e.message); }
     }
   }
 
