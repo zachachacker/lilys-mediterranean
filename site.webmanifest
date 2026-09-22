@@ -1,8 +1,8 @@
 {
   "name": "Lily's Mediterranean Fresh Grill",
   "short_name": "Lily's",
-  "description": "Order Lily's Mediterranean for pickup in Indialantic, FL.",
-  "start_url": "order.html",
+  "description": "Lily's Mediterranean Fresh Grill in Indialantic, FL.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#fbf5ea",

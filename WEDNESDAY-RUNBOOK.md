@@ -1,3 +1,9 @@
+> **SUPERSEDED 2026-09-22.** Online ordering now runs through Kareem's SkyTab
+> (`data.js` → `orderUrl`). The custom checkout is dormant: nothing on the site
+> links to it and `order.html` redirects to SkyTab. This page applies only if the
+> custom checkout is ever revived. Do not paste Square or Stripe credentials
+> because of anything written below.
+
 # Go-live — the only page you need at the counter
 
 *(Filename still says Wednesday for historical reasons — other documents point at it.

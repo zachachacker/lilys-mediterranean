@@ -1,5 +1,27 @@
 # Edge functions — deployed to Supabase project `hytvfqydahwsrcdbnvfq` (lilys-mediterranean)
 
+## Status 2026-09-22: DORMANT — ordering moved to SkyTab
+
+Kareem's SkyTab POS already had online ordering switched on. Every Order button
+now points at it, and `order.html` redirects there (the old page is intact below
+the redirect; delete those two lines in `<head>` to revive it). Nothing on the site
+calls these functions any more.
+
+State left behind, for whoever revives or retires this:
+- `app_config.payment_provider = 'square'`, only `square_location_id` set; token
+  and webhook signature key empty.
+- `create-checkout` still answers as NON-demo (closed-hours probe returned 409,
+  which only runs past the demo branch). With Square incomplete, the deployed
+  (pre-`e403f71`) ladder most likely falls through to a `STRIPE_SECRET_KEY`
+  function secret. **Inferred, not read** — secrets are not visible from SQL.
+  Reachable only by a direct POST to the function URL.
+- Committed but never deployed: `e403f71` readiness gate, `kitchen-api` stock and
+  offers actions. Never applied: `migrations/20260819_promotions.sql`.
+- `menu_items` contains a `test-bottled-water` row ($2.00, orderable) nobody claims.
+
+Retiring properly = remove the function secret, delete the Square rows, and
+undeploy or 503 `create-checkout`. Not done: each needs Zachary's word.
+
 These are the canonical copies of the deployed functions. If you edit one,
 redeploy it (Supabase MCP `deploy_edge_function`, or `supabase functions deploy <name>`).
 
