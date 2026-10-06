@@ -8,13 +8,18 @@ the redirect; delete those two lines in `<head>` to revive it). Nothing on the s
 calls these functions any more.
 
 State left behind, for whoever revives or retires this:
-- `app_config.payment_provider = 'square'`, only `square_location_id` set; token
-  and webhook signature key empty.
-- `create-checkout` still answers as NON-demo (closed-hours probe returned 409,
-  which only runs past the demo branch). With Square incomplete, the deployed
-  (pre-`e403f71`) ladder most likely falls through to a `STRIPE_SECRET_KEY`
-  function secret. **Inferred, not read** — secrets are not visible from SQL.
-  Reachable only by a direct POST to the function URL.
+- **Square is FULLY configured, not half** (corrected 2026-10-06; the 09-22 note here
+  guessed a `STRIPE_SECRET_KEY` secret, which does not exist). `SQUARE_ACCESS_TOKEN`
+  and `SQUARE_WEBHOOK_SIGNATURE_KEY` are Edge Function **secrets** (set 2026-08-20
+  ~03:15 UTC), `square_location_id` is in `app_config`, `payment_provider='square'`.
+  The code reads secrets before `app_config`, so all three are present and Square is
+  live for anything that reaches `create-checkout`. Whose Square account it is was not
+  recorded. Env secrets also beat `app_config` for Stripe: if `STRIPE_SECRET_KEY` is
+  ever set as a secret, a key pasted into `app_config` is silently ignored.
+- Deployed `create-checkout` is v4 from **2026-07-25**: it predates the readiness gate
+  (`e403f71`), the closed-day `#test:` token bypass (`de732f5`) and promotions. The
+  committed version 503s if the `promotions` table is missing, so the migration must
+  be applied BEFORE deploying it.
 - Committed but never deployed: `e403f71` readiness gate, `kitchen-api` stock and
   offers actions. Never applied: `migrations/20260819_promotions.sql`.
 - `menu_items` contains a `test-bottled-water` row ($2.00, orderable) nobody claims.
