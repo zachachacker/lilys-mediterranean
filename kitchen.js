@@ -304,24 +304,35 @@
         <span class="t-code">${esc(o.code)}</span>
         <span class="t-right">
           ${recalled.has(o.id) ? '<span class="t-chip recalled">Recalled</span>' : ""}
+          ${o.fulfilment === "delivery" ? '<span class="t-chip t-chip-del">Delivery</span>' : ""}
           <span class="t-chip">${o.status === "paid" ? "New" : "Making"}</span>
           <span class="t-timer" data-ts="${esc(ageBase(o))}" data-oid="${o.id}">${fmtTimer(ageBase(o))}</span>
         </span>
       </div>`;
     const notes = o.notes ? `<div class="t-notes">${esc(o.notes)}</div>` : "";
+    const del = deliveryBlock(o);
     if (o.status === "paid") {
       return `<div class="t new ${o._fresh ? "fresh" : ""}" data-start="${o.id}">
-        ${band}<div class="t-body">${items}${notes}</div>${meta}
+        ${band}<div class="t-body">${items}${notes}${del}</div>${meta}
         <div class="t-hint">Tap to start</div>
       </div>`;
     }
     return `<div class="t">
-      ${band}<div class="t-body">${items}${notes}</div>${meta}
+      ${band}<div class="t-body">${items}${notes}${del}</div>${meta}
       <div class="t-actions">
         <button class="t-go" data-ready="${o.id}">Ready</button>
         <button class="t-more" data-more="${o.id}" aria-label="More options for ${esc(o.code)}">···</button>
       </div>
     </div>`;
+  }
+
+  // delivery orders: the driver needs the address and distance at a glance, and
+  // the tip is shown so it can be handed over (it was paid online with the order)
+  function deliveryBlock(o) {
+    if (o.fulfilment !== "delivery") return "";
+    const miles = o.delivery_miles != null ? ` · ${Number(o.delivery_miles).toFixed(1)} mi` : "";
+    const tip = o.tip_cents > 0 ? `<div class="t-del-tip">Driver tip ${money(o.tip_cents)} (paid online)</div>` : "";
+    return `<div class="t-del"><div class="t-del-addr">${esc(o.delivery_address || "")}${miles}</div>${tip}</div>`;
   }
 
   function railCard(o) {
@@ -330,10 +341,11 @@
         <span class="t-code">${esc(o.code)}</span>
         <span class="t-right"><span class="t-timer" data-ts="${esc(o.updated_at)}" data-oid="${o.id}">${fmtTimer(o.updated_at)}</span></span>
       </div>
-      <div class="t-name">${esc(o.customer_name)}</div>
+      <div class="t-name">${esc(o.customer_name)}${o.fulfilment === "delivery" ? ' <span class="t-chip t-chip-del">Delivery</span>' : ""}</div>
+      ${deliveryBlock(o)}
       <div class="t-sub">${(o.items || []).reduce((s, l) => s + l.qty, 0)} items · <a href="${telHref(o.customer_phone)}" style="color:inherit">${esc(o.customer_phone)}</a>${o.demo ? ' · <span class="t-demo">test</span>' : ""}</div>
       <div class="t-actions">
-        <button class="t-go" data-picked="${o.id}">Picked up</button>
+        <button class="t-go" data-picked="${o.id}">${o.fulfilment === "delivery" ? "Out for delivery" : "Picked up"}</button>
         <button class="t-more" data-more="${o.id}" aria-label="More options for ${esc(o.code)}">···</button>
       </div>
     </div>`;

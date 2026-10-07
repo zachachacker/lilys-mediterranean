@@ -96,16 +96,100 @@ function applyPromotions(lines: PLine[], promos: Promo[]) {
   return { subtotal, discount, applied };
 }
 
+/* ── delivery ────────────────────────────────────────────────────────────
+   Kareem, 2026-10-07: free within 2 miles, $5 to 3.5 miles, $10 to 5 miles,
+   nothing beyond; at least $15 of food; customers may tip the driver.
+   Distance is a straight line from the restaurant. Lily's sits at the east
+   end of the causeway, so it tracks the real drive closely. Like prices and
+   discounts, all of this is decided HERE: the order page only shows what the
+   quote mode below reports, and whatever fee it sends is ignored. */
+const LILYS_LAT = 28.09175;
+const LILYS_LON = -80.56608;
+const DELIVERY_MAX_MILES = 5;
+const DELIVERY_MIN_CENTS = 1500;
+const TIP_MAX_CENTS = 10000;
+
+function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLon = rad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 3958.8 * Math.asin(Math.sqrt(a));
+}
+
+function deliveryFeeCents(miles: number): number | null {
+  if (!Number.isFinite(miles) || miles < 0 || miles > DELIVERY_MAX_MILES) return null;
+  if (miles <= 2) return 0;
+  if (miles <= 3.5) return 500;
+  return 1000;
+}
+
+function parseTipCents(raw: unknown): number | null {
+  if (raw === undefined || raw === null || raw === "") return 0;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > TIP_MAX_CENTS) return null;
+  return n;
+}
+
+// US Census geocoder: free, keyless, built for US street addresses. A lookup
+// failure is "try again", never "too far" — the two must not be confused.
+async function geocode(address: string): Promise<{ lat: number; lon: number } | "none" | "error"> {
+  try {
+    const u = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
+    u.searchParams.set("address", address);
+    u.searchParams.set("benchmark", "Public_AR_Current");
+    u.searchParams.set("format", "json");
+    const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return "error";
+    const m = (await r.json())?.result?.addressMatches?.[0]?.coordinates;
+    if (!m || !Number.isFinite(m.y) || !Number.isFinite(m.x)) return "none";
+    return { lat: m.y, lon: m.x };
+  } catch {
+    return "error";
+  }
+}
+
+async function quoteDelivery(address: string): Promise<
+  { ok: true; miles: number; fee_cents: number } | { ok: false; status: number; error: string }
+> {
+  if (address.length < 6) return { ok: false, status: 400, error: "Please enter your street address, city and ZIP." };
+  const g = await geocode(address);
+  if (g === "error") return { ok: false, status: 503, error: "We couldn't check that address just now. Please try again, or call us." };
+  if (g === "none") return { ok: false, status: 400, error: "We couldn't find that address. Please include the street, city and ZIP." };
+  const miles = Math.round(milesBetween(LILYS_LAT, LILYS_LON, g.lat, g.lon) * 100) / 100;
+  const fee = deliveryFeeCents(miles);
+  if (fee === null) {
+    return { ok: false, status: 400, error: `That's ${miles.toFixed(1)} miles away, and we deliver within ${DELIVERY_MAX_MILES} miles. Pickup is always available.` };
+  }
+  return { ok: true, miles, fee_cents: fee };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  let body: { items?: CartLine[]; name?: string; phone?: string; notes?: string };
+  let body: {
+    items?: CartLine[]; name?: string; phone?: string; notes?: string;
+    action?: string; fulfilment?: string; address?: string; tip_cents?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON" }, 400);
   }
+
+  // quote mode: the order page asks what delivery to an address would cost,
+  // using the exact rules the order itself is charged by. Creates nothing.
+  if (body.action === "quote") {
+    const q = await quoteDelivery(String(body.address ?? "").trim().slice(0, 200));
+    return q.ok ? json(q) : json({ error: q.error }, q.status);
+  }
+
+  const fulfilment = body.fulfilment === "delivery" ? "delivery" : "pickup";
+  const address = String(body.address ?? "").trim().slice(0, 200);
+  // tips are for the driver, so only delivery carries one
+  const tip = fulfilment === "delivery" ? parseTipCents(body.tip_cents) : 0;
+  if (tip === null) return json({ error: "That tip amount doesn't look right." }, 400);
 
   const name = (body.name ?? "").trim().slice(0, 80);
   const phone = (body.phone ?? "").trim().slice(0, 25);
@@ -233,9 +317,31 @@ Deno.serve(async (req) => {
   }
 
   const { subtotal, discount, applied } = applyPromotions(lines, promos);
+
+  let deliveryMiles: number | null = null;
+  let deliveryFee = 0;
+  if (fulfilment === "delivery") {
+    if (subtotal - discount < DELIVERY_MIN_CENTS) {
+      return json({ error: "Delivery needs at least $15 of food. Add a little more, or choose pickup." }, 400);
+    }
+    const q = await quoteDelivery(address);
+    if (!q.ok) return json({ error: q.error }, q.status);
+    deliveryMiles = q.miles;
+    deliveryFee = q.fee_cents;
+  }
+
   // tax on what is actually paid, not the pre-discount figure
   const tax = Math.round((subtotal - discount) * taxRate);
-  const total = subtotal - discount + tax;
+  // delivery fee is separately stated and optional (pickup is always offered),
+  // so it is not taxed; tips are voluntary and never taxed
+  const total = subtotal - discount + tax + deliveryFee + tip;
+
+  // the Square path below charges line items only: it has no coupon, fee or
+  // tip support. Refuse rather than charge a total that differs from the order.
+  if (provider === "square" && (discount > 0 || deliveryFee > 0 || tip > 0)) {
+    console.error("square cannot charge discounts/delivery/tips — refusing");
+    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
 
   // insert with a fresh code; retry on the (unlikely) code collision
   let order: { id: string; code: string } | null = null;
@@ -256,6 +362,11 @@ Deno.serve(async (req) => {
         discounts: applied.length ? applied : null,
         tax_cents: tax,
         total_cents: total,
+        fulfilment,
+        delivery_address: fulfilment === "delivery" ? address : null,
+        delivery_miles: deliveryMiles,
+        delivery_fee_cents: deliveryFee,
+        tip_cents: tip,
         demo,
         payment_provider: demo ? "demo" : provider,
         // our own session token — the confirmation page looks orders up by it.
@@ -356,11 +467,43 @@ Deno.serve(async (req) => {
     form.set(`line_items[${i}][price_data][unit_amount]`, String(l.unit_cents));
     form.set(`line_items[${i}][price_data][product_data][name]`, l.name);
   });
-  const n = lines.length;
-  form.set(`line_items[${n}][quantity]`, "1");
-  form.set(`line_items[${n}][price_data][currency]`, "usd");
-  form.set(`line_items[${n}][price_data][unit_amount]`, String(tax));
-  form.set(`line_items[${n}][price_data][product_data][name]`, taxLabel);
+  const extras: [string, number][] = [[taxLabel, tax]];
+  if (deliveryFee > 0) extras.push([`Delivery (${deliveryMiles?.toFixed(1)} mi)`, deliveryFee]);
+  if (tip > 0) extras.push(["Driver tip", tip]);
+  extras.forEach(([label, cents], j) => {
+    const n = lines.length + j;
+    form.set(`line_items[${n}][quantity]`, "1");
+    form.set(`line_items[${n}][price_data][currency]`, "usd");
+    form.set(`line_items[${n}][price_data][unit_amount]`, String(cents));
+    form.set(`line_items[${n}][price_data][product_data][name]`, label);
+  });
+
+  // Stripe line items can't be negative, so a discount must travel as a coupon
+  // or the customer is charged full price for an order recorded as discounted.
+  // One coupon per order, for exactly the amount computed above, usable once.
+  if (discount > 0) {
+    const c = new URLSearchParams();
+    c.set("amount_off", String(discount));
+    c.set("currency", "usd");
+    c.set("duration", "once");
+    c.set("max_redemptions", "1");
+    c.set("name", applied.map((a) => a.label).join(", ").slice(0, 40) || "Offer");
+    let coupon: { id?: string; error?: { message?: string } };
+    try {
+      const cr = await fetch("https://api.stripe.com/v1/coupons", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${stripeKey}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: c,
+      });
+      coupon = await cr.json();
+      if (!cr.ok || !coupon.id) throw new Error(coupon?.error?.message || `HTTP ${cr.status}`);
+    } catch (ex) {
+      await db.from("orders").update({ status: "canceled" }).eq("id", order.id);
+      console.error("stripe coupon error:", ex instanceof Error ? ex.message : ex);
+      return json({ error: "Payment setup failed — please call us to order." }, 502);
+    }
+    form.set("discounts[0][coupon]", coupon.id);
+  }
 
   let session: { id?: string; url?: string; error?: { message?: string } };
   try {

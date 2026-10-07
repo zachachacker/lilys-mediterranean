@@ -36,12 +36,13 @@
     }
     // landing here means the order went through — now the cart can go
     try { localStorage.removeItem("lilys-cart-v1"); } catch { /* fine */ }
-    const STEPS = [
-      ["paid", "Received"],
-      ["making", "On the grill"],
-      ["ready", "Ready for pickup"],
-    ];
     const render = (o) => {
+      const delivery = o.fulfilment === "delivery";
+      const STEPS = [
+        ["paid", "Received"],
+        ["making", "On the grill"],
+        ["ready", delivery ? "Out for delivery" : "Ready for pickup"],
+      ];
       const items = (o.items || [])
         .map((l) => `<div class="co-line"><span>${l.qty} × ${esc(l.name)}</span><span>${money(l.unit_cents * l.qty)}</span></div>`)
         .join("");
@@ -55,19 +56,26 @@
       confirmRoot.innerHTML = `
         ${o.demo ? '<div class="demo-badge">Test order — no payment was taken</div>' : ""}
         <span class="eyebrow">${pending ? "Almost there" : "Order received"} — thank you${o.customer_name ? ", " + esc(o.customer_name.split(" ")[0]) : ""}!</span>
-        <h1>${pending ? "Finalizing<br>your payment…" : "Show this code<br>at the counter."}</h1>
+        <h1>${pending ? "Finalizing<br>your payment…" : delivery ? "It's coming<br>to you." : "Show this code<br>at the counter."}</h1>
         <div class="confirm-code">${esc(o.code)}</div>
         ${o.status === "canceled"
           ? '<p class="confirm-error">This order was canceled. If that\'s a surprise, call us at <a class="ink" href="tel:+13213124444">(321) 312-4444</a>.</p>'
           : pending
           ? '<p class="confirm-sub">Confirming your payment with the bank — this usually takes a few seconds. Keep this page open.</p>'
+          : delivery
+          ? `<div class="co-steps">${steps}</div>
+             <p class="confirm-sub">On its way in about <strong>${esc(O.deliveryMinutes)} minutes</strong> to ${esc(o.delivery_address || "your address")}.
+             Questions? <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`
           : `<div class="co-steps">${steps}</div>
              <p class="confirm-sub">Ready in about <strong>${esc(O.prepMinutes)} minutes</strong> at 2 5th Ave STE C, Indialantic.
              <a class="ink" href="${L.directionsUrl}" target="_blank" rel="noopener">Directions</a> · <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`}
         <div class="co-receipt">
           ${items}
           <div class="co-line co-sub"><span>Subtotal</span><span>${money(o.subtotal_cents)}</span></div>
+          ${o.discount_cents > 0 ? `<div class="co-line co-sub"><span>Offers</span><span>−${money(o.discount_cents)}</span></div>` : ""}
           <div class="co-line co-sub"><span>Tax</span><span>${money(o.tax_cents)}</span></div>
+          ${o.delivery_fee_cents > 0 ? `<div class="co-line co-sub"><span>Delivery</span><span>${money(o.delivery_fee_cents)}</span></div>` : ""}
+          ${o.tip_cents > 0 ? `<div class="co-line co-sub"><span>Driver tip</span><span>${money(o.tip_cents)}</span></div>` : ""}
           <div class="co-line co-total"><span>${totalLabel}</span><span>${money(o.total_cents)}</span></div>
         </div>`;
     };
@@ -105,6 +113,7 @@
   if (!tabs || !body) return;
 
   if ($("prepMin")) $("prepMin").textContent = O.prepMinutes;
+  if ($("delMin")) $("delMin").textContent = O.deliveryMinutes;
 
   // came back from Stripe without paying — cart is intact, say so
   if (new URLSearchParams(location.search).get("canceled") && $("closedNote")) {
@@ -280,11 +289,20 @@
     if (n > 0) {
       const sub = subtotal();
       const tax = Math.round(sub * O.taxRate);
+      // display only: the server recomputes every figure from its own rules
+      const delivery = ful === "delivery";
+      const fee = delivery && quote ? quote.fee_cents : 0;
+      const tip = delivery ? tipCents : 0;
       $("ctSub").textContent = money(sub);
       $("ctTax").textContent = money(tax);
-      $("ctTotal").textContent = money(sub + tax);
+      $("ctDelRow").hidden = !delivery;
+      $("ctDel").textContent = !delivery ? "" : quote ? (fee ? money(fee) : "Free") : "—";
+      $("ctTipRow").hidden = !(delivery && tip > 0);
+      $("ctTip").textContent = money(tip);
+      $("ctTotal").textContent = money(sub + tax + fee + tip);
       $("cartBarCount").textContent = n === 1 ? "1 item" : `${n} items`;
-      $("cartBarTotal").textContent = money(sub + tax);
+      $("cartBarTotal").textContent = money(sub + tax + fee + tip);
+      showMinimum();
     }
     if (cartBar) cartBar.hidden = n === 0;
     renderActions();
@@ -315,6 +333,77 @@
     $("cartPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
+  /* --------------------------------------------------- pickup / delivery ---- */
+  let ful = "pickup";
+  let quote = null; // { address, miles, fee_cents } for the address as typed
+  let tipCents = 0;
+  const quoteEl = $("cfQuote");
+  const addrEl = $("cfAddr");
+  const DELIVERY_MIN = 1500; // mirrors create-checkout; the server enforces it
+
+  const setQuoteMsg = (msg, bad = false) => {
+    quoteEl.textContent = msg;
+    quoteEl.classList.toggle("bad", bad);
+  };
+  function showMinimum() {
+    if (ful !== "delivery") return;
+    if (subtotal() < DELIVERY_MIN) setQuoteMsg("Delivery needs at least $15 of food.", true);
+    else if (quote) setQuoteMsg(`${quote.miles.toFixed(1)} miles away · ${quote.fee_cents ? money(quote.fee_cents) + " delivery" : "free delivery"}`);
+    else if (quoteEl.classList.contains("bad") && /at least \$15/.test(quoteEl.textContent)) setQuoteMsg("");
+  }
+
+  document.querySelectorAll('input[name="ful"]').forEach((r) =>
+    r.addEventListener("change", () => {
+      ful = r.value;
+      $("cfDel").hidden = ful !== "delivery";
+      $("cartFine").textContent = ful === "delivery"
+        ? "Secure card payment by Stripe. We'll call this number if the driver can't find you."
+        : "Secure card payment by Stripe. Show your order code at the counter.";
+      renderCart();
+    }));
+
+  let quoteSeq = 0;
+  async function checkAddress() {
+    const address = addrEl.value.trim();
+    quote = null;
+    renderCart();
+    if (address.length < 6) { setQuoteMsg(""); return; }
+    const seq = ++quoteSeq;
+    setQuoteMsg("Checking your address…");
+    try {
+      const r = await fetch(`${FN}/create-checkout`, {
+        method: "POST", headers: HDRS, body: JSON.stringify({ action: "quote", address }),
+      });
+      const j = await r.json();
+      if (seq !== quoteSeq) return; // a newer check is in flight
+      if (!r.ok) { setQuoteMsg(j.error || "We couldn't check that address.", true); return; }
+      quote = { address, miles: j.miles, fee_cents: j.fee_cents };
+      setQuoteMsg("");
+      renderCart();
+    } catch {
+      if (seq === quoteSeq) setQuoteMsg("We couldn't check that address just now. Please try again.", true);
+    }
+  }
+  let addrTimer;
+  addrEl.addEventListener("input", () => { clearTimeout(addrTimer); addrTimer = setTimeout(checkAddress, 900); });
+  addrEl.addEventListener("change", () => { clearTimeout(addrTimer); checkAddress(); });
+
+  $("tipRow").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tip]");
+    if (!b) return;
+    document.querySelectorAll("#tipRow button").forEach((x) => x.classList.toggle("on", x === b));
+    const other = b.dataset.tip === "other";
+    $("cfTipOther").hidden = !other;
+    tipCents = other ? Math.round(Number($("cfTipOther").value || 0) * 100) : Number(b.dataset.tip);
+    if (other) $("cfTipOther").focus();
+    renderCart();
+  });
+  $("cfTipOther").addEventListener("input", () => {
+    const d = Number($("cfTipOther").value);
+    tipCents = Number.isFinite(d) && d > 0 ? Math.min(Math.round(d * 100), 10000) : 0;
+    renderCart();
+  });
+
   /* --------------------------------------------------------- checkout ---- */
   const errEl = $("cartError");
   cartForm.addEventListener("submit", async (e) => {
@@ -325,6 +414,13 @@
     if (name.length < 2) return showErr("Please tell us your name for pickup.");
     if (phone.replace(/\D/g, "").length < 10) return showErr("Please enter a valid phone number.");
     if (count() === 0) return showErr("Your cart is empty.");
+    if (ful === "delivery") {
+      if (subtotal() < DELIVERY_MIN) return showErr("Delivery needs at least $15 of food. Add a little more, or choose pickup.");
+      if (!quote || quote.address !== addrEl.value.trim()) {
+        await checkAddress();
+        if (!quote) return showErr("Please check your delivery address first.");
+      }
+    }
 
     const btn = $("checkoutBtn");
     btn.disabled = true;
@@ -339,6 +435,9 @@
           name,
           phone,
           notes: $("cfNotes").value.trim(),
+          fulfilment: ful,
+          address: ful === "delivery" ? addrEl.value.trim() : "",
+          tip_cents: ful === "delivery" ? tipCents : 0,
         }),
       });
       const j = await r.json();

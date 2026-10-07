@@ -256,3 +256,32 @@ export function applyPromotions(lines: PLine[], promos: Promo[]) {
   discount = Math.min(discount, subtotal);
   return { subtotal, discount, applied };
 }
+
+/* ── create-checkout/index.ts — delivery helpers (2026-10-07) ─────────── */
+export const LILYS_LAT = 28.09175;
+export const LILYS_LON = -80.56608;
+export const DELIVERY_MAX_MILES = 5;
+export const DELIVERY_MIN_CENTS = 1500;
+export const TIP_MAX_CENTS = 10000;
+
+export function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLon = rad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 3958.8 * Math.asin(Math.sqrt(a));
+}
+
+export function deliveryFeeCents(miles: number): number | null {
+  if (!Number.isFinite(miles) || miles < 0 || miles > DELIVERY_MAX_MILES) return null;
+  if (miles <= 2) return 0;
+  if (miles <= 3.5) return 500;
+  return 1000;
+}
+
+export function parseTipCents(raw: unknown): number | null {
+  if (raw === undefined || raw === null || raw === "") return 0;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > TIP_MAX_CENTS) return null;
+  return n;
+}

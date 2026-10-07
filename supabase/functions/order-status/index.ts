@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data, error } = await db
     .from("orders")
-    .select("code,status,items,subtotal_cents,tax_cents,total_cents,created_at,demo,customer_name")
+    .select("code,status,items,subtotal_cents,discount_cents,tax_cents,total_cents,created_at,demo,customer_name,fulfilment,delivery_address,delivery_fee_cents,tip_cents")
     .eq("stripe_session_id", sid)
     .maybeSingle();
   if (error) return json({ error: "Lookup failed" }, 500);
