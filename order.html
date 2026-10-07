@@ -59,7 +59,7 @@
     <div class="section-head">
       <span class="eyebrow">Pickup · pay online · straight to the kitchen</span>
       <h1>Order for pickup.</h1>
-      <p>Ready in about <strong id="prepMin">20–25</strong> minutes. Pickup at 2 5th Ave STE C, Indialantic — we'll have it hot.</p>
+      <p>Pickup in about <strong id="prepMin">30</strong> minutes at 2 5th Ave STE C, Indialantic, or delivery within 5 miles in about <strong id="delMin">40</strong>.</p>
       <div class="menu-status"><span id="statusMount"></span></div>
       <div class="order-closed-note" id="closedNote" hidden>
         The kitchen is closed right now — you can build a cart, and ordering opens with the kitchen.
@@ -81,10 +81,36 @@
         <div class="cart-totals" id="cartTotals" hidden>
           <div class="ct-row"><span>Subtotal</span><span id="ctSub"></span></div>
           <div class="ct-row"><span>FL sales tax (7%)</span><span id="ctTax"></span></div>
+          <div class="ct-row" id="ctDelRow" hidden><span>Delivery</span><span id="ctDel"></span></div>
+          <div class="ct-row" id="ctTipRow" hidden><span>Driver tip</span><span id="ctTip"></span></div>
           <div class="ct-row ct-total"><span>Total</span><span id="ctTotal"></span></div>
         </div>
         <form class="cart-form" id="cartForm" hidden>
-          <label>Name for pickup
+          <fieldset class="cf-ful">
+            <legend>How would you like it?</legend>
+            <label class="ful-opt"><input type="radio" name="ful" value="pickup" checked>
+              <span><b>Pickup</b><em>Ready in about 30 min · no fee</em></span><i class="ful-tag">Fastest</i></label>
+            <label class="ful-opt"><input type="radio" name="ful" value="delivery">
+              <span><b>Delivery</b><em>About 40 min · free within 2 miles</em></span></label>
+          </fieldset>
+          <div class="cf-del" id="cfDel" hidden>
+            <label>Delivery address
+              <input id="cfAddr" type="text" autocomplete="street-address" maxlength="200" placeholder="Street, city, ZIP">
+            </label>
+            <p class="cf-quote" id="cfQuote" aria-live="polite"></p>
+            <div class="cf-tip">
+              <span class="cf-tip-l">Tip for the driver</span>
+              <div class="tip-row" id="tipRow">
+                <button type="button" data-tip="0" class="on">No tip</button>
+                <button type="button" data-tip="200">$2</button>
+                <button type="button" data-tip="300">$3</button>
+                <button type="button" data-tip="500">$5</button>
+                <button type="button" data-tip="other">Other</button>
+              </div>
+              <input id="cfTipOther" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="Tip in dollars" hidden>
+            </div>
+          </div>
+          <label>Your name
             <input id="cfName" type="text" autocomplete="name" maxlength="80" required placeholder="Your name">
           </label>
           <label>Phone
@@ -95,7 +121,7 @@
           </label>
           <button class="btn cart-checkout" id="checkoutBtn" type="submit">Pay &amp; place order <span class="arw">→</span></button>
           <p class="cart-error" id="cartError" role="alert" hidden></p>
-          <p class="cart-fine">Secure payment by Square. Show your order code at the counter.</p>
+          <p class="cart-fine" id="cartFine">Secure card payment by Stripe. Show your order code at the counter.</p>
         </form>
       </aside>
     </div>

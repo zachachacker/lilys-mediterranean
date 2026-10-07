@@ -935,6 +935,11 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 /* cart panel — a lit counter-top against the dark room */
 .cart-panel {
   position: sticky; top: 5.5rem;
+  /* never taller than the window: with delivery + tips the form outgrew short
+     laptop screens and the Pay button sat below the fold, unreachable, because
+     a sticky panel does not scroll with the page. It scrolls inside instead. */
+  max-height: calc(100vh - 6.5rem); max-height: calc(100dvh - 6.5rem);
+  overflow-y: auto; overscroll-behavior: contain;
   background: var(--foam); color: var(--char);
   border-radius: 8px; padding: 1.4rem;
   box-shadow: 0 40px 90px -30px color-mix(in srgb, var(--ink) 70%, transparent);
@@ -966,6 +971,31 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
   background: #fff; color: var(--char); width: 100%;
 }
 .cart-form input:focus, .cart-form textarea:focus { outline: 2px solid var(--teal); outline-offset: 1px; }
+/* pickup / delivery (2026-10-07). Pickup is the default and carries the
+   "Fastest" tag: Kareem wants customers nudged toward collecting. */
+.cf-ful { border: 0; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.cf-ful legend { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink); margin-bottom: 0.4rem; }
+.cart-form .ful-opt {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.7rem;
+  font-family: var(--sans); font-size: 0.95rem; letter-spacing: 0; text-transform: none; color: var(--char);
+  border: 1px solid var(--mist); border-radius: 6px; padding: 0.75rem 0.9rem; background: #fff; cursor: pointer;
+}
+.cart-form .ful-opt:has(input:checked) { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
+.ful-opt input { width: auto; accent-color: var(--teal); }
+.ful-opt b { display: block; font-weight: 600; }
+.ful-opt em { display: block; font-style: normal; font-size: 0.8rem; color: color-mix(in srgb, var(--char) 65%, transparent); }
+.ful-tag { font-style: normal; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--teal-ink); border: 1px solid var(--teal); border-radius: 99px; padding: 0.2em 0.6em; }
+.cf-del { display: grid; gap: 0.6rem; }
+.cf-quote { font-size: 0.85rem; margin: -0.2rem 0 0; color: var(--teal-ink); min-height: 1.2em; }
+.cf-quote.bad { color: var(--ember); }
+.cf-tip { display: grid; gap: 0.4rem; }
+.cf-tip-l { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink); }
+.tip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tip-row button {
+  font: inherit; font-size: 0.85rem; padding: 0.5em 0.9em; min-height: 40px; border-radius: 99px;
+  border: 1px solid var(--mist); background: #fff; color: var(--char); cursor: pointer;
+}
+.tip-row button.on { border-color: var(--teal); background: var(--teal); color: #fff; }
 .cart-checkout { justify-content: center; width: 100%; margin-top: 0.2rem; }
 .cart-checkout:disabled { opacity: 0.6; cursor: wait; }
 .cart-error { color: var(--ember); font-size: 0.88rem; font-weight: 500; }

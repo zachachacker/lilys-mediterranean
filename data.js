@@ -49,7 +49,8 @@ window.LILYS = {
     supabaseUrl: "https://hytvfqydahwsrcdbnvfq.supabase.co",
     anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5dHZmcXlkYWh3c3JjZGJudmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDk3NDYsImV4cCI6MjA5OTc4NTc0Nn0.taAfp5xGFYdxyNxeszmxEt5Me-PPNfUbXfs4suLvXt0",
     taxRate: 0.07, // FL 6% + Brevard 1% — confirm with Kareem
-    prepMinutes: "20–25",
+    prepMinutes: "30", // pickup (Kareem, 2026-10-07)
+    deliveryMinutes: "40",
   },
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
   // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,
