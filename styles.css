@@ -935,6 +935,11 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 /* cart panel — a lit counter-top against the dark room */
 .cart-panel {
   position: sticky; top: 5.5rem;
+  /* never taller than the window: with delivery + tips the form outgrew short
+     laptop screens and the Pay button sat below the fold, unreachable, because
+     a sticky panel does not scroll with the page. It scrolls inside instead. */
+  max-height: calc(100vh - 6.5rem); max-height: calc(100dvh - 6.5rem);
+  overflow-y: auto; overscroll-behavior: contain;
   background: var(--foam); color: var(--char);
   border-radius: 8px; padding: 1.4rem;
   box-shadow: 0 40px 90px -30px color-mix(in srgb, var(--ink) 70%, transparent);

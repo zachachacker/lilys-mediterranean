@@ -304,7 +304,6 @@
         <span class="t-code">${esc(o.code)}</span>
         <span class="t-right">
           ${recalled.has(o.id) ? '<span class="t-chip recalled">Recalled</span>' : ""}
-          ${o.fulfilment === "delivery" ? '<span class="t-chip t-chip-del">Delivery</span>' : ""}
           <span class="t-chip">${o.status === "paid" ? "New" : "Making"}</span>
           <span class="t-timer" data-ts="${esc(ageBase(o))}" data-oid="${o.id}">${fmtTimer(ageBase(o))}</span>
         </span>
@@ -332,7 +331,9 @@
     if (o.fulfilment !== "delivery") return "";
     const miles = o.delivery_miles != null ? ` · ${Number(o.delivery_miles).toFixed(1)} mi` : "";
     const tip = o.tip_cents > 0 ? `<div class="t-del-tip">Driver tip ${money(o.tip_cents)} (paid online)</div>` : "";
-    return `<div class="t-del"><div class="t-del-addr">${esc(o.delivery_address || "")}${miles}</div>${tip}</div>`;
+    // the label lives here, not in the band: the band is already full on a
+    // portrait tablet and an extra chip pushed the timer off the card
+    return `<div class="t-del"><div class="t-del-l">Delivery</div><div class="t-del-addr">${esc(o.delivery_address || "")}${miles}</div>${tip}</div>`;
   }
 
   function railCard(o) {
@@ -341,7 +342,7 @@
         <span class="t-code">${esc(o.code)}</span>
         <span class="t-right"><span class="t-timer" data-ts="${esc(o.updated_at)}" data-oid="${o.id}">${fmtTimer(o.updated_at)}</span></span>
       </div>
-      <div class="t-name">${esc(o.customer_name)}${o.fulfilment === "delivery" ? ' <span class="t-chip t-chip-del">Delivery</span>' : ""}</div>
+      <div class="t-name">${esc(o.customer_name)}</div>
       ${deliveryBlock(o)}
       <div class="t-sub">${(o.items || []).reduce((s, l) => s + l.qty, 0)} items · <a href="${telHref(o.customer_phone)}" style="color:inherit">${esc(o.customer_phone)}</a>${o.demo ? ' · <span class="t-demo">test</span>' : ""}</div>
       <div class="t-actions">

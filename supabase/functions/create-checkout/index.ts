@@ -131,9 +131,15 @@ function parseTipCents(raw: unknown): number | null {
   return n;
 }
 
-// US Census geocoder: free, keyless, built for US street addresses. A lookup
-// failure is "try again", never "too far" — the two must not be confused.
-async function geocode(address: string): Promise<{ lat: number; lon: number } | "none" | "error"> {
+// Address lookup. The US Census geocoder (free, keyless, built for US street
+// addresses) goes first; it misses some newer and private-road addresses, so
+// OpenStreetMap is the fallback. OSM only counts at building level
+// (place_rank >= 28): a street- or town-level hit would put the pin in the
+// wrong place and quote the wrong fee. A lookup failure is "try again", never
+// "too far" — the two must not be confused.
+type Geo = { lat: number; lon: number } | "none" | "error";
+
+async function geocodeCensus(address: string): Promise<Geo> {
   try {
     const u = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
     u.searchParams.set("address", address);
@@ -147,6 +153,36 @@ async function geocode(address: string): Promise<{ lat: number; lon: number } | 
   } catch {
     return "error";
   }
+}
+
+async function geocodeOsm(address: string): Promise<Geo> {
+  try {
+    const u = new URL("https://nominatim.openstreetmap.org/search");
+    u.searchParams.set("q", address);
+    u.searchParams.set("format", "jsonv2");
+    u.searchParams.set("countrycodes", "us");
+    u.searchParams.set("limit", "1");
+    const r = await fetch(u, {
+      signal: AbortSignal.timeout(8000),
+      headers: { "User-Agent": "LilysMediterraneanOrdering/1.0 (lilysmediterraneanfresh.com)" },
+    });
+    if (!r.ok) return "error";
+    const hit = (await r.json())?.[0];
+    if (!hit || Number(hit.place_rank) < 28) return "none";
+    const lat = Number(hit.lat), lon = Number(hit.lon);
+    return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : "none";
+  } catch {
+    return "error";
+  }
+}
+
+async function geocode(address: string): Promise<Geo> {
+  const census = await geocodeCensus(address);
+  if (typeof census === "object") return census;
+  const osm = await geocodeOsm(address);
+  if (typeof osm === "object") return osm;
+  // only "none" if neither service could have found it; otherwise retryable
+  return census === "error" && osm === "error" ? "error" : census === "none" && osm === "none" ? "none" : "error";
 }
 
 async function quoteDelivery(address: string): Promise<
