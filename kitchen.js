@@ -16,6 +16,7 @@
   const API = `${SUPABASE_URL}/functions/v1/kitchen-api`;
   const KEY_STORE = "lilys-kitchen-key";
   const QUEUE_STORE = "lilys-kitchen-pending";
+  const TOUR_STORE = "lilys-kitchen-tour-v1";
   const POLL_MS = 5000;
   const OFFLINE_BANNER_AFTER_MS = 45000;
   const RECALL_WINDOW_MS = 60 * 60 * 1000;
@@ -43,7 +44,13 @@
   const money = (c) => `$${(c / 100).toFixed(2)}`;
   const clock = (d) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-  let key = localStorage.getItem(KEY_STORE) || "";
+  // one-tap setup: kitchen.html#key=<kitchen key> logs this tablet in with no
+  // typing. The home-screen icon is added FROM that link, so it reopens with the
+  // key on every launch and never asks again, even if iOS clears its storage.
+  // A #fragment is never sent to any server.
+  const hashKey = new URLSearchParams(location.hash.slice(1)).get("key") || "";
+  if (hashKey) { try { localStorage.setItem(KEY_STORE, hashKey); } catch { /* fine */ } }
+  let key = hashKey || localStorage.getItem(KEY_STORE) || "";
   let orders = [];
   let knownIds = new Set(); // orders seen at least once (arrival chime + flash)
   let firstLoad = true;
@@ -144,7 +151,9 @@
       body: JSON.stringify(payload),
     });
     const j = await r.json().catch(() => ({}));
-    if (r.status === 401) throw Object.assign(new Error("Wrong kitchen key"), { auth: true });
+    // only OUR "wrong key" answer logs the tablet out. A 401 from Supabase's own
+    // gateway is an outage, not a bad key, and must never wipe a working login.
+    if (r.status === 401 && j.error === "Wrong kitchen key") throw Object.assign(new Error("Wrong kitchen key"), { auth: true });
     if (r.status === 409) throw Object.assign(new Error(j.error || "conflict"), { conflict: true });
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
     return j;
@@ -189,12 +198,13 @@
       list.forEach((o) => { o._fresh = !firstLoad && o.status === "paid" && !knownIds.has(o.id); });
       list.forEach((o) => knownIds.add(o.id));
       [...knownIds].forEach((id) => { if (!incoming.has(id)) knownIds.delete(id); });
-      orders = list;
+      orders = practice ? [...list, practice] : list;
       firstLoad = false;
       lastOkAt = Date.now();
       failCount = 0;
       syncReminder();
       renderBoard();
+      maybeAutoTour();
     } catch (e) {
       if (e.auth) { logout(e.message); return; }
       failCount++;
@@ -222,6 +232,16 @@
 
   /* -------------------------------------------- actions (optimistic) ---- */
   const act = async (id, to, { undoable = true, label = "" } = {}) => {
+    // the tutorial's practice order lives only on this tablet: never sent anywhere
+    if (String(id).startsWith("practice-")) {
+      const p = orders.find((x) => x.id === id);
+      const was = p?.status;
+      if (p) { p.status = to; p.updated_at = new Date().toISOString(); p._fresh = false; }
+      renderBoard();
+      if (undoable && was) showUndo({ id, from: was, label });
+      tourOnAct(to);
+      return;
+    }
     const o = orders.find((x) => x.id === id);
     const from = o?.status;
     if (o) { o.status = to; o.updated_at = new Date().toISOString(); o._fresh = false; }
@@ -379,6 +399,7 @@
           <button class="k-tool" id="kSound" title="Test sound">${soundReady() ? "♪" : "🔕"}</button>
           <button class="k-tool" id="kStock" title="Mark items out of stock">86</button>
           <button class="k-tool" id="kPromo" title="Switch offers on and off">%</button>
+          <button class="k-tool" id="kHelp" title="How to use this screen">?</button>
           <button class="k-tool" id="kFull" title="Fullscreen" ${document.fullscreenElement ? "hidden" : ""}>⛶</button>
           <span class="k-clock" id="kClock">${clock(new Date())}</span>
         </div>
@@ -413,6 +434,7 @@
     document.getElementById("kSoundBanner")?.addEventListener("click", () => ensureAudio());
     document.getElementById("kStock")?.addEventListener("click", openStock);
     document.getElementById("kPromo")?.addEventListener("click", openOffers);
+    document.getElementById("kHelp")?.addEventListener("click", () => startTour());
     document.getElementById("kFull")?.addEventListener("click", () => document.documentElement.requestFullscreen?.().catch(() => {}));
     document.getElementById("kUndoBtn")?.addEventListener("click", doUndo);
   }
@@ -629,6 +651,127 @@
         </div>
       </div>`;
     wireBoard();
+  }
+
+  /* ---- tutorial ----------------------------------------------------------
+     An interactive walkthrough built around a practice order that exists only
+     in this tablet's memory. Kareem taps it through the real buttons (start,
+     ready, picked up) and the coach waits for each tap before moving on.
+     Runs once automatically, and any time from the ? button. Highlights are
+     driven by a body attribute so they survive the board re-rendering. */
+  let practice = null;
+  let tour = null; // { i }
+  const TOUR = [
+    { id: "welcome", title: "Welcome to Lily's Kitchen",
+      text: "This screen shows every online order the moment it's paid. This 2-minute walkthrough uses a practice order, so nothing you tap here reaches a customer." },
+    { id: "sound", title: "First, sound",
+      text: "Tap the ♪ button at the top to hear the new-order chime. If you ever see a yellow \"Tap anywhere\" bar, tap the screen once so the sound can play." },
+    { id: "arrive", title: "A new order just came in",
+      text: "New orders appear on the left in yellow, with a chime. The timer shows how long ago it arrived. This one says PRACTICE, so it's pretend.",
+      enter: () => { addPractice(); try { chime(); } catch { /* sound not ready yet */ } } },
+    { id: "start", title: "Start making it", wait: "making",
+      text: "Tap the yellow practice order. That tells the screen you've started cooking it." },
+    { id: "ready", title: "Food's ready?", wait: "ready",
+      text: "Tap the orange READY button when the food is bagged and ready to go." },
+    { id: "picked", title: "Customer collects it", wait: "done",
+      text: "Ready orders move to the right, so they're easy to find at the counter. When the customer takes it, tap PICKED UP." },
+    { id: "undo", title: "Tapped the wrong thing?",
+      text: "Right after any tap, an UNDO button shows at the bottom for a few seconds. Picked-up orders also wait under \"Earlier today\" with a Recall button." },
+    { id: "more", title: "The ··· button",
+      text: "Every order has a ··· button: go back a step, call the customer, or cancel. Cancelling does NOT refund the customer. Refunds are done in Stripe." },
+    { id: "stock", title: "Run out of something?",
+      text: "Tap 86 at the top, then tap the dish. It disappears from the website straight away. Tap it again when it's back." },
+    { id: "daily", title: "Every day",
+      text: "Keep the iPad plugged in and open on this screen while you're open. After opening, tap the screen once so the sound works. Tap ? at the top any time to see this again." },
+  ];
+
+  function addPractice() {
+    if (practice) return;
+    const now = new Date().toISOString();
+    practice = {
+      id: "practice-1", code: "PRACTICE", status: "paid", demo: true,
+      customer_name: "Practice order", customer_phone: "",
+      notes: "Pretend order for the walkthrough. Nobody will collect it.",
+      items: [{ qty: 2, name: "Chicken Shawarma Wrap" }, { qty: 1, name: "Batata Harrah" }],
+      subtotal_cents: 0, tax_cents: 0, total_cents: 0, created_at: now, updated_at: now,
+      fulfilment: "pickup", _fresh: true,
+    };
+    orders = [...orders.filter((o) => o.id !== practice.id), practice];
+    renderBoard();
+  }
+
+  function removePractice() {
+    practice = null;
+    orders = orders.filter((o) => !String(o.id).startsWith("practice-"));
+    renderBoard();
+  }
+
+  function startTour() {
+    ensureAudio();
+    tour = { i: 0 };
+    removePractice();
+    showStep();
+  }
+
+  function endTour() {
+    try { localStorage.setItem(TOUR_STORE, "done"); } catch { /* fine */ }
+    tour = null;
+    document.body.removeAttribute("data-tour");
+    document.getElementById("kTour")?.remove();
+    removePractice();
+  }
+
+  function maybeAutoTour() {
+    let done = "";
+    try { done = localStorage.getItem(TOUR_STORE) || ""; } catch { /* fine */ }
+    if (!done && !tour) startTour();
+  }
+
+  function goStep(i) {
+    if (!tour) return;
+    tour.i = Math.max(0, Math.min(TOUR.length - 1, i));
+    showStep();
+  }
+
+  // a practice tap moves the coach on only when it's the tap we asked for
+  function tourOnAct(to) {
+    if (!tour) return;
+    const step = TOUR[tour.i];
+    if (step.wait && step.wait === to) goStep(tour.i + 1);
+  }
+
+  function showStep() {
+    const step = TOUR[tour.i];
+    step.enter?.();
+    document.body.setAttribute("data-tour", step.id);
+    let el = document.getElementById("kTour");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "kTour";
+      document.body.appendChild(el);
+    }
+    const last = tour.i === TOUR.length - 1;
+    el.innerHTML = `
+      <div class="kt-step">Step ${tour.i + 1} of ${TOUR.length}</div>
+      <h2>${esc(step.title)}</h2>
+      <p>${esc(step.text)}</p>
+      ${step.wait ? '<div class="kt-wait">Waiting for your tap…</div>' : ""}
+      <div class="kt-btns">
+        <button class="kt-skip" id="ktSkip">${last ? "" : "Skip tutorial"}</button>
+        <span>
+          ${tour.i > 0 ? '<button class="kt-back" id="ktBack">Back</button>' : ""}
+          ${step.wait ? "" : `<button class="kt-next" id="ktNext">${tour.i === 0 ? "Start" : last ? "Finish" : "Next"}</button>`}
+        </span>
+      </div>`;
+    el.querySelector("#ktSkip").hidden = last;
+    el.querySelector("#ktSkip").addEventListener("click", endTour);
+    el.querySelector("#ktBack")?.addEventListener("click", () => {
+      // going back past the practice order's arrival resets it
+      if (TOUR[tour.i - 1] && ["welcome", "sound"].includes(TOUR[tour.i - 1].id)) removePractice();
+      else if (practice && TOUR[tour.i - 1]?.wait) { practice.status = { making: "paid", ready: "making", done: "ready" }[TOUR[tour.i - 1].wait]; renderBoard(); }
+      goStep(tour.i - 1);
+    });
+    el.querySelector("#ktNext")?.addEventListener("click", () => (last ? endTour() : goStep(tour.i + 1)));
   }
 
   function wireBoard() {
