@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Lily's Dashboard</title>
+<link rel="icon" href="assets/kds-icon-192.png">
+<style>
+  /* Owner analytics (2026-10-08). Private: unlocked by the owner key, which the
+     server checks; this page holds no data until that key is accepted. Colours
+     follow the data-viz reference palette, validated light and dark. */
+  .viz-root {
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface-1:   #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:        #e1e0d9;
+    --baseline:    #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --series-1:    #2a78d6;   /* blue  — the one-series hue (sales, orders) */
+    --series-2:    #eb6834;   /* orange — second identity (delivery) */
+    --context:     #c3c2b7;   /* de-emphasis grey: hours we're closed */
+    --good-text:   #006300;
+    --bad-text:    #b3261e;
+    --hover-wash:  rgba(11,11,11,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface-1: #1a1a19;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --series-2: #d95926; --context: #383835;
+      --good-text: #0ca30c; --bad-text: #e66767; --hover-wash: rgba(255,255,255,0.06);
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #d95926; --context: #383835;
+    --good-text: #0ca30c; --bad-text: #e66767; --hover-wash: rgba(255,255,255,0.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body.viz-root {
+    background: var(--page); color: var(--text-primary);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 1.35rem; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .sub { color: var(--text-secondary); font-size: 0.85rem; }
+  .muted { color: var(--text-muted); }
+
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 16px; }
+  .filters button {
+    font: inherit; font-size: 0.85rem; padding: 7px 14px; border-radius: 99px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+  }
+  .filters button:hover { background: var(--hover-wash); }
+  .filters button[aria-pressed="true"] { color: var(--text-primary); font-weight: 650; border-color: var(--text-primary); }
+  .filters .refresh { margin-left: auto; }
+
+  .grid { display: grid; gap: 14px; }
+  .kpis { grid-template-columns: 1.6fr repeat(3, 1fr); }
+  .two { grid-template-columns: 1.5fr 1fr; }
+  @media (max-width: 860px) { .kpis { grid-template-columns: 1fr 1fr; } .two { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+  .card h2 { font-size: 0.9rem; font-weight: 650; margin: 0 0 2px; }
+  .card .cap { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 12px; }
+  .tile .label { font-size: 0.8rem; color: var(--text-secondary); }
+  .tile .value { font-size: 1.9rem; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; }
+  .tile.hero .value { font-size: 3.2rem; line-height: 1.05; }
+  .tile .delta { font-size: 0.8rem; margin-top: 4px; color: var(--text-muted); }
+  .delta.up { color: var(--good-text); } .delta.down { color: var(--bad-text); }
+  .stack { margin-top: 14px; }
+
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .chart .tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart .gridline { stroke: var(--grid); stroke-width: 1; }
+  .chart .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .chart .bar { fill: var(--series-1); }
+  .chart .bar.ctx { fill: var(--context); }
+  .chart .hit { fill: transparent; cursor: default; }
+  .chart .hit:hover + .hl, .chart .hit:focus + .hl { opacity: 1; }
+  .chart .hl { fill: var(--hover-wash); opacity: 0; pointer-events: none; }
+  .chart .hit:focus { outline: none; }
+  .tip {
+    position: absolute; pointer-events: none; z-index: 5; min-width: 120px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.8rem; box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  }
+  .tip .v { font-weight: 650; font-size: 0.95rem; color: var(--text-primary); }
+  .tip .k { color: var(--text-secondary); }
+  .tip .row { display: flex; align-items: center; gap: 6px; }
+  .tip .key { width: 12px; height: 2px; background: var(--series-1); border-radius: 1px; }
+
+  .hbars { display: grid; gap: 8px; }
+  .hb { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; align-items: center; gap: 10px; font-size: 0.85rem; }
+  .hb .n { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hb .track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .hb .fill { height: 18px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .hb .val { color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .split { display: flex; height: 22px; gap: 2px; border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+  .split span { display: block; height: 100%; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82rem; color: var(--text-secondary); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; font-weight: 600; color: var(--text-secondary); font-size: 0.78rem; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  td.r, th.r { text-align: right; }
+  .table-wrap { overflow-x: auto; }
+  details.tv { margin-top: 10px; font-size: 0.82rem; color: var(--text-secondary); }
+  details.tv summary { cursor: pointer; }
+
+  .empty { color: var(--text-muted); font-size: 0.88rem; padding: 18px 0; text-align: center; }
+  .loading { opacity: 0.5; transition: opacity 0.2s; }
+
+  .login { max-width: 380px; margin: 14vh auto 0; text-align: center; }
+  .login input { font: inherit; font-size: 16px; width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); margin: 14px 0 10px; }
+  .login button { font: inherit; font-weight: 650; padding: 10px 18px; border-radius: 8px; border: 0; background: var(--text-primary); color: var(--surface-1); cursor: pointer; }
+  .err { color: var(--bad-text); font-size: 0.85rem; margin-top: 10px; }
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap" id="app"></div>
+<script>
+(() => {
+  const FN = "https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1/owner-stats";
+  const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5dHZmcXlkYWh3c3JjZGJudmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDk3NDYsImV4cCI6MjA5OTc4NTc0Nn0.taAfp5xGFYdxyNxeszmxEt5Me-PPNfUbXfs4suLvXt0";
+  const STORE = "lilys-owner-key";
+  const TZ = "America/New_York";
+  const OPEN_HOURS = [11, 23]; // widest daily window (Fri/Sat close 11pm)
+  const app = document.getElementById("app");
+
+  // setup link: dashboard.html#key=<owner key>. A fragment never reaches a server.
+  const hashKey = new URLSearchParams(location.hash.slice(1)).get("key") || "";
+  if (hashKey) { try { localStorage.setItem(STORE, hashKey); } catch {} }
+  let key = hashKey;
+  if (!key) { try { key = localStorage.getItem(STORE) || ""; } catch {} }
+
+  let orders = [];
+  let range = (() => { try { return localStorage.getItem("lilys-dash-range") || "30"; } catch { return "30"; } })();
+  let updatedAt = null;
+
+  /* ---------- helpers ---------- */
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids) if (c != null) n.append(c);
+    return n;
+  };
+  const svgEl = (tag, attrs = {}) => {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    return n;
+  };
+  const money = (c, compact = false) => {
+    const d = c / 100;
+    if (compact && Math.abs(d) >= 10000) return "$" + (d / 1000).toFixed(1) + "K";
+    return d.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  };
+  const parts = (iso) => {
+    const p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date(iso));
+    const g = (t) => p.find((x) => x.type === t)?.value;
+    return { day: `${g("year")}-${g("month")}-${g("day")}`, hour: Number(g("hour")), min: Number(g("minute")) };
+  };
+  const todayKey = () => parts(new Date().toISOString()).day;
+  const addDays = (dayKey, n) => {
+    const [y, m, d] = dayKey.split("-").map(Number);
+    const t = new Date(Date.UTC(y, m - 1, d + n));
+    return t.toISOString().slice(0, 10);
+  };
+  const dayLabel = (k, long = false) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", long
+      ? { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }
+      : { month: "short", day: "numeric", timeZone: "UTC" });
+  };
+  const hourLabel = (h) => (h % 12 || 12) + (h < 12 ? "am" : "pm");
+  const niceMax = (v) => {
+    if (v <= 0) return 1;
+    const p = 10 ** Math.floor(Math.log10(v));
+    // steps that halve to a whole value, so the mid tick is never "$12.5"→"$13"
+    for (const s of [1, 2, 4, 5, 10]) if (s * p >= v) return s * p;
+    return 10 * p;
+  };
+  const counted = (o) => ["paid", "making", "ready", "done"].includes(o.status);
+  const sales = (o) => o.subtotal_cents - (o.discount_cents || 0); // food after offers: excludes tax, delivery, tips
+
+  /* ---------- range ---------- */
+  function rangeDays() {
+    const t = todayKey();
+    if (range === "all") {
+      const first = orders.length ? parts(orders[0].created_at).day : t;
+      const days = [];
+      for (let d = first; d <= t; d = addDays(d, 1)) days.push(d);
+      return days.length ? days : [t];
+    }
+    const n = Number(range);
+    const days = [];
+    for (let i = n - 1; i >= 0; i--) days.push(addDays(t, -i));
+    return days;
+  }
+  function slice(days) {
+    const set = new Set(days);
+    return orders.filter((o) => set.has(parts(o.created_at).day));
+  }
+  function prevSlice(days) {
+    if (range === "all") return null;
+    const n = days.length;
+    const prevDays = days.map((d) => addDays(d, -n));
+    return slice(prevDays);
+  }
+
+  /* ---------- data ---------- */
+  async function load() {
+    app.classList.add("loading");
+    try {
+      const r = await fetch(FN, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "x-owner-key": key, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 401 && j.error === "Wrong owner key") {
+        try { localStorage.removeItem(STORE); } catch {}
+        key = "";
+        return renderLogin("That owner code wasn't accepted.");
+      }
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      orders = j.orders || [];
+      updatedAt = new Date();
+      render();
+    } catch (e) {
+      if (!orders.length) app.replaceChildren(el("p", { class: "err", text: "Couldn't load the numbers. " + e.message }));
+    } finally {
+      app.classList.remove("loading");
+    }
+  }
+
+  /* ---------- views ---------- */
+  function renderLogin(err = "") {
+    const input = el("input", { type: "password", placeholder: "Owner code", autocomplete: "off" });
+    const go = () => { key = input.value.trim(); if (!key) return; try { localStorage.setItem(STORE, key); } catch {} load(); };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    app.replaceChildren(el("div", { class: "login" },
+      el("h1", { text: "Lily's Dashboard" }),
+      el("p", { class: "sub", text: "Private. Enter the owner code, or open your setup link." }),
+      input, el("button", { text: "Open", onclick: go }),
+      err ? el("p", { class: "err", text: err }) : null));
+  }
+
+  function deltaEl(cur, prev, fmt) {
+    if (prev === null) return el("div", { class: "delta", text: "All time" });
+    if (prev === 0 && cur === 0) return el("div", { class: "delta", text: "No change vs previous period" });
+    if (prev === 0) return el("div", { class: "delta up", text: `▲ New vs previous ${rangeName(true)}` });
+    const pct = Math.round(((cur - prev) / prev) * 100);
+    const dir = pct > 0 ? "up" : pct < 0 ? "down" : "";
+    const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "";
+    return el("div", { class: `delta ${dir}`, text: `${arrow} ${Math.abs(pct)}% vs previous ${rangeName(true)} (${fmt(prev)})`.trim() });
+  }
+  const rangeName = (short = false) => ({ "1": short ? "day" : "Today", "7": short ? "7 days" : "Last 7 days", "30": short ? "30 days" : "Last 30 days", "90": short ? "90 days" : "Last 90 days", all: "All time" })[range];
+
+  function tile(label, value, delta, hero = false) {
+    return el("div", { class: `card tile${hero ? " hero" : ""}` },
+      el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), delta);
+  }
+
+  function render() {
+    const days = rangeDays();
+    const cur = slice(days);
+    const prev = prevSlice(days);
+    const ok = cur.filter(counted);
+    const okPrev = prev ? prev.filter(counted) : null;
+    const sum = (list, f) => list.reduce((s, o) => s + f(o), 0);
+    const items = (list) => sum(list, (o) => (o.items || []).reduce((s, l) => s + l.qty, 0));
+
+    const S = sum(ok, sales), Sp = okPrev ? sum(okPrev, sales) : null;
+    const N = ok.length, Np = okPrev ? okPrev.length : null;
+    const A = N ? Math.round(S / N) : 0, Ap = okPrev ? (Np ? Math.round(Sp / Np) : 0) : null;
+    const I = items(ok), Ip = okPrev ? items(okPrev) : null;
+
+    const filters = el("div", { class: "filters", role: "group", "aria-label": "Date range" },
+      ...[["1", "Today"], ["7", "7 days"], ["30", "30 days"], ["90", "90 days"], ["all", "All time"]].map(([v, t]) =>
+        el("button", { "aria-pressed": String(range === v), text: t, onclick: () => { range = v; try { localStorage.setItem("lilys-dash-range", v); } catch {} render(); } })),
+      el("button", { class: "refresh", text: "Refresh", onclick: load }));
+
+    const kpis = el("div", { class: "grid kpis" },
+      tile(`Food sales · ${rangeName()}`, money(S, true), deltaEl(S, Sp, (v) => money(v, true)), true),
+      tile("Orders", N.toLocaleString(), deltaEl(N, Np, (v) => String(v))),
+      tile("Average order", N ? money(A) : "–", deltaEl(A, Ap, (v) => money(v))),
+      tile("Items sold", I.toLocaleString(), deltaEl(I, Ip, (v) => String(v))));
+
+    // sales by day
+    const byDay = days.map((d) => {
+      const list = ok.filter((o) => parts(o.created_at).day === d);
+      return { key: d, value: sum(list, sales), orders: list.length };
+    });
+    const salesCard = el("div", { class: "card" },
+      el("h2", { text: "Food sales by day" }),
+      el("p", { class: "cap", text: "Florida time · excludes tax, delivery fees and tips" }));
+    const salesChart = el("div", { class: "chart" });
+    salesCard.append(salesChart);
+    salesCard.append(tableView("View as table", ["Day", "Orders", "Food sales"],
+      byDay.filter((r) => r.orders).map((r) => [dayLabel(r.key, true), r.orders, money(r.value)])));
+
+    // orders by hour
+    const hours = [];
+    for (let h = 0; h < 24; h++) hours.push({ key: h, value: 0 });
+    ok.forEach((o) => { hours[parts(o.created_at).hour].value++; });
+    const shown = hours.filter((h) => h.key >= OPEN_HOURS[0] - 1 && h.key <= OPEN_HOURS[1]);
+    const hourCard = el("div", { class: "card" },
+      el("h2", { text: "When people order" }),
+      el("p", { class: "cap", text: "Orders by hour of the day · grey = outside opening hours" }));
+    const hourChart = el("div", { class: "chart" });
+    hourCard.append(hourChart);
+
+    // top dishes
+    const dish = new Map();
+    ok.forEach((o) => (o.items || []).forEach((l) => {
+      const d = dish.get(l.name) || { qty: 0, cents: 0 };
+      d.qty += l.qty; d.cents += l.qty * l.unit_cents; dish.set(l.name, d);
+    }));
+    const top = [...dish.entries()].sort((a, b) => b[1].qty - a[1].qty || b[1].cents - a[1].cents).slice(0, 8);
+    const maxQ = Math.max(1, ...top.map(([, d]) => d.qty));
+    const dishCard = el("div", { class: "card" },
+      el("h2", { text: "Top dishes" }), el("p", { class: "cap", text: "By quantity sold" }),
+      top.length
+        ? el("div", { class: "hbars" }, ...top.map(([name, d]) => el("div", { class: "hb", title: `${name}: ${d.qty} sold, ${money(d.cents)}` },
+            el("span", { class: "n", text: name }),
+            el("span", { class: "track" },
+              el("span", { class: "fill", style: `width:${Math.max(2, (d.qty / maxQ) * 100) * 0.8}%` }),
+              el("span", { class: "val", text: `${d.qty} · ${money(d.cents)}` })))))
+        : el("p", { class: "empty", text: "No dishes sold in this period yet." }));
+
+    // pickup vs delivery + kitchen speed
+    const pick = ok.filter((o) => o.fulfilment !== "delivery").length;
+    const deliv = ok.filter((o) => o.fulfilment === "delivery").length;
+    const tips = sum(ok, (o) => o.tip_cents || 0);
+    const fees = sum(ok, (o) => o.delivery_fee_cents || 0);
+    const cancelled = cur.filter((o) => o.status === "canceled").length;
+    const done = ok.filter((o) => o.status === "done")
+      .map((o) => (new Date(o.updated_at) - new Date(o.created_at)) / 60000).filter((m) => m > 0 && m < 240).sort((a, b) => a - b);
+    const median = done.length ? Math.round(done[Math.floor((done.length - 1) / 2)]) : null;
+    const mixCard = el("div", { class: "card" },
+      el("h2", { text: "Pickup vs delivery" }),
+      el("p", { class: "cap", text: deliv ? "Share of orders" : "Delivery is switched off for now" }),
+      N ? el("div", { class: "split", role: "img", "aria-label": `${pick} pickup, ${deliv} delivery` },
+            pick ? el("span", { style: `flex:${pick};background:var(--series-1)`, title: `Pickup: ${pick}` }) : null,
+            deliv ? el("span", { style: `flex:${deliv};background:var(--series-2)`, title: `Delivery: ${deliv}` }) : null)
+        : el("p", { class: "empty", text: "No orders in this period." }),
+      el("div", { class: "legend" },
+        el("span", {}, el("i", { style: "background:var(--series-1)" }), `Pickup ${pick}`),
+        el("span", {}, el("i", { style: "background:var(--series-2)" }), `Delivery ${deliv}`)),
+      el("div", { class: "stack" },
+        el("table", {}, el("tbody", {},
+          el("tr", {}, el("td", { text: "Order to collected (median)" }), el("td", { class: "r", text: median === null ? "–" : `${median} min` })),
+          el("tr", {}, el("td", { text: "Driver tips" }), el("td", { class: "r", text: money(tips) })),
+          el("tr", {}, el("td", { text: "Delivery fees" }), el("td", { class: "r", text: money(fees) })),
+          el("tr", {}, el("td", { text: "Cancelled orders" }), el("td", { class: "r", text: String(cancelled) }))))));
+
+    // recent orders
+    const recent = [...cur].reverse().slice(0, 25);
+    const recentCard = el("div", { class: "card" },
+      el("h2", { text: "Recent orders" }), el("p", { class: "cap", text: "Newest first · no customer details are shown on this page" }),
+      recent.length ? el("div", { class: "table-wrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, ...["When", "Order", "Type", "Items", "Food sales", "Status"].map((h, i) => el("th", { class: i >= 3 && i <= 4 ? "r" : "", text: h })))),
+        el("tbody", {}, ...recent.map((o) => {
+          const p = parts(o.created_at);
+          return el("tr", {},
+            el("td", { text: `${dayLabel(p.day)} ${hourLabel(p.hour).replace(/(am|pm)/, ":" + String(p.min).padStart(2, "0") + "$1")}` }),
+            el("td", { text: o.code }),
+            el("td", { text: o.fulfilment === "delivery" ? "Delivery" : "Pickup" }),
+            el("td", { class: "r", text: String((o.items || []).reduce((s, l) => s + l.qty, 0)) }),
+            el("td", { class: "r", text: money(sales(o)) }),
+            el("td", { text: o.status === "done" ? "Collected" : o.status === "canceled" ? "Cancelled" : o.status === "pending" ? "Not paid" : o.status[0].toUpperCase() + o.status.slice(1) }));
+        })))) : el("p", { class: "empty", text: "No orders in this period yet." }));
+
+    app.replaceChildren(
+      el("header", {},
+        el("h1", { text: "Lily's Dashboard" }),
+        el("span", { class: "sub", text: `Updated ${updatedAt ? updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "–"} · real orders only` })),
+      filters, kpis,
+      el("div", { class: "grid two", style: "margin-top:14px" }, salesCard, hourCard),
+      el("div", { class: "grid two", style: "margin-top:14px" }, dishCard, mixCard),
+      el("div", { class: "grid", style: "margin-top:14px" }, recentCard));
+
+    columnChart(salesChart, byDay.map((d) => ({
+      label: days.length > 14 ? dayLabel(d.key) : dayLabel(d.key, true),
+      value: d.value, ctx: false,
+      tip: [money(d.value), `${dayLabel(d.key, true)} · ${d.orders} order${d.orders === 1 ? "" : "s"}`],
+    })), { fmt: (v) => money(v), compact: (v) => "$" + Math.round(v / 100).toLocaleString() });
+    columnChart(hourChart, shown.map((h) => ({
+      label: hourLabel(h.key), value: h.value,
+      ctx: h.key < OPEN_HOURS[0] || h.key >= OPEN_HOURS[1],
+      tip: [`${h.value} order${h.value === 1 ? "" : "s"}`, `${hourLabel(h.key)}–${hourLabel((h.key + 1) % 24)}`],
+    })), { fmt: (v) => String(v), compact: (v) => String(Math.round(v)), integer: true });
+  }
+
+  function tableView(summary, head, rows) {
+    if (!rows.length) return null;
+    return el("details", { class: "tv" }, el("summary", { text: summary }),
+      el("div", { class: "table-wrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, ...head.map((h, i) => el("th", { class: i ? "r" : "", text: h })))),
+        el("tbody", {}, ...rows.map((r) => el("tr", {}, ...r.map((c, i) => el("td", { class: i ? "r" : "", text: String(c) }))))))));
+  }
+
+  /* ---------- column chart: one series, thin rounded columns, hover tooltip ---------- */
+  function columnChart(host, data, { compact, integer = false } = {}) {
+    const draw = () => {
+      host.replaceChildren();
+      const W = Math.max(280, host.clientWidth), H = 190;
+      const m = { t: 10, r: 6, b: 24, l: 44 };
+      const iw = W - m.l - m.r, ih = H - m.t - m.b;
+      const maxV = Math.max(...data.map((d) => d.value), 0);
+      let top = niceMax(maxV);
+      if (integer) top = Math.max(1, Math.ceil(top));
+      const ticks = integer && top <= 4 ? Array.from({ length: top + 1 }, (_, i) => i) : [0, top / 2, top];
+      const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" });
+      ticks.forEach((t) => {
+        const y = m.t + ih - (t / top) * ih;
+        svg.append(svgEl("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, class: t === 0 ? "baseline" : "gridline" }));
+        const lab = svgEl("text", { x: m.l - 8, y: y + 4, "text-anchor": "end", class: "tick" });
+        lab.textContent = compact(t);
+        svg.append(lab);
+      });
+      const band = iw / data.length;
+      const bw = Math.max(2, Math.min(24, band * 0.62));
+      const every = Math.ceil(data.length / Math.max(1, Math.floor(iw / 56)));
+      const tip = el("div", { class: "tip", hidden: "" });
+      data.forEach((d, i) => {
+        const x = m.l + i * band + (band - bw) / 2;
+        const h = (d.value / top) * ih;
+        const y = m.t + ih - h;
+        if (h > 0) {
+          const r = Math.min(4, bw / 2, h);
+          svg.append(svgEl("path", {
+            class: "bar" + (d.ctx ? " ctx" : ""),
+            d: `M${x},${m.t + ih} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${m.t + ih} Z`,
+          }));
+        }
+        // always label the newest slot (today), and skip one that would crowd it
+        const lastI = data.length - 1;
+        if ((i % every === 0 && lastI - i >= every / 2) || i === lastI) {
+          const lab = svgEl("text", { x: m.l + i * band + band / 2, y: H - 6, "text-anchor": "middle", class: "tick" });
+          lab.textContent = d.label;
+          svg.append(lab);
+        }
+        // hit target = the whole band, taller than the mark
+        const hit = svgEl("rect", { x: m.l + i * band, y: m.t, width: band, height: ih, class: "hit", tabindex: "0", "aria-label": `${d.label}: ${d.tip[0]}` });
+        const hl = svgEl("rect", { x: m.l + i * band, y: m.t, width: band, height: ih, class: "hl" });
+        const show = () => {
+          tip.replaceChildren(
+            el("div", { class: "row" }, el("span", { class: "key" }), el("span", { class: "v", text: d.tip[0] })),
+            el("div", { class: "k", text: d.tip[1] }));
+          tip.hidden = false;
+          const tx = Math.min(W - 140, Math.max(0, m.l + i * band + band / 2 - 60));
+          tip.style.left = tx + "px";
+          tip.style.top = Math.max(0, y - 58) + "px";
+        };
+        hit.addEventListener("pointerenter", show);
+        hit.addEventListener("focus", show);
+        hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+        hit.addEventListener("blur", () => { tip.hidden = true; });
+        svg.append(hit, hl);
+      });
+      host.append(svg, tip);
+    };
+    draw();
+    if (!host._ro) {
+      let raf;
+      host._ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
+      host._ro.observe(host);
+    }
+  }
+
+  if (!key) renderLogin(); else load();
+  setInterval(() => { if (key && document.visibilityState === "visible") load(); }, 60000);
+})();
+</script>
+</body>
+</html>
