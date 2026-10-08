@@ -35,17 +35,33 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: keyRow, error: keyErr } = await db.from("app_config").select("value").eq("key", "kitchen_key").maybeSingle();
+  const { data: keyRows, error: keyErr } = await db
+    .from("app_config")
+    .select("key,value")
+    .in("key", ["kitchen_key", "kitchen_key_prev", "kitchen_key_prev_until"]);
   if (keyErr) {
     // transient DB blip must read as "try again", not "wrong key" — a 401 logs the tablet out
     console.error("kitchen_key read failed:", keyErr.message);
     return json({ error: "Temporarily unavailable" }, 503);
   }
-  const expected = keyRow?.value ?? "";
+  const kc = Object.fromEntries((keyRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  const expected = kc.kitchen_key ?? "";
   const provided = req.headers.get("x-kitchen-key") ?? "";
-  if (!expected || !timingSafeEqual(provided, expected)) {
+  // Key rotation without a dark board: the previous key keeps working until
+  // kitchen_key_prev_until, so a tablet still on it isn't logged out before it
+  // has been moved to the new setup link. After that moment it is dead.
+  const prev = kc.kitchen_key_prev ?? "";
+  const prevUntil = Date.parse(kc.kitchen_key_prev_until ?? "");
+  const currentOk = expected.length > 0 && timingSafeEqual(provided, expected);
+  const prevOk = !currentOk && prev.length > 0 && Number.isFinite(prevUntil) && Date.now() < prevUntil &&
+    timingSafeEqual(provided, prev);
+  if (!currentOk && !prevOk) {
+    // every miss is logged and costs the caller a second, so guessing is slow and visible
+    console.warn("kitchen-api: wrong key attempt");
+    await new Promise((r) => setTimeout(r, 1000));
     return json({ error: "Wrong kitchen key" }, 401);
   }
+  if (prevOk) console.log("kitchen-api: request on the previous key (rotation grace period)");
 
   let body: { action?: string; id?: string; to?: string; available?: boolean; active?: boolean };
   try {
