@@ -316,6 +316,13 @@ Deno.serve(async (req) => {
 
   // demo orders may be placed while closed (for showing Kareem); real ones may
   // not — except a token-carrying test order, which rides the full live path
+  // delivery is switched by app_config.delivery_enabled, default OFF: Zachary is
+  // holding it until Kareem confirms drivers (2026-10-08). Checked before any
+  // order row exists, so a forced delivery request never creates anything.
+  if (fulfilment === "delivery" && (cfg.delivery_enabled ?? "").trim() !== "true") {
+    return json({ error: "Delivery isn't available yet. Pickup is ready in about 30 minutes." }, 409);
+  }
+
   if (!demo && !testOrder && !openNow()) {
     return json({ error: "We're closed right now — online ordering opens with the kitchen." }, 409);
   }

@@ -59,7 +59,7 @@
     <div class="section-head">
       <span class="eyebrow">Pickup · pay online · straight to the kitchen</span>
       <h1>Order for pickup.</h1>
-      <p>Pickup in about <strong id="prepMin">30</strong> minutes at 2 5th Ave STE C, Indialantic, or delivery within 5 miles in about <strong id="delMin">40</strong>.</p>
+      <p>Pickup in about <strong id="prepMin">30</strong> minutes at 2 5th Ave STE C, Indialantic<span id="heroDel">, or delivery within 5 miles in about <strong id="delMin">40</strong></span>.</p>
       <div class="menu-status"><span id="statusMount"></span></div>
       <div class="order-closed-note" id="closedNote" hidden>
         The kitchen is closed right now — you can build a cart, and ordering opens with the kitchen.
@@ -90,8 +90,8 @@
             <legend>How would you like it?</legend>
             <label class="ful-opt"><input type="radio" name="ful" value="pickup" checked>
               <span><b>Pickup</b><em>Ready in about 30 min · no fee</em></span><i class="ful-tag">Fastest</i></label>
-            <label class="ful-opt"><input type="radio" name="ful" value="delivery">
-              <span><b>Delivery</b><em>About 40 min · free within 2 miles</em></span></label>
+            <label class="ful-opt" id="fulDelivery"><input type="radio" name="ful" value="delivery">
+              <span><b>Delivery</b><em id="fulDelNote">About 40 min · free within 2 miles</em></span></label>
           </fieldset>
           <div class="cf-del" id="cfDel" hidden>
             <label>Delivery address
