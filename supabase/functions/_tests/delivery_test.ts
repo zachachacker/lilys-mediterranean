@@ -51,6 +51,13 @@ Deno.test("drift: tips only ride delivery orders; minimum is checked on food aft
   assertStringIncludes(s, "if (subtotal - discount < DELIVERY_MIN_CENTS) {");
 });
 
+Deno.test("drift: delivery is refused unless app_config.delivery_enabled is exactly true", async () => {
+  const s = await src();
+  assertStringIncludes(s, 'if (fulfilment === "delivery" && (cfg.delivery_enabled ?? "").trim() !== "true") {');
+  // and the gate sits before the order insert
+  assert(s.indexOf('cfg.delivery_enabled') < s.indexOf('.from("orders")\n      .insert('));
+});
+
 Deno.test("fee: every tier boundary", () => {
   assertEquals(deliveryFeeCents(0), 0);
   assertEquals(deliveryFeeCents(2), 0);

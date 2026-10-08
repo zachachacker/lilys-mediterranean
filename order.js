@@ -114,6 +114,14 @@
 
   if ($("prepMin")) $("prepMin").textContent = O.prepMinutes;
   if ($("delMin")) $("delMin").textContent = O.deliveryMinutes;
+  if (!O.deliveryEnabled) {
+    // held until Kareem confirms drivers — shown, but not selectable
+    const r = document.querySelector('input[name="ful"][value="delivery"]');
+    if (r) r.disabled = true;
+    if ($("fulDelivery")) $("fulDelivery").classList.add("off");
+    if ($("fulDelNote")) $("fulDelNote").textContent = "Currently unavailable";
+    if ($("heroDel")) $("heroDel").hidden = true;
+  }
 
   // came back from Stripe without paying — cart is intact, say so
   if (new URLSearchParams(location.search).get("canceled") && $("closedNote")) {

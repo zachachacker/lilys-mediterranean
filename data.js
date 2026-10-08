@@ -51,6 +51,9 @@ window.LILYS = {
     taxRate: 0.07, // FL 6% + Brevard 1% — confirm with Kareem
     prepMinutes: "30", // pickup (Kareem, 2026-10-07)
     deliveryMinutes: "40",
+    // shows/hides the Delivery option. The server has its own switch
+    // (app_config.delivery_enabled) and refuses delivery while that is off.
+    deliveryEnabled: false,
   },
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
   // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,
