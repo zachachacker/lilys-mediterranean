@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#121514">
-<link rel="manifest" href="kitchen.webmanifest">
+<link rel="apple-touch-icon" href="assets/kds-icon-192.png">
 <title>Kitchen · Lily's Orders</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -214,6 +214,26 @@
     .k-main { grid-template-columns: 1fr; }
     .k-rail { border-left: none; border-top: 1px solid var(--line); min-height: 0; }
   }
+
+  /* ---- tutorial coach (2026-10-08) -------------------------------------- */
+  #kTour { position:fixed; left:50%; bottom:88px; transform:translateX(-50%); z-index:55;
+    width:min(620px, 94vw); background:#1d2320; color:#f4f1ea; border:2px solid #e3a33b;
+    border-radius:14px; padding:18px 20px 16px; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+  #kTour .kt-step { font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:#e3a33b; }
+  #kTour h2 { margin:6px 0 6px; font-size:1.35rem; }
+  #kTour p { margin:0; font-size:1.08rem; line-height:1.5; color:#dcd8cf; }
+  #kTour .kt-wait { margin-top:10px; font-size:0.9rem; color:#9fd3c7; }
+  #kTour .kt-btns { display:flex; justify-content:space-between; align-items:center; margin-top:14px; gap:10px; }
+  #kTour button { font:inherit; font-weight:700; border-radius:10px; padding:0.75rem 1.4rem; cursor:pointer; border:0; }
+  #kTour .kt-next { background:#e3a33b; color:#1a1408; }
+  #kTour .kt-back { background:#2c3430; color:#f4f1ea; margin-right:8px; }
+  #kTour .kt-skip { background:transparent; color:#9aa39d; padding-left:0; }
+  @keyframes ktPulse { 0%,100% { box-shadow:0 0 0 0 rgba(227,163,59,0.9); } 50% { box-shadow:0 0 0 10px rgba(227,163,59,0); } }
+  body[data-tour="sound"] #kSound, body[data-tour="stock"] #kStock, body[data-tour="daily"] #kHelp,
+  body[data-tour="arrive"] [data-start^="practice-"], body[data-tour="start"] [data-start^="practice-"],
+  body[data-tour="ready"] [data-ready^="practice-"], body[data-tour="picked"] [data-picked^="practice-"],
+  body[data-tour="undo"] #kUndoBtn, body[data-tour="more"] [data-more^="practice-"] {
+    outline:3px solid #e3a33b; outline-offset:3px; animation:ktPulse 1.3s ease-in-out infinite; position:relative; z-index:2; }
 
   /* ---- delivery tickets (2026-10-07) ------------------------------------ */
   .t-del-l { font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:#9fd3c7; margin-bottom:3px; }
