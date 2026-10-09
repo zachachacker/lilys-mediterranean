@@ -480,14 +480,17 @@
               el("strong", { text: f.rating === 1 ? "Great · " : "Not great · " }), document.createTextNode(f.comment)))) : null)
         : el("p", { class: "empty", text: "No ratings yet. Customers are asked once their order is collected." }));
 
-    // funnel
+    // funnel — only orders from when counting began, or the steps would compare
+    // orders placed before tracking against visits counted after it
+    const TRACK_START = "2026-10-09";
+    const funnelPaid = ok.filter((o) => parts(o.created_at).day >= TRACK_START).length;
     const visits = evSum("visit_home") + evSum("visit_menu") + evSum("visit_order");
     const fSteps = [
       ["Page visits (any page)", visits],
       ["Visits to the order page", evSum("visit_order")],
       ["Items added to cart", evSum("add_to_cart")],
       ["Checkouts started", evSum("checkout_start")],
-      ["Orders paid", N],
+      ["Orders paid", funnelPaid],
     ];
     const fMax = Math.max(1, ...fSteps.map(([, v]) => v));
     const checkouts = evSum("checkout_start");
@@ -495,7 +498,7 @@
       el("p", { class: "cap", text: "Daily totals, no cookies or visitor tracking · counting started 9 Oct" }),
       el("div", { class: "hbars" }, ...fSteps.map(([n, v]) => el("div", { class: "hb" }, el("span", { class: "n", text: n }),
         el("span", { class: "track" }, el("span", { class: "fill", style: `width:${Math.max(2, (v / fMax) * 100) * 0.8}%` }), el("span", { class: "val", text: v.toLocaleString() }))))),
-      el("p", { class: "cap", style: "margin:12px 0 0", text: checkouts ? `${Math.round((N / checkouts) * 100)}% of started checkouts were paid.` : "No checkouts counted yet in this period." }));
+      el("p", { class: "cap", style: "margin:12px 0 0", text: checkouts ? `${Math.round((funnelPaid / checkouts) * 100)}% of started checkouts were paid.` : "No checkouts counted yet in this period." }));
 
     // dishes: added vs ordered
     const names = new Map();
