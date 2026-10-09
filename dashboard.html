@@ -254,7 +254,8 @@
       updatedAt = new Date();
       render();
     } catch (e) {
-      if (!orders.length) app.replaceChildren(el("p", { class: "err", text: "Couldn't load the numbers. " + e.message }));
+      console.error("dashboard:", e); // never swallow a render error silently again
+      if (!orders.length || !app.children.length) app.replaceChildren(el("p", { class: "err", text: "Couldn't show the numbers. " + e.message }));
     } finally {
       app.classList.remove("loading");
     }
@@ -295,7 +296,7 @@
     skytab: "SkyTab", gbp: "Google listing", qr: "QR code",
   };
   const sourceName = (s) => SOURCE_NAMES[s] || (s ? s.replace(/-/g, " ") : "Unknown (before tracking)");
-  const median = (xs) => { const v = xs.filter((m) => m > 0 && m < 240).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
+  const medianOf = (xs) => { const v = xs.filter((m) => m > 0 && m < 240).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
   const mins = (a, b) => (a && b ? (new Date(b) - new Date(a)) / 60000 : null);
   const fmtMin = (m) => (m === null ? "–" : m < 1 ? "<1 min" : `${Math.round(m)} min`);
   const prettyDish = (id, names) => names.get(id) || id.replace(/^lily-s-/, "lily's-").split("-").map((w) => w[0]?.toUpperCase() + w.slice(1)).join(" ");
@@ -443,10 +444,10 @@
 
     // kitchen timing (stamped stages; orders from before 9 Oct have none)
     const stamped = ok.filter((o) => o.paid_at);
-    const tWait = median(stamped.map((o) => mins(o.paid_at, o.started_at)));
-    const tCook = median(stamped.map((o) => mins(o.started_at, o.ready_at)));
-    const tCounter = median(stamped.map((o) => mins(o.ready_at, o.done_at)));
-    const tTotal = median(stamped.map((o) => mins(o.paid_at, o.done_at)));
+    const tWait = medianOf(stamped.map((o) => mins(o.paid_at, o.started_at)));
+    const tCook = medianOf(stamped.map((o) => mins(o.started_at, o.ready_at)));
+    const tCounter = medianOf(stamped.map((o) => mins(o.ready_at, o.done_at)));
+    const tTotal = medianOf(stamped.map((o) => mins(o.paid_at, o.done_at)));
     const timingCard = kvCard("Kitchen timing", "Medians · from the kitchen screen taps", [
       ["Paid → kitchen starts it", fmtMin(tWait)],
       ["Cooking (start → ready)", fmtMin(tCook)],
