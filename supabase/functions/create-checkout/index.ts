@@ -96,6 +96,29 @@ function applyPromotions(lines: PLine[], promos: Promo[]) {
   return { subtotal, discount, applied };
 }
 
+/* ── analytics (2026-10-08) ─────────────────────────────────────────────
+   Where the order came from (set by the site from the landing URL/referrer)
+   and an anonymous repeat-customer fingerprint: a salted SHA-256 of the
+   phone's digits. The salt lives only in app_config, so the fingerprint can't
+   be reversed by hashing guessed numbers, and the dashboard never sees a
+   phone number at all. */
+function normSource(raw: unknown, max = 40): string | null {
+  const s = String(raw ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, max);
+  return s || null;
+}
+
+function phoneDigits(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  return d.length === 11 && d.startsWith("1") ? d.slice(1) : d; // +1 US prefix
+}
+
+async function customerHash(salt: string, phone: string): Promise<string | null> {
+  const digits = phoneDigits(phone);
+  if (!salt || digits.length < 10) return null;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${digits}`));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /* ── delivery ────────────────────────────────────────────────────────────
    Kareem, 2026-10-07: free within 2 miles, $5 to 3.5 miles, $10 to 5 miles,
    nothing beyond; at least $15 of food; customers may tip the driver.
@@ -207,6 +230,7 @@ Deno.serve(async (req) => {
   let body: {
     items?: CartLine[]; name?: string; phone?: string; notes?: string;
     action?: string; fulfilment?: string; address?: string; tip_cents?: unknown;
+    source?: unknown; source_detail?: unknown;
   };
   try {
     body = await req.json();
@@ -386,6 +410,10 @@ Deno.serve(async (req) => {
     return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
   }
 
+  const source = normSource(body.source);
+  const sourceDetail = normSource(body.source_detail, 80);
+  const custHash = await customerHash(cfg.customer_hash_salt ?? "", phone);
+
   // insert with a fresh code; retry on the (unlikely) code collision
   let order: { id: string; code: string } | null = null;
   for (let attempt = 0; attempt < 3 && !order; attempt++) {
@@ -410,6 +438,9 @@ Deno.serve(async (req) => {
         delivery_miles: deliveryMiles,
         delivery_fee_cents: deliveryFee,
         tip_cents: tip,
+        source,
+        source_detail: sourceDetail,
+        customer_hash: custHash,
         demo,
         payment_provider: demo ? "demo" : provider,
         // our own session token — the confirmation page looks orders up by it.

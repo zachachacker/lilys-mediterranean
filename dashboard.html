@@ -151,6 +151,8 @@
   if (!key) { try { key = localStorage.getItem(STORE) || ""; } catch {} }
 
   let orders = [];
+  let events = [];
+  let feedback = [];
   let range = (() => { try { return localStorage.getItem("lilys-dash-range") || "30"; } catch { return "30"; } })();
   let updatedAt = null;
 
@@ -247,6 +249,8 @@
       }
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
       orders = j.orders || [];
+      events = j.events || [];
+      feedback = j.feedback || [];
       updatedAt = new Date();
       render();
     } catch (e) {
@@ -282,6 +286,33 @@
   function tile(label, value, delta, hero = false) {
     return el("div", { class: `card tile${hero ? " hero" : ""}` },
       el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), delta);
+  }
+
+  const SOURCE_NAMES = {
+    "google-ads": "Google Ads", google: "Google search", direct: "Direct / typed in", instagram: "Instagram",
+    facebook: "Facebook", tiktok: "TikTok", yelp: "Yelp", tripadvisor: "TripAdvisor", bing: "Bing",
+    duckduckgo: "DuckDuckGo", sticker: "Uber Eats bag sticker", ubereats: "Uber Eats", doordash: "DoorDash",
+    skytab: "SkyTab", gbp: "Google listing", qr: "QR code",
+  };
+  const sourceName = (s) => SOURCE_NAMES[s] || (s ? s.replace(/-/g, " ") : "Unknown (before tracking)");
+  const median = (xs) => { const v = xs.filter((m) => m > 0 && m < 240).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
+  const mins = (a, b) => (a && b ? (new Date(b) - new Date(a)) / 60000 : null);
+  const fmtMin = (m) => (m === null ? "–" : m < 1 ? "<1 min" : `${Math.round(m)} min`);
+  const prettyDish = (id, names) => names.get(id) || id.replace(/^lily-s-/, "lily's-").split("-").map((w) => w[0]?.toUpperCase() + w.slice(1)).join(" ");
+
+  function hbarCard(title, cap, rows, emptyText) {
+    const max = Math.max(1, ...rows.map((r) => r.v));
+    return el("div", { class: "card" }, el("h2", { text: title }), el("p", { class: "cap", text: cap }),
+      rows.length ? el("div", { class: "hbars" }, ...rows.map((r) => el("div", { class: "hb", title: `${r.n}: ${r.label}` },
+        el("span", { class: "n", text: r.n }),
+        el("span", { class: "track" }, el("span", { class: "fill", style: `width:${Math.max(2, (r.v / max) * 100) * 0.8}%` }), el("span", { class: "val", text: r.label })))))
+      : el("p", { class: "empty", text: emptyText }));
+  }
+
+  function kvCard(title, cap, rows, note) {
+    return el("div", { class: "card" }, el("h2", { text: title }), el("p", { class: "cap", text: cap }),
+      el("table", {}, el("tbody", {}, ...rows.map(([k, v]) => el("tr", {}, el("td", { text: k }), el("td", { class: "r", text: v }))))),
+      note ? el("p", { class: "cap", style: "margin:10px 0 0", text: note }) : null);
   }
 
   function render() {
@@ -398,6 +429,90 @@
             el("td", { text: o.status === "done" ? "Collected" : o.status === "canceled" ? (o.charged ? "Cancelled" : "Not completed") : o.status === "pending" ? "Paying now" : o.status[0].toUpperCase() + o.status.slice(1) }));
         })))) : el("p", { class: "empty", text: "No orders in this period yet." }));
 
+    /* ---- analytics v1 sections ---- */
+    const daySet = new Set(days);
+    const ev = events.filter((e) => daySet.has(e.day));
+    const evSum = (name) => ev.filter((e) => e.event === name).reduce((s2, e) => s2 + e.count, 0);
+
+    // where orders come from
+    const bySrc = new Map();
+    ok.forEach((o) => { const k = o.source || ""; const r = bySrc.get(k) || { n: 0, c: 0 }; r.n++; r.c += sales(o); bySrc.set(k, r); });
+    const srcRows = [...bySrc.entries()].sort((a, b) => b[1].n - a[1].n)
+      .map(([k, r]) => ({ n: sourceName(k), v: r.n, label: `${r.n} order${r.n === 1 ? "" : "s"} · ${money(r.c)}` }));
+    const sourceCard = hbarCard("Where orders come from", "Last place the customer came from before ordering", srcRows, "No orders in this period yet.");
+
+    // kitchen timing (stamped stages; orders from before 9 Oct have none)
+    const stamped = ok.filter((o) => o.paid_at);
+    const tWait = median(stamped.map((o) => mins(o.paid_at, o.started_at)));
+    const tCook = median(stamped.map((o) => mins(o.started_at, o.ready_at)));
+    const tCounter = median(stamped.map((o) => mins(o.ready_at, o.done_at)));
+    const tTotal = median(stamped.map((o) => mins(o.paid_at, o.done_at)));
+    const timingCard = kvCard("Kitchen timing", "Medians · from the kitchen screen taps", [
+      ["Paid → kitchen starts it", fmtMin(tWait)],
+      ["Cooking (start → ready)", fmtMin(tCook)],
+      ["Waiting on the counter (ready → collected)", fmtMin(tCounter)],
+      ["Paid → collected", fmtMin(tTotal)],
+    ], stamped.length ? `${stamped.length} order${stamped.length === 1 ? "" : "s"} measured` : "Collecting from 9 Oct; earlier orders weren't timed step by step.");
+
+    // customers
+    const custOrders = new Map();
+    orders.filter(counted).forEach((o) => { if (o.customer) custOrders.set(o.customer, (custOrders.get(o.customer) || 0) + 1); });
+    const inRange = [...new Set(ok.map((o) => o.customer).filter(Boolean))];
+    const returning = inRange.filter((c) => (custOrders.get(c) || 0) >= 2).length;
+    const untracked = ok.filter((o) => !o.customer).length;
+    const custCard = kvCard("Customers", "Anonymous: no names or numbers, just whether someone came back", [
+      ["Customers in this period", String(inRange.length)],
+      ["Have ordered more than once", inRange.length ? `${returning} (${Math.round((returning / inRange.length) * 100)}%)` : "–"],
+      ["Orders per customer", inRange.length ? (ok.filter((o) => o.customer).length / inRange.length).toFixed(1) : "–"],
+    ], untracked ? `${untracked} earlier order${untracked === 1 ? "" : "s"} from before tracking aren't counted here.` : null);
+
+    // ratings
+    const fbIn = feedback.filter((f) => daySet.has(parts(f.created_at).day));
+    const great = fbIn.filter((f) => f.rating === 1).length;
+    const comments = fbIn.filter((f) => f.comment).slice(0, 6);
+    const rateCard = el("div", { class: "card" }, el("h2", { text: "Ratings" }), el("p", { class: "cap", text: "Asked after collection: Great or Not great" }),
+      fbIn.length
+        ? el("div", {},
+            el("div", { class: "tile" }, el("div", { class: "value", text: `${Math.round((great / fbIn.length) * 100)}%` }),
+              el("div", { class: "delta", text: `said Great · ${fbIn.length} rating${fbIn.length === 1 ? "" : "s"}` })),
+            comments.length ? el("div", { class: "stack" }, ...comments.map((f) => el("p", { style: "margin:0 0 8px;font-size:0.85rem" },
+              el("strong", { text: f.rating === 1 ? "Great · " : "Not great · " }), document.createTextNode(f.comment)))) : null)
+        : el("p", { class: "empty", text: "No ratings yet. Customers are asked once their order is collected." }));
+
+    // funnel
+    const visits = evSum("visit_home") + evSum("visit_menu") + evSum("visit_order");
+    const fSteps = [
+      ["Page visits (any page)", visits],
+      ["Visits to the order page", evSum("visit_order")],
+      ["Items added to cart", evSum("add_to_cart")],
+      ["Checkouts started", evSum("checkout_start")],
+      ["Orders paid", N],
+    ];
+    const fMax = Math.max(1, ...fSteps.map(([, v]) => v));
+    const checkouts = evSum("checkout_start");
+    const funnelCard = el("div", { class: "card" }, el("h2", { text: "From visit to order" }),
+      el("p", { class: "cap", text: "Daily totals, no cookies or visitor tracking · counting started 9 Oct" }),
+      el("div", { class: "hbars" }, ...fSteps.map(([n, v]) => el("div", { class: "hb" }, el("span", { class: "n", text: n }),
+        el("span", { class: "track" }, el("span", { class: "fill", style: `width:${Math.max(2, (v / fMax) * 100) * 0.8}%` }), el("span", { class: "val", text: v.toLocaleString() }))))),
+      el("p", { class: "cap", style: "margin:12px 0 0", text: checkouts ? `${Math.round((N / checkouts) * 100)}% of started checkouts were paid.` : "No checkouts counted yet in this period." }));
+
+    // dishes: added vs ordered
+    const names = new Map();
+    orders.forEach((o) => (o.items || []).forEach((l) => names.set(l.id, l.name)));
+    const added = new Map();
+    ev.filter((e) => e.event === "add_to_cart" && e.item).forEach((e) => added.set(e.item, (added.get(e.item) || 0) + e.count));
+    const ordered = new Map();
+    ok.forEach((o) => (o.items || []).forEach((l) => ordered.set(l.id, (ordered.get(l.id) || 0) + l.qty)));
+    const dishIds = [...new Set([...added.keys(), ...ordered.keys()])]
+      .sort((a, b) => (added.get(b) || 0) - (added.get(a) || 0) || (ordered.get(b) || 0) - (ordered.get(a) || 0)).slice(0, 10);
+    const interestCard = el("div", { class: "card" }, el("h2", { text: "Dishes: added vs ordered" }),
+      el("p", { class: "cap", text: "A dish added often but rarely ordered usually means price or photo" }),
+      dishIds.length ? el("div", { class: "table-wrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", { text: "Dish" }), el("th", { class: "r", text: "Added" }), el("th", { class: "r", text: "Ordered" }))),
+        el("tbody", {}, ...dishIds.map((id) => el("tr", {}, el("td", { text: prettyDish(id, names) }),
+          el("td", { class: "r", text: String(added.get(id) || 0) }), el("td", { class: "r", text: String(ordered.get(id) || 0) }))))))
+        : el("p", { class: "empty", text: "Nothing added to carts in this period yet." }));
+
     app.replaceChildren(
       el("header", {},
         el("h1", { text: "Lily's Dashboard" }),
@@ -405,6 +520,9 @@
       filters, kpis,
       el("div", { class: "grid two", style: "margin-top:14px" }, salesCard, hourCard),
       el("div", { class: "grid two", style: "margin-top:14px" }, dishCard, mixCard),
+      el("div", { class: "grid two", style: "margin-top:14px" }, sourceCard, timingCard),
+      el("div", { class: "grid two", style: "margin-top:14px" }, funnelCard, interestCard),
+      el("div", { class: "grid two", style: "margin-top:14px" }, custCard, rateCard),
       el("div", { class: "grid", style: "margin-top:14px" }, recentCard));
 
     columnChart(salesChart, byDay.map((d) => ({

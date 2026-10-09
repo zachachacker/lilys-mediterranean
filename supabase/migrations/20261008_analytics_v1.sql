@@ -1,0 +1,6 @@
+-- Analytics v1 (2026-10-08). APPLIED via MCP 2026-10-09.
+-- Per-stage timestamps (trigger-stamped, first time only), order source,
+-- anonymous salted customer fingerprint, cookieless daily funnel counters
+-- (only writable through the whitelisted track_event function), and one rating
+-- per order (service-role only). See the live migration "analytics_v1" for the
+-- exact DDL; this file records that it exists and why.

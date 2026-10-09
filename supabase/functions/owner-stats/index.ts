@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
   const since = new Date(Date.now() - 400 * 86400 * 1000).toISOString();
   const { data, error } = await db
     .from("orders")
-    .select("code,status,fulfilment,created_at,updated_at,items,subtotal_cents,discount_cents,tax_cents,delivery_fee_cents,tip_cents,total_cents,stripe_payment_intent")
+    .select("code,status,fulfilment,created_at,updated_at,items,subtotal_cents,discount_cents,tax_cents,delivery_fee_cents,tip_cents,total_cents,stripe_payment_intent,paid_at,started_at,ready_at,done_at,source,source_detail,customer_hash")
     .eq("demo", false)
     .not("code", "like", "TEST-%")
     .gte("created_at", since)
@@ -55,11 +55,24 @@ Deno.serve(async (req) => {
   // items carry only dish id, name, qty and price — strip anything else defensively
   // `charged` tells an unpaid checkout that expired apart from an order the
   // kitchen cancelled; the payment id itself never leaves this function
-  const orders = (data ?? []).map(({ stripe_payment_intent, ...o }: Record<string, unknown>) => ({
+  // repeat customers: the salted fingerprint never leaves this function either —
+  // the page gets "customer 1, 2, 3…", numbered in order of first appearance
+  const custIndex = new Map<string, number>();
+  const orders = (data ?? []).map(({ stripe_payment_intent, customer_hash, ...o }: Record<string, unknown>) => ({
     ...o,
     charged: Boolean(stripe_payment_intent),
+    customer: customer_hash
+      ? (custIndex.get(customer_hash as string) ??
+        (custIndex.set(customer_hash as string, custIndex.size + 1), custIndex.size))
+      : null,
     items: ((o.items as { id: string; name: string; qty: number; unit_cents: number }[]) ?? [])
       .map(({ id, name, qty, unit_cents }) => ({ id, name, qty, unit_cents })),
   }));
-  return json({ orders, now: new Date().toISOString() });
+  const sinceDay = since.slice(0, 10);
+  const [{ data: events, error: evErr }, { data: fb, error: fbErr }] = await Promise.all([
+    db.from("site_events").select("day,event,item,source,count").gte("day", sinceDay),
+    db.from("feedback").select("code,rating,comment,created_at").not("code", "like", "TEST-%").gte("created_at", since).order("created_at", { ascending: false }),
+  ]);
+  if (evErr || fbErr) console.error("owner-stats extras failed:", evErr?.message, fbErr?.message);
+  return json({ orders, events: events ?? [], feedback: fb ?? [], now: new Date().toISOString() });
 });

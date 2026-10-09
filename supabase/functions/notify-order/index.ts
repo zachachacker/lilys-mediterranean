@@ -1,6 +1,6 @@
 // Order notification email — the backup channel behind the kitchen tablet.
 // Fired by a DB trigger whenever an order becomes paid (pg_net → here).
-// Dormant until app_config.resend_api_key is set. Idempotent via
+// Dormant until the RESEND_API_KEY secret (or app_config.resend_api_key) is set. Idempotent via
 // orders.notified_at, and only notifies fresh orders (no back-spam when
 // the key is added later).
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -28,7 +28,9 @@ Deno.serve(async (req) => {
   const { data: config, error: cfgErr } = await db.from("app_config").select("key,value");
   if (cfgErr) return json({ error: "config read failed" }, 503);
   const cfg = Object.fromEntries((config ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
-  const apiKey = cfg.resend_api_key || "";
+  // the key lives in Edge Function secrets (RESEND_API_KEY), like the Stripe key;
+  // the app_config row is only a fallback for older setups
+  const apiKey = Deno.env.get("RESEND_API_KEY") || cfg.resend_api_key || "";
   const to = cfg.notify_email || "";
   if (!apiKey || !to) return json({ ok: true, note: "email channel not configured" });
 
