@@ -35,6 +35,8 @@ window.LILYS = {
   orderUrl: "order.html", // our own ordering — direct to the kitchen
   instagram: "https://www.instagram.com/lilysmediterranean/",
   directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=2+5th+Ave+STE+C+Indialantic+FL+32903",
+  // Google Ads purchase conversion label from Kareem's account. null = off.
+  googleAdsConversion: null,
   reviewsUrl: "https://www.google.com/maps/search/?api=1&query=Lily%27s+Mediterranean+Fresh+Grill+2+5th+Ave+Indialantic+FL+32903",
   delivery: {
     partners: [

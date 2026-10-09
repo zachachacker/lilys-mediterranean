@@ -1163,3 +1163,12 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .offer { font-weight:600; color:#14532b; line-height:1.4; }
 .offer + .offer { margin-top:0.15rem; }
 .offers-n { font-size:0.78rem; color:#6a6459; margin-top:0.35rem; }
+
+/* rating after collection (2026-10-08) */
+.co-rate { margin: 1.4rem auto 0; max-width: 420px; display: grid; gap: 0.6rem; justify-items: center; }
+.co-rate-t { margin: 0; font-size: 1rem; }
+.co-rate-b { display: flex; gap: 0.6rem; }
+.co-rate-b button { font: inherit; padding: 0.65em 1.4em; border-radius: 99px; border: 1px solid var(--mist); background: #fff; color: var(--char); cursor: pointer; min-height: 44px; }
+.co-rate-b button:hover { border-color: var(--teal); }
+.co-rate textarea { font: inherit; font-size: 16px; width: 100%; padding: 0.6em 0.8em; border: 1px solid var(--mist); border-radius: 6px; }
+.co-rate .muted { opacity: 0.6; font-size: 0.85em; }

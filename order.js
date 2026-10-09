@@ -69,6 +69,7 @@
           : `<div class="co-steps">${steps}</div>
              <p class="confirm-sub">Ready in about <strong>${esc(O.prepMinutes)} minutes</strong> at 2 5th Ave STE C, Indialantic.
              <a class="ink" href="${L.directionsUrl}" target="_blank" rel="noopener">Directions</a> · <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`}
+        ${o.status === "done" ? rateHTML(o) : ""}
         <div class="co-receipt">
           ${items}
           <div class="co-line co-sub"><span>Subtotal</span><span>${money(o.subtotal_cents)}</span></div>
@@ -79,6 +80,52 @@
           <div class="co-line co-total"><span>${totalLabel}</span><span>${money(o.total_cents)}</span></div>
         </div>`;
     };
+    // one-tap rating once the order is collected. The Google review link is
+    // offered to EVERYONE who rates, good or bad: Google bans asking only the
+    // happy customers.
+    function rateHTML(o) {
+      if (o.rated) return `<div class="co-rate"><p class="co-rate-t">Thanks for rating your order.</p>
+        <a class="ink" href="${L.reviewsUrl}" target="_blank" rel="noopener">Leave a Google review</a></div>`;
+      return `<div class="co-rate" id="coRate">
+        <p class="co-rate-t">How was your food?</p>
+        <div class="co-rate-b"><button type="button" data-rate="1">Great</button><button type="button" data-rate="-1">Not great</button></div>
+      </div>`;
+    }
+    confirmRoot.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-rate],[data-rate-send]");
+      if (!b) return;
+      const box = document.getElementById("coRate");
+      if (!box) return;
+      if (b.dataset.rate) {
+        box.dataset.rating = b.dataset.rate;
+        box.innerHTML = `<p class="co-rate-t">${b.dataset.rate === "1" ? "Glad you enjoyed it!" : "Sorry about that."} Anything to tell the kitchen? <span class="muted">(optional)</span></p>
+          <textarea id="coRateC" maxlength="500" rows="2"></textarea>
+          <div class="co-rate-b"><button type="button" data-rate-send="1">Send</button></div>
+          <a class="ink" href="${L.reviewsUrl}" target="_blank" rel="noopener">Leave a Google review</a>`;
+        sendRating(box.dataset.rating, ""); // the tap counts even if they never type
+        return;
+      }
+      await sendRating(box.dataset.rating, $("coRateC")?.value || "");
+      box.innerHTML = `<p class="co-rate-t">Thank you, the kitchen will see that.</p>
+        <a class="ink" href="${L.reviewsUrl}" target="_blank" rel="noopener">Leave a Google review</a>`;
+    });
+    async function sendRating(rating, comment) {
+      try {
+        await fetch(`${FN}/feedback`, { method: "POST", headers: HDRS, body: JSON.stringify({ sid, rating: Number(rating), comment }) });
+      } catch { /* a lost rating is not worth an error message */ }
+    }
+
+    // Google Ads purchase conversion: dormant until Kareem's conversion label is
+    // set in data.js (googleAdsConversion, e.g. "AW-18438934153/AbCdEf"). Fires
+    // once per order, only for real paid orders, with the food value.
+    function reportConversion(o) {
+      const label = L.googleAdsConversion;
+      if (!label || o.demo || o.status === "pending" || o.status === "canceled" || typeof gtag !== "function") return;
+      const k = "lilys-conv-" + o.code;
+      try { if (localStorage.getItem(k)) return; localStorage.setItem(k, "1"); } catch { /* fine */ }
+      gtag("event", "conversion", { send_to: label, value: (o.subtotal_cents - (o.discount_cents || 0)) / 100, currency: "USD", transaction_id: o.code });
+    }
+
     let rendered = false;
     let failures = 0;
     const load = async () => {
@@ -88,7 +135,9 @@
         if (!r.ok) throw new Error(j.error || "lookup failed");
         rendered = true;
         failures = 0;
-        render(j.order);
+        // never re-render over a rating the customer is in the middle of
+        if (!document.getElementById("coRate")?.dataset.rating) render(j.order);
+        reportConversion(j.order);
         if (!["done", "canceled"].includes(j.order.status)) {
           setTimeout(load, j.order.status === "pending" ? 5000 : 15000);
         }
@@ -332,6 +381,7 @@
         return;
       }
       cart.set(id, Math.min(qty + 1, 20));
+      window.LILYS_TRACK?.event("add_to_cart", id);
     }
     renderCart();
   });
@@ -430,6 +480,7 @@
       }
     }
 
+    window.LILYS_TRACK?.event("checkout_start");
     const btn = $("checkoutBtn");
     btn.disabled = true;
     btn.textContent = "Setting up payment…";
@@ -446,6 +497,8 @@
           fulfilment: ful,
           address: ful === "delivery" ? addrEl.value.trim() : "",
           tip_cents: ful === "delivery" ? tipCents : 0,
+          source: window.LILYS_TRACK?.source() || "direct",
+          source_detail: window.LILYS_TRACK?.detail() || "",
         }),
       });
       const j = await r.json();

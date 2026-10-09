@@ -285,3 +285,21 @@ export function parseTipCents(raw: unknown): number | null {
   if (!Number.isInteger(n) || n < 0 || n > TIP_MAX_CENTS) return null;
   return n;
 }
+
+/* ── create-checkout/index.ts — analytics helpers (2026-10-08) ─────────── */
+export function normSource(raw: unknown, max = 40): string | null {
+  const s = String(raw ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, max);
+  return s || null;
+}
+
+export function phoneDigits(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  return d.length === 11 && d.startsWith("1") ? d.slice(1) : d; // +1 US prefix
+}
+
+export async function customerHash(salt: string, phone: string): Promise<string | null> {
+  const digits = phoneDigits(phone);
+  if (!salt || digits.length < 10) return null;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${digits}`));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
