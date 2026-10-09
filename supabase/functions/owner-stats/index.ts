@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
   const since = new Date(Date.now() - 400 * 86400 * 1000).toISOString();
   const { data, error } = await db
     .from("orders")
-    .select("code,status,fulfilment,created_at,updated_at,items,subtotal_cents,discount_cents,tax_cents,delivery_fee_cents,tip_cents,total_cents")
+    .select("code,status,fulfilment,created_at,updated_at,items,subtotal_cents,discount_cents,tax_cents,delivery_fee_cents,tip_cents,total_cents,stripe_payment_intent")
     .eq("demo", false)
     .not("code", "like", "TEST-%")
     .gte("created_at", since)
@@ -53,8 +53,11 @@ Deno.serve(async (req) => {
     return json({ error: "Temporarily unavailable" }, 503);
   }
   // items carry only dish id, name, qty and price — strip anything else defensively
-  const orders = (data ?? []).map((o: Record<string, unknown>) => ({
+  // `charged` tells an unpaid checkout that expired apart from an order the
+  // kitchen cancelled; the payment id itself never leaves this function
+  const orders = (data ?? []).map(({ stripe_payment_intent, ...o }: Record<string, unknown>) => ({
     ...o,
+    charged: Boolean(stripe_payment_intent),
     items: ((o.items as { id: string; name: string; qty: number; unit_cents: number }[]) ?? [])
       .map(({ id, name, qty, unit_cents }) => ({ id, name, qty, unit_cents })),
   }));
