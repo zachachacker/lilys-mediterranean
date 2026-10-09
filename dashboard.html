@@ -356,7 +356,10 @@
     const deliv = ok.filter((o) => o.fulfilment === "delivery").length;
     const tips = sum(ok, (o) => o.tip_cents || 0);
     const fees = sum(ok, (o) => o.delivery_fee_cents || 0);
-    const cancelled = cur.filter((o) => o.status === "canceled").length;
+    // an unpaid checkout that expired is not a cancellation: nobody was charged
+    // and nothing reached the kitchen. Only charged-then-cancelled counts.
+    const abandoned = cur.filter((o) => (o.status === "canceled" && !o.charged) || o.status === "pending").length;
+    const cancelled = cur.filter((o) => o.status === "canceled" && o.charged).length;
     const done = ok.filter((o) => o.status === "done")
       .map((o) => (new Date(o.updated_at) - new Date(o.created_at)) / 60000).filter((m) => m > 0 && m < 240).sort((a, b) => a - b);
     const median = done.length ? Math.round(done[Math.floor((done.length - 1) / 2)]) : null;
@@ -375,7 +378,8 @@
           el("tr", {}, el("td", { text: "Order to collected (median)" }), el("td", { class: "r", text: median === null ? "–" : `${median} min` })),
           el("tr", {}, el("td", { text: "Driver tips" }), el("td", { class: "r", text: money(tips) })),
           el("tr", {}, el("td", { text: "Delivery fees" }), el("td", { class: "r", text: money(fees) })),
-          el("tr", {}, el("td", { text: "Cancelled orders" }), el("td", { class: "r", text: String(cancelled) }))))));
+          el("tr", {}, el("td", { text: "Cancelled by the kitchen" }), el("td", { class: "r", text: String(cancelled) })),
+          el("tr", {}, el("td", { text: "Checkouts not completed (never paid)" }), el("td", { class: "r", text: String(abandoned) }))))));
 
     // recent orders
     const recent = [...cur].reverse().slice(0, 25);
@@ -391,7 +395,7 @@
             el("td", { text: o.fulfilment === "delivery" ? "Delivery" : "Pickup" }),
             el("td", { class: "r", text: String((o.items || []).reduce((s, l) => s + l.qty, 0)) }),
             el("td", { class: "r", text: money(sales(o)) }),
-            el("td", { text: o.status === "done" ? "Collected" : o.status === "canceled" ? "Cancelled" : o.status === "pending" ? "Not paid" : o.status[0].toUpperCase() + o.status.slice(1) }));
+            el("td", { text: o.status === "done" ? "Collected" : o.status === "canceled" ? (o.charged ? "Cancelled" : "Not completed") : o.status === "pending" ? "Paying now" : o.status[0].toUpperCase() + o.status.slice(1) }));
         })))) : el("p", { class: "empty", text: "No orders in this period yet." }));
 
     app.replaceChildren(
