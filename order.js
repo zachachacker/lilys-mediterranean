@@ -70,6 +70,7 @@
              <p class="confirm-sub">Ready in about <strong>${esc(O.prepMinutes)} minutes</strong> at 2 5th Ave STE C, Indialantic.
              <a class="ink" href="${L.directionsUrl}" target="_blank" rel="noopener">Directions</a> · <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`}
         ${o.status === "done" ? rateHTML(o) : ""}
+        ${o.referral ? shareHTML(o.referral) : ""}
         <div class="co-receipt">
           ${items}
           <div class="co-line co-sub"><span>Subtotal</span><span>${money(o.subtotal_cents)}</span></div>
@@ -80,6 +81,29 @@
           <div class="co-line co-total"><span>${totalLabel}</span><span>${money(o.total_cents)}</span></div>
         </div>`;
     };
+    // refer a friend: the customer's own link (server-made, held off until
+    // Kareem turns it on). The token rides the #fragment, never the query.
+    const shareUrl = (r) => `${location.origin}/order.html?src=referral#r=${r.token}`;
+    function shareHTML(r) {
+      return `<div class="co-share">
+        <p class="co-rate-t">Give a friend ${r.percent}% off their first order, and get ${r.percent}% off your next one.</p>
+        <div class="co-rate-b"><button type="button" data-share="${esc(r.token)}" data-pct="${r.percent}">Share your link</button></div>
+        <p class="co-share-u" id="coShareU" hidden></p>
+      </div>`;
+    }
+    confirmRoot.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-share]");
+      if (!b) return;
+      const url = shareUrl({ token: b.dataset.share });
+      const text = `Lily's Mediterranean: here's ${b.dataset.pct}% off your first online order`;
+      try {
+        if (navigator.share) { await navigator.share({ title: "Lily's Mediterranean", text, url }); return; }
+        await navigator.clipboard.writeText(url);
+        const u = $("coShareU"); u.textContent = "Link copied. Paste it to a friend."; u.hidden = false;
+      } catch {
+        const u = $("coShareU"); u.textContent = url; u.hidden = false; // copy by hand
+      }
+    });
     // one-tap rating once the order is collected. The Google review link is
     // offered to EVERYONE who rates, good or bad: Google bans asking only the
     // happy customers.
@@ -213,6 +237,37 @@
   const optsCents = (opts) => opts.reduce((s, o) => s + (OPT.get(o)?.cents || 0), 0);
   const lineCents = (l) => byId.get(l.id).cents + optsCents(l.opts);
   const PHOTOS = window.LILYS_PHOTOS || {};
+
+  /* ---- discount links (stickers on Uber Eats bags, refer-a-friend) -------
+     The token arrives in the #fragment (#t= sticker, #r= referral), is checked
+     with the server once, then kept with the cart. The server decides
+     everything again at checkout; this only shows what's coming. */
+  const CODE_KEY = "lilys-code-v1";
+  let promoCode = null; // { token, kind, percent }
+  try { promoCode = JSON.parse(localStorage.getItem(CODE_KEY) || "null"); } catch { /* none */ }
+  const dropCode = () => { promoCode = null; try { localStorage.removeItem(CODE_KEY); } catch { /* fine */ } };
+  async function readCodeFromLink() {
+    const m = /^#([tr])=([23456789A-Za-z]{10})$/.exec(location.hash);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname + location.search); // keep it out of shared URLs
+    try {
+      const r = await fetch(`${FN}/create-checkout`, {
+        method: "POST", headers: HDRS, body: JSON.stringify({ action: "code", promo_token: m[2].toUpperCase() }),
+      });
+      const j = await r.json();
+      if (!r.ok) { showErr(j.error || "That discount link isn't valid."); return; }
+      promoCode = { token: m[2].toUpperCase(), kind: j.kind, percent: j.percent };
+      try { localStorage.setItem(CODE_KEY, JSON.stringify(promoCode)); } catch { /* still applies this visit */ }
+      loadOffers();
+      // say it up top too: on a phone the cart (and its offers box) is far below
+      const note = document.createElement("div");
+      note.className = "order-code-note";
+      note.textContent = j.kind === "sticker"
+        ? `Thanks for scanning! ${j.percent}% off your first online order, taken off at checkout.`
+        : `A friend sent you ${j.percent}% off your first online order, taken off at checkout.`;
+      $("closedNote")?.before(note);
+    } catch { /* offline: no discount shown, nothing lost */ }
+  }
 
   /* ------------------------------------------------------------- cart ---- */
   const CART_KEY = "lilys-cart-v1";
@@ -641,11 +696,19 @@
           fulfilment: ful,
           address: ful === "delivery" ? addrEl.value.trim() : "",
           tip_cents: tipCents,
+          promo_token: promoCode?.token || "",
           source: window.LILYS_TRACK?.source() || "direct",
           source_detail: window.LILYS_TRACK?.detail() || "",
         }),
       });
       const j = await r.json();
+      // a discount link that doesn't apply (used, not a first order...) must not
+      // block the order: drop it and let them pay without it
+      if (!r.ok && promoCode && /discount|sticker|share link|referral/i.test(j.error || "")) {
+        dropCode();
+        loadOffers();
+        throw new Error(`${j.error} We've removed it, so you can place the order without it.`);
+      }
       if (!r.ok) throw new Error(j.error || "Something went wrong.");
       // the cart survives until the order is truly done — if they cancel on
       // the Stripe page and come back, nothing is lost. The confirmation
@@ -688,21 +751,30 @@
   async function loadOffers() {
     const box = document.getElementById("offers");
     if (!box) return;
+    let rows = [];
     try {
       const r = await fetch(
         `${L.ORDERING.supabaseUrl}/rest/v1/promotions?select=label&active=eq.true`,
         { headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` } });
-      if (!r.ok) return;
-      const rows = await r.json();
-      if (!Array.isArray(rows) || !rows.length) return;
-      box.innerHTML = `<div class="offers-t">On right now</div>` +
-        rows.map((o) => `<div class="offer">${esc(o.label)}</div>`).join("") +
-        `<div class="offers-n">Taken off automatically at checkout.</div>`;
-      box.hidden = false;
+      const j = r.ok ? await r.json() : [];
+      if (Array.isArray(j)) rows = j;
     } catch { /* no offers shown; nothing is lost */ }
+    const code = promoCode
+      ? `<div class="offer">${promoCode.kind === "sticker"
+          ? `${promoCode.percent}% off your first online order (bag sticker)`
+          : `${promoCode.percent}% off from a friend's link`}
+          <button type="button" class="offer-x" id="codeX">Remove</button></div>`
+      : "";
+    if (!rows.length && !code) { box.hidden = true; return; }
+    box.innerHTML = `<div class="offers-t">On right now</div>` +
+      rows.map((o) => `<div class="offer">${esc(o.label)}</div>`).join("") + code +
+      `<div class="offers-n">Taken off automatically at checkout.</div>`;
+    box.hidden = false;
+    $("codeX")?.addEventListener("click", () => { dropCode(); loadOffers(); });
   }
 
   loadOffers();
+  readCodeFromLink();
   loadAvailability();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") loadAvailability();

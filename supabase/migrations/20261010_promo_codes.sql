@@ -1,0 +1,11 @@
+-- Discount links (2026-10-10). APPLIED via MCP as "promo_codes".
+-- promo_tokens: random 10-char tokens, never typed codes.
+--   sticker  = one per Uber Eats bag sticker, single use (claim_sticker, atomic;
+--              a canceled/expired order releases it), first online order only.
+--   referral = one per customer (unique on referrer_hash), many friends, each
+--              friend's first order only; each paid friend order earns the
+--              referrer one referral_rewards row, spent atomically (claim_reward).
+-- RLS on with no policies: only the Edge Functions (service role) touch these.
+-- app_config: referral_enabled ('false' until Kareem sets terms), referral_percent ('10').
+-- orders.promo_token records which link an order used.
+-- See the live migration for the exact DDL and the two claim functions.

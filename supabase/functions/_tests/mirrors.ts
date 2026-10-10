@@ -380,3 +380,12 @@ export function stockPatch(state: StockState, now: Date): { out_until: string | 
   if (state === "today") return { out_until: nextFloridaMorning(now), hidden: false };
   return { out_until: null, hidden: false };
 }
+
+/* ── create-checkout/index.ts — discount links (2026-10-10) ───────────── */
+export const TOKEN_RE = /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{10}$/;
+export const PAID_STATUSES = ["paid", "making", "ready", "done"];
+
+export function codeDiscountCents(afterPromos: number, percent: number): number {
+  if (!Number.isFinite(percent) || percent <= 0 || percent > 50 || afterPromos <= 0) return 0;
+  return Math.round((afterPromos * percent) / 100);
+}

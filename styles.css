@@ -1274,3 +1274,12 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 /* menu page: the kitchen's stock switches (sold out today, or hidden) */
 .menu-item:not(.order-item).soldout .mi-name, .menu-item:not(.order-item).soldout .mi-desc { opacity: 0.5; }
 .menu-item:not(.order-item).soldout .mi-price::after { content: " · sold out"; font-size: 0.8em; color: var(--ember); }
+
+/* discount links (sticker / referral) and the share box after paying */
+.offer-x { font: inherit; font-size: 0.75rem; font-weight: 400; margin-left: 0.4rem; padding: 0.1em 0.5em;
+  border: 0; background: none; color: #6a6459; text-decoration: underline; cursor: pointer; }
+.co-share { margin: 1.4rem auto 0; max-width: 420px; display: grid; gap: 0.6rem; justify-items: center; text-align: center; }
+.co-share-u { margin: 0; font-size: 0.85rem; word-break: break-all; opacity: 0.8; }
+.order-code-note { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; max-width: 46ch;
+  background: color-mix(in srgb, var(--go) 22%, transparent); border: 1px solid color-mix(in srgb, var(--go) 60%, transparent);
+  color: var(--foam); font-size: 0.95rem; }

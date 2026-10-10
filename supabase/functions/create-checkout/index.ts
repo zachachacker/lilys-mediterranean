@@ -148,6 +148,23 @@ function applyPromotions(lines: PLine[], promos: Promo[]) {
   return { subtotal, discount, applied };
 }
 
+/* ── discount links (2026-10-10) ─────────────────────────────────────────
+   Two kinds, both bound to a random 10-character token and NEVER a typed
+   code (coupon sites harvest typed codes within days):
+     sticker   one QR per Uber Eats bag sticker, usable once, first online
+               order only (by phone fingerprint). Kareem: 5% off.
+     referral  one link per customer. A friend's first order gets the
+               discount, and the referrer earns the same off their next order.
+               Held OFF (app_config.referral_enabled) until Kareem sets terms.
+   Applied after the menu promotions, on what is left, at most one per order. */
+const TOKEN_RE = /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{10}$/;
+const PAID_STATUSES = ["paid", "making", "ready", "done"];
+
+function codeDiscountCents(afterPromos: number, percent: number): number {
+  if (!Number.isFinite(percent) || percent <= 0 || percent > 50 || afterPromos <= 0) return 0;
+  return Math.round((afterPromos * percent) / 100);
+}
+
 /* ── analytics (2026-10-08) ─────────────────────────────────────────────
    Where the order came from (set by the site from the landing URL/referrer)
    and an anonymous repeat-customer fingerprint: a salted SHA-256 of the
@@ -281,7 +298,7 @@ Deno.serve(async (req) => {
   let body: {
     items?: CartLine[]; name?: string; phone?: string; notes?: string;
     action?: string; fulfilment?: string; address?: string; tip_cents?: unknown;
-    source?: unknown; source_detail?: unknown;
+    source?: unknown; source_detail?: unknown; promo_token?: unknown;
   };
   try {
     body = await req.json();
@@ -294,6 +311,28 @@ Deno.serve(async (req) => {
   if (body.action === "quote") {
     const q = await quoteDelivery(String(body.address ?? "").trim().slice(0, 200));
     return q.ok ? json(q) : json({ error: q.error }, q.status);
+  }
+
+  // code mode: the order page asks whether a sticker/referral link is good
+  // before showing it. The same checks run again at checkout.
+  if (body.action === "code") {
+    const token = String(body.promo_token ?? "").toUpperCase();
+    if (!TOKEN_RE.test(token)) return json({ error: "That discount link isn't valid." }, 400);
+    const db0 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const [{ data: t }, { data: cfgRows }] = await Promise.all([
+      db0.from("promo_tokens").select("kind,percent,order_id").eq("token", token).maybeSingle(),
+      db0.from("app_config").select("key,value").in("key", ["referral_enabled", "referral_percent"]),
+    ]);
+    const c = Object.fromEntries((cfgRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+    if (!t || (t.kind === "referral" && (c.referral_enabled ?? "").trim() !== "true")) {
+      return json({ error: "That discount link isn't valid." }, 400);
+    }
+    if (t.kind === "sticker" && t.order_id) {
+      const { data: o } = await db0.from("orders").select("status").eq("id", t.order_id).maybeSingle();
+      if (o && o.status !== "canceled") return json({ error: "This sticker has already been used." }, 409);
+    }
+    const percent = t.kind === "referral" ? Number(c.referral_percent ?? "10") : t.percent;
+    return json({ ok: true, kind: t.kind, percent });
   }
 
   const fulfilment = body.fulfilment === "delivery" ? "delivery" : "pickup";
@@ -470,7 +509,73 @@ Deno.serve(async (req) => {
     promos = (data ?? []) as Promo[];
   }
 
-  const { subtotal, discount, applied } = applyPromotions(lines, promos);
+  const promo = applyPromotions(lines, promos);
+  const { subtotal, applied } = promo;
+  let discount = promo.discount;
+  const custHash = await customerHash(cfg.customer_hash_salt ?? "", phone);
+
+  // sticker / referral link, or a referral reward this customer has earned
+  const referralOn = (cfg.referral_enabled ?? "").trim() === "true";
+  const referralPct = Number(cfg.referral_percent ?? "10");
+  const promoToken = String(body.promo_token ?? "").toUpperCase();
+  let tokenRow: { token: string; kind: string; percent: number; referrer_hash: string | null; order_id: string | null } | null = null;
+  let rewardId: number | null = null;
+  const firstOrder = async () => {
+    if (!custHash) return false; // no fingerprint, no first-order offer
+    const { count, error } = await db.from("orders").select("id", { count: "exact", head: true })
+      .eq("customer_hash", custHash).in("status", PAID_STATUSES);
+    if (error) throw new Error(error.message);
+    return (count ?? 0) === 0;
+  };
+  try {
+    if (promoToken) {
+      if (!TOKEN_RE.test(promoToken)) return json({ error: "That discount link isn't valid. Remove it and try again." }, 400);
+      const { data: t, error } = await db.from("promo_tokens")
+        .select("token,kind,percent,referrer_hash,order_id").eq("token", promoToken).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!t || (t.kind === "referral" && !referralOn)) {
+        return json({ error: "That discount link isn't valid. Remove it and try again." }, 400);
+      }
+      if (t.kind === "referral" && t.referrer_hash === custHash) {
+        return json({ error: "That's your own share link. Send it to a friend instead!" }, 400);
+      }
+      if (!(await firstOrder())) {
+        return json({ error: "That discount is for your first online order. Remove it to continue." }, 400);
+      }
+      tokenRow = t;
+      const pct = t.kind === "referral" ? referralPct : t.percent;
+      const cents = Math.min(codeDiscountCents(subtotal - discount, pct), subtotal - discount);
+      if (cents > 0) {
+        discount += cents;
+        applied.push({ id: t.kind, label: t.kind === "sticker" ? `${pct}% off your first online order` : `Friend's ${pct}% off`, cents });
+      }
+    } else if (referralOn && custHash) {
+      // earned rewards whose friend actually paid, oldest first; one per order
+      const { data: rw, error } = await db.from("referral_rewards")
+        .select("id,percent,from_order_id,used_order_id").eq("customer_hash", custHash).order("id");
+      if (error) throw new Error(error.message);
+      const oids = (rw ?? []).flatMap((r) => [r.from_order_id, r.used_order_id]).filter(Boolean);
+      const st = new Map<string, string>();
+      if (oids.length) {
+        const { data: os, error: oe } = await db.from("orders").select("id,status").in("id", oids);
+        if (oe) throw new Error(oe.message);
+        (os ?? []).forEach((o) => st.set(o.id, o.status));
+      }
+      const usable = (rw ?? []).find((r) =>
+        PAID_STATUSES.includes(st.get(r.from_order_id) ?? "") && (!r.used_order_id || st.get(r.used_order_id) === "canceled"));
+      if (usable) {
+        const cents = Math.min(codeDiscountCents(subtotal - discount, usable.percent), subtotal - discount);
+        if (cents > 0) {
+          rewardId = usable.id;
+          discount += cents;
+          applied.push({ id: "reward", label: `Thanks for the referral: ${usable.percent}% off`, cents });
+        }
+      }
+    }
+  } catch (ex) {
+    console.error("discount link check failed:", ex instanceof Error ? ex.message : ex);
+    return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
 
   let deliveryMiles: number | null = null;
   let deliveryFee = 0;
@@ -499,7 +604,6 @@ Deno.serve(async (req) => {
 
   const source = normSource(body.source);
   const sourceDetail = normSource(body.source_detail, 80);
-  const custHash = await customerHash(cfg.customer_hash_salt ?? "", phone);
 
   // insert with a fresh code; retry on the (unlikely) code collision
   let order: { id: string; code: string } | null = null;
@@ -528,6 +632,7 @@ Deno.serve(async (req) => {
         source,
         source_detail: sourceDetail,
         customer_hash: custHash,
+        promo_token: tokenRow?.token ?? null,
         demo,
         payment_provider: demo ? "demo" : provider,
         // our own session token — the confirmation page looks orders up by it.
@@ -541,6 +646,29 @@ Deno.serve(async (req) => {
     else if (!String(error.message).includes("duplicate")) return json({ error: "Could not create the order." }, 500);
   }
   if (!order) return json({ error: "Could not create the order." }, 500);
+
+  // claim the sticker / reward now that the order exists. Atomic in the
+  // database: two people racing for one sticker can't both get it. Losing
+  // the race cancels this (unpaid) order rather than charging full price.
+  {
+    let lost = "";
+    if (tokenRow?.kind === "sticker") {
+      const { data, error } = await db.rpc("claim_sticker", { p_token: tokenRow.token, p_order: order.id });
+      if (error || data !== true) lost = "This sticker has already been used.";
+    } else if (tokenRow?.kind === "referral") {
+      const { error } = await db.from("referral_rewards").insert({
+        customer_hash: tokenRow.referrer_hash, from_order_id: order.id, percent: referralPct,
+      });
+      if (error) console.error("referral reward insert failed:", error.message); // the friend still gets their discount
+    } else if (rewardId !== null) {
+      const { data, error } = await db.rpc("claim_reward", { p_id: rewardId, p_order: order.id });
+      if (error || data !== true) lost = "Your referral reward was just used on another order. Please try again.";
+    }
+    if (lost) {
+      await db.from("orders").update({ status: "canceled" }).eq("id", order.id);
+      return json({ error: lost }, 409);
+    }
+  }
 
   const sid = (order as unknown as { stripe_session_id: string }).stripe_session_id;
   const taxLabel = `FL sales tax (${+(taxRate * 100).toFixed(2)}%)`; // 0.07*100 → 7, not 7.000000000000001
