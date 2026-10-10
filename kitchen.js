@@ -556,9 +556,11 @@
   function promoDesc(p) {
     let what;
     if (p.kind === "bogo") {
-      what = p.buy_qty === 1 && p.free_qty === 1
+      // buy_qty is the whole group (paid + free): 2 and 1 = buy one, get one free
+      const paid = p.buy_qty - p.free_qty;
+      what = paid === 1 && p.free_qty === 1
         ? "Buy one, get one free"
-        : `Buy ${p.buy_qty}, get ${p.free_qty} free`;
+        : `Buy ${paid}, get ${p.free_qty} free`;
     } else if (p.kind === "percent_items") {
       const parts = [...(p.categories || []), ...((p.item_ids || []).length ? [`${p.item_ids.length} dish${p.item_ids.length > 1 ? "es" : ""}`] : [])];
       what = `${p.percent}% off ${parts.join(", ")}`;

@@ -2,7 +2,7 @@
  * chosen dishes or sections, and the manager API's validation, which is the
  * only gate between a typo and every order that follows. */
 import { assert, assertEquals } from "jsr:@std/assert@1";
-import { applyPromotions, type PLine, type Promo, promoRunsAt, validatePromo } from "./mirrors.ts";
+import { applyPromotions, type PLine, type Promo, promoRunsAt, toPage, validatePromo } from "./mirrors.ts";
 
 const root = new URL("../", import.meta.url);
 const between = (s: string, a: string, b: string) => s.slice(s.indexOf(a), s.indexOf(b, s.indexOf(a)));
@@ -112,4 +112,19 @@ Deno.test("manager: refuses broken schedules and dates", () => {
   assertEquals(ok({ ...base, days: [7] }).ok, false);
   assertEquals(ok({ ...base, starts_at: "2026-10-20T00:00:00Z", ends_at: "2026-10-19T00:00:00Z" }).ok, false);
   assertEquals(ok({ ...base, starts_at: "not a date" }).ok, false);
+});
+
+Deno.test("manager: 'buy 1, get 1 free' from the page charges for one of every two", () => {
+  const r = ok({ kind: "bogo", label: "BOGO hummus", item_id: "hummus", buy_qty: 1, free_qty: 1 });
+  assert(r.ok);
+  if (!r.ok) return;
+  assertEquals([r.row.buy_qty, r.row.free_qty], [2, 1]); // engine: groups of 2, 1 free
+  const promo: Promo = { id: "b", ...r.row } as Promo;
+  const h = (qty: number): PLine => ({ id: "hummus", qty, unit_cents: 975, base_cents: 975 });
+  assertEquals(applyPromotions([h(1)], [promo]).discount, 0);
+  assertEquals(applyPromotions([h(2)], [promo]).discount, 975);
+  assertEquals(applyPromotions([h(3)], [promo]).discount, 975);
+  // and the page gets back what it sent
+  assertEquals(toPage({ kind: "bogo", buy_qty: 2, free_qty: 1 }).buy_qty, 1);
+  assertEquals(toPage({ kind: "percent_over", buy_qty: null, free_qty: null }).buy_qty, null);
 });

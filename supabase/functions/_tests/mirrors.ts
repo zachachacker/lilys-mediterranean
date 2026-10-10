@@ -466,11 +466,14 @@ export function validatePromo(
     row.categories = cats.length ? cats : null;
   }
   if (kind === "bogo") {
+    // The page speaks "buy N, get M free" (N paid). The engine's buy_qty is the
+    // whole group, paid + free ("buy 1 get 1" = groups of 2, 1 free), so it is
+    // converted here and back in toPage(). Storing N as-is would make every unit free.
     const id = String(p.item_id ?? "");
     if (!itemIds.has(id)) return { ok: false, error: "Choose the dish for this offer." };
     if (!isInt(p.buy_qty, 1, 10)) return { ok: false, error: "\"Buy\" must be a number from 1 to 10." };
     if (!isInt(p.free_qty, 1, p.buy_qty as number)) return { ok: false, error: "\"Free\" can't be more than \"buy\"." };
-    row.item_id = id; row.buy_qty = p.buy_qty as number; row.free_qty = p.free_qty as number;
+    row.item_id = id; row.buy_qty = (p.buy_qty as number) + (p.free_qty as number); row.free_qty = p.free_qty as number;
   }
   if (kind === "percent_over") {
     if (!isInt(p.min_subtotal_cents, 0, 100000)) return { ok: false, error: "Enter the minimum order in dollars." };
@@ -500,4 +503,9 @@ export function validatePromo(
   }
   if (typeof p.active === "boolean") row.active = p.active;
   return { ok: true, row };
+}
+
+// database row -> what the page shows (bogo: paid count, not group size)
+export function toPage<T extends { kind: string; buy_qty: number | null; free_qty: number | null }>(r: T): T {
+  return r.kind === "bogo" && r.buy_qty != null && r.free_qty != null ? { ...r, buy_qty: r.buy_qty - r.free_qty } : r;
 }
