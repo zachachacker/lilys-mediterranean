@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F4F1E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121514" media="(prefers-color-scheme: dark)">
+<title>Offers · Lily's</title>
+<link rel="icon" href="assets/kds-icon-192.png">
+<link rel="apple-touch-icon" href="assets/kds-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Owner offers page (2026-10-10). Private: unlocked by the manager key from
+     manage.html#key=..., which the server checks on every call. Phone first. */
+  :root {
+    color-scheme: light;
+    --bg: #F4F1E8;
+    --surface: #FFFDF8;
+    --surface-2: #ECE8DC;
+    --text: #1A1E1C;
+    --muted: #59605C;
+    --line: rgba(26, 30, 28, 0.14);
+    --brand: #14532b;
+    --brand-text: #14532b;
+    --on-brand: #F4F1E8;
+    --brand-wash: rgba(20, 83, 43, 0.10);
+    --danger: #B4472B;
+    --danger-text: #9C3A22;
+    --live: #2E7D82;
+    --live-text: #1F6266;
+    --wait: #B07A12;
+    --wait-text: #7A5408;
+    --switch-off: #B9B5A8;
+    --shadow: 0 1px 2px rgba(26, 30, 28, 0.06), 0 6px 20px rgba(26, 30, 28, 0.06);
+    --serif: "Fraunces", Georgia, serif;
+    --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "Space Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121514; --surface: #1B2220; --surface-2: #26302D;
+      --text: #F4F1E8; --muted: #AEB7B2; --line: rgba(244, 241, 232, 0.14);
+      --brand: #1F6B3D; --brand-text: #8FCDA3; --on-brand: #F4F1E8; --brand-wash: rgba(143, 205, 163, 0.12);
+      --danger: #C9573A; --danger-text: #F0927A;
+      --live: #4FB3B9; --live-text: #7FD0D5; --wait: #E4A72E; --wait-text: #E9BC62;
+      --switch-off: #4A534F;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121514; --surface: #1B2220; --surface-2: #26302D;
+    --text: #F4F1E8; --muted: #AEB7B2; --line: rgba(244, 241, 232, 0.14);
+    --brand: #1F6B3D; --brand-text: #8FCDA3; --on-brand: #F4F1E8; --brand-wash: rgba(143, 205, 163, 0.12);
+    --danger: #C9573A; --danger-text: #F0927A;
+    --live: #4FB3B9; --live-text: #7FD0D5; --wait: #E4A72E; --wait-text: #E9BC62;
+    --switch-off: #4A534F;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  [hidden] { display: none !important; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--brand-text); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 680px; margin: 0 auto;
+    padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+  }
+  .eyebrow { font: 700 0.72rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-text); margin: 4px 0 10px; }
+  h1 { font: 600 2rem/1.1 var(--serif); margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font: 600 1.2rem/1.25 var(--serif); margin: 0; }
+  .lede { color: var(--muted); margin: 0 0 18px; }
+  .muted { color: var(--muted); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; padding: 10px 20px; border-radius: 12px; border: 1px solid transparent;
+    font-weight: 650; font-size: 1rem; text-decoration: none;
+  }
+  .btn-primary { background: var(--brand); color: var(--on-brand); }
+  .btn-primary:disabled { opacity: 0.6; cursor: default; }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--text); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-wide { width: 100%; }
+  .linkbtn { background: none; border: 0; padding: 10px 4px; min-height: 44px; color: var(--brand-text); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ---------- list ---------- */
+  .top { margin-bottom: 18px; }
+  .cards { display: grid; gap: 12px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px; box-shadow: var(--shadow); min-width: 0;
+  }
+  .card.is-off { background: var(--bg); box-shadow: none; }
+  .card-top { display: flex; align-items: flex-start; gap: 12px; }
+  .card-title { flex: 1; min-width: 0; font: 600 1.3rem/1.25 var(--serif); margin: 2px 0 0; overflow-wrap: anywhere; }
+  .sum { margin: 6px 0 0; color: var(--text); overflow-wrap: anywhere; }
+  .card.is-off .sum { color: var(--muted); }
+  .st { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 0.92rem; font-weight: 600; }
+  .st .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: currentColor; }
+  .st-live { color: var(--live-text); }
+  .st-wait { color: var(--wait-text); }
+  .st-off, .st-ended { color: var(--muted); }
+  .st-ended .dot { background: transparent; border: 2px solid currentColor; }
+  .acts { display: flex; gap: 8px; margin-top: 12px; }
+  .acts .btn { min-height: 44px; padding: 8px 16px; font-size: 0.95rem; }
+  .acts .del { color: var(--danger-text); }
+
+  .sw-wrap { display: flex; align-items: center; gap: 8px; flex: none; }
+  .sw-text { font: 700 0.8rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); min-width: 2.2em; text-align: right; }
+  .sw-wrap.on .sw-text { color: var(--brand-text); }
+  .sw {
+    position: relative; width: 60px; height: 44px; border: 0; background: none; padding: 0; flex: none;
+  }
+  .sw::before {
+    content: ""; position: absolute; left: 4px; right: 4px; top: 8px; height: 28px; border-radius: 99px;
+    background: var(--switch-off); transition: background 0.18s;
+  }
+  .sw::after {
+    content: ""; position: absolute; left: 7px; top: 11px; width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.18s;
+  }
+  .sw[aria-checked="true"]::before { background: var(--brand); }
+  .sw[aria-checked="true"]::after { transform: translateX(24px); }
+  .sw:disabled { cursor: default; opacity: 0.75; }
+
+  .empty { text-align: center; padding: 28px 18px; border: 2px dashed var(--line); border-radius: 16px; color: var(--muted); }
+  .empty p { margin: 0 0 16px; }
+  .help { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+  .help p { margin: 0 0 6px; }
+
+  .gate { text-align: center; padding-top: 12vh; max-width: 420px; margin: 0 auto; }
+  .gate p { margin: 0 0 10px; }
+  .status-msg { padding: 24px 0; color: var(--muted); }
+  .err-box { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--danger); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+  .err-box p { margin: 0 0 10px; }
+
+  /* ---------- form ---------- */
+  .formhead { display: flex; align-items: center; gap: 4px; margin: 0 0 12px -8px; }
+  .back { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; min-height: 44px; padding: 8px; color: var(--brand-text); font-weight: 650; }
+  .back svg { width: 18px; height: 18px; }
+  .types { display: grid; gap: 12px; margin-top: 8px; }
+  .type {
+    text-align: left; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 16px; min-height: 76px; box-shadow: var(--shadow);
+  }
+  .type strong { display: block; font: 600 1.2rem/1.25 var(--serif); }
+  .type span { display: block; color: var(--muted); margin-top: 4px; font-size: 0.95rem; }
+  .type:hover { border-color: var(--brand-text); }
+
+  .fs { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 0 0 12px; min-width: 0; }
+  .fs > h2 { margin-bottom: 4px; }
+  .fs .note { color: var(--muted); font-size: 0.92rem; margin: 0 0 12px; }
+  .field { margin-top: 14px; }
+  .field:first-of-type { margin-top: 8px; }
+  .row2 > .field { margin-top: 14px; }
+  .lab { display: block; font-weight: 650; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
+  .input, select.input {
+    width: 100%; min-height: 48px; padding: 10px 12px; font-size: 16px;
+    border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  }
+  select.input { appearance: none; -webkit-appearance: none; padding-right: 36px;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+  input[type="date"].input { min-width: 0; display: block; -webkit-appearance: none; appearance: none; }
+  .input:focus { border-color: var(--brand-text); outline: none; box-shadow: 0 0 0 3px var(--brand-wash); }
+  .prefix { position: relative; }
+  .prefix > span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .prefix > .input { padding-left: 26px; }
+  .suffix { position: relative; }
+  .suffix > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    min-height: 44px; min-width: 44px; padding: 8px 14px; border-radius: 99px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); font-weight: 600; font-size: 0.95rem;
+  }
+  .chip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+  .pct-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pct-row .suffix { width: 110px; }
+  .days .chip { flex: 1 1 0; padding: 8px 0; min-width: 40px; }
+  .days { flex-wrap: nowrap; gap: 4px; }
+  .quick { margin-top: 8px; }
+  .quick .chip { font-size: 0.88rem; min-height: 44px; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row2 > div { min-width: 0; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; }
+  .toggle-row .lab { margin: 0; }
+
+  .dish-search { margin-bottom: 8px; }
+  .dishlist {
+    max-height: min(52vh, 440px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+  }
+  .grph {
+    position: sticky; top: 0; z-index: 1; background: var(--surface-2);
+    font: 700 0.72rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    padding: 9px 12px;
+  }
+  .dish { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border-top: 1px solid var(--line); cursor: pointer; }
+  .grph + .dish { border-top: 0; }
+  .dish input { width: 22px; height: 22px; flex: none; accent-color: var(--brand); margin: 0; }
+  .dish .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .dish .incl { font-size: 0.78rem; color: var(--brand-text); font-weight: 600; white-space: nowrap; }
+  .dish.in-cat { cursor: default; }
+  .dish.in-cat .nm { color: var(--muted); }
+  .nomatch { padding: 14px 12px; color: var(--muted); }
+  .count { margin-top: 8px; font-weight: 650; color: var(--brand-text); }
+
+  .stepper { display: flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 12px; width: max-content; background: var(--bg); }
+  .stepper button { width: 52px; height: 48px; border: 0; background: none; font-size: 1.5rem; line-height: 1; color: var(--brand-text); font-weight: 600; }
+  .stepper button:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
+  .stepper output { min-width: 44px; text-align: center; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+  .picked { margin: 0 0 10px; font-weight: 650; }
+  .counter { float: right; font-weight: 400; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+  .preview { background: var(--brand-wash); border-radius: 16px; padding: 14px 16px; margin: 0 0 12px; }
+  .preview .k { font: 700 0.7rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand-text); margin: 0 0 6px; }
+  .preview .pl { font: 600 1.2rem/1.25 var(--serif); margin: 0; overflow-wrap: anywhere; }
+  .preview .ps { margin: 4px 0 0; overflow-wrap: anywhere; }
+  .form-err { color: var(--danger-text); font-weight: 650; margin: 0 0 12px; }
+  .savebar {
+    position: sticky; bottom: 0; z-index: 5; display: flex; gap: 10px;
+    background: var(--bg); padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line); margin-top: 4px;
+  }
+  .savebar .btn-primary { flex: 1; }
+
+  /* ---------- dialog + toast ---------- */
+  dialog {
+    border: 0; border-radius: 18px; padding: 22px 20px 18px; width: min(92vw, 400px);
+    background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  dialog::backdrop { background: rgba(10, 12, 11, 0.5); }
+  dialog h2 { margin: 0 0 6px; }
+  dialog p { margin: 0 0 18px; color: var(--muted); }
+  dialog .row { display: flex; gap: 10px; flex-wrap: wrap-reverse; }
+  dialog .row .btn { flex: 1 1 170px; }
+  .toast {
+    position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    max-width: calc(100vw - 32px); width: max-content; z-index: 20;
+    background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px; font-weight: 600;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  }
+  .toast.bad { background: var(--danger); color: #fff; }
+
+  @media (min-width: 720px) {
+    .wrap { padding-top: 40px; }
+    h1 { font-size: 2.4rem; }
+    .top { display: grid; grid-template-columns: 1fr auto; align-items: end; column-gap: 24px; }
+    .top .lede { margin-bottom: 4px; }
+    .types { grid-template-columns: repeat(3, 1fr); }
+    .type { min-height: 140px; }
+    .acts .btn { min-height: 40px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap" id="app"><p class="status-msg">Loading your offers...</p></main>
+<dialog id="dlg" aria-labelledby="dlgT" aria-describedby="dlgP">
+  <form method="dialog">
+    <h2 id="dlgT"></h2>
+    <p id="dlgP"></p>
+    <div class="row">
+      <button class="btn btn-ghost" value="no" id="dlgNo"></button>
+      <button class="btn btn-primary" value="yes" id="dlgYes"></button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="data.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  /* ------------------------------------------------------------ setup ---- */
+  // data.js is the source of truth; the fallbacks keep this page usable if
+  // data.js ever fails to load (the anon key is public by design).
+  const ORD = (window.LILYS && window.LILYS.ORDERING) || {};
+  const SUPA = ORD.supabaseUrl || "https://hytvfqydahwsrcdbnvfq.supabase.co";
+  const ANON = ORD.anonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5dHZmcXlkYWh3c3JjZGJudmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDk3NDYsImV4cCI6MjA5OTc4NTc0Nn0.taAfp5xGFYdxyNxeszmxEt5Me-PPNfUbXfs4suLvXt0";
+  const API = `${SUPA}/functions/v1/manage-api`;
+  const TZ = (window.LILYS && window.LILYS.timeZone) || "America/New_York";
+  const KEY_STORE = "lilys-manager-key-v1";
+  const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+  const TIME_STEPS = []; // 10:00am .. 11:30pm in 30-minute steps
+  for (let m = 600; m <= 1410; m += 30) TIME_STEPS.push(m);
+  const KINDS = {
+    percent_items: { title: "% off dishes", sub: "Example: 15% off bowls, Mon to Fri, 11am to 3pm." },
+    bogo: { title: "Buy X, get Y free", sub: "Example: buy one hummus, get one free." },
+    percent_over: { title: "% off big orders", sub: "Example: 10% off orders over $70." },
+  };
+
+  const app = document.getElementById("app");
+  const dlg = document.getElementById("dlg");
+  const toastEl = document.getElementById("toast");
+
+  const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const store = {
+    get() { try { return localStorage.getItem(KEY_STORE) || ""; } catch { return ""; } },
+    set(v) { try { localStorage.setItem(KEY_STORE, v); } catch { /* private mode: memory only */ } },
+    clear() { try { localStorage.removeItem(KEY_STORE); } catch { /* nothing to clear */ } },
+  };
+
+  // setup link: manage.html#key=<manager key>. A #fragment never reaches a
+  // server; we save it and then take it out of the address bar.
+  const takeHashKey = () => {
+    const k = new URLSearchParams(location.hash.slice(1)).get("key") || "";
+    if (k) {
+      store.set(k);
+      try { history.replaceState(null, "", location.pathname + location.search); } catch { /* fine */ }
+    }
+    return k;
+  };
+
+  /* ---------------------------------------------------- Florida time ---- */
+  const flFmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ, year: "numeric", month: "numeric", day: "numeric",
+    hour: "numeric", minute: "numeric", second: "numeric", hourCycle: "h23", weekday: "short",
+  });
+  const fl = (date) => {
+    const o = {};
+    for (const p of flFmt.formatToParts(date)) o[p.type] = p.value;
+    return { y: +o.year, m: +o.month, d: +o.day, h: (+o.hour) % 24, mi: +o.minute, s: +o.second, dow: DAY.indexOf(o.weekday) };
+  };
+  // how far Florida's wall clock is from UTC at this instant (ms, negative)
+  const tzOffset = (utcMs) => {
+    const p = fl(new Date(utcMs));
+    return Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s) - Math.floor(utcMs / 1000) * 1000;
+  };
+  // Florida wall-clock time -> the real instant. Two passes handle DST edges.
+  const flToUtc = (y, m, d, h, mi, s) => {
+    const guess = Date.UTC(y, m - 1, d, h, mi, s);
+    const t1 = guess - tzOffset(guess);
+    return new Date(guess - tzOffset(t1));
+  };
+  const dateInputFromIso = (iso) => {
+    const t = Date.parse(iso);
+    if (!isFinite(t)) return "";
+    const p = fl(new Date(t));
+    return `${p.y}-${pad(p.m)}-${pad(p.d)}`;
+  };
+  const parseDateInput = (v) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
+    return m ? { y: +m[1], m: +m[2], d: +m[3] } : null;
+  };
+  let skew = 0; // server clock minus this device's clock
+  const now = () => new Date(Date.now() + skew);
+
+  /* --------------------------------------------------------- wording ---- */
+  const timeLabel = (min) => {
+    const h = Math.floor(min / 60) % 24, mm = min % 60;
+    const h12 = h % 12 || 12;
+    return `${h12}${mm ? ":" + pad(mm) : ""}${h < 12 ? "am" : "pm"}`;
+  };
+  const dollars = (cents) => (cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`);
+  const shortDate = (iso) => {
+    const p = fl(new Date(iso));
+    const thisYear = fl(now()).y;
+    return `${MON[p.m - 1]} ${p.d}${p.y !== thisYear ? ", " + p.y : ""}`;
+  };
+  const joinAnd = (xs) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+  const normDays = (days) => {
+    if (!Array.isArray(days) || !days.length) return null;
+    const u = [...new Set(days)].filter((d) => d >= 0 && d <= 6).sort((a, b) => a - b);
+    return u.length === 7 || !u.length ? null : u;
+  };
+  const daysText = (days) => {
+    const arr = normDays(days);
+    if (!arr) return "every day";
+    if (arr.length === 2 && arr[0] === 0 && arr[1] === 6) return "weekends";
+    if (arr.length === 1) return `${DAY[arr[0]]} only`;
+    if (arr.length >= 3) {
+      // one unbroken run (Fri to Sun wraps round the week too)
+      const set = new Set(arr);
+      const starts = arr.filter((d) => !set.has((d + 6) % 7));
+      if (starts.length === 1) {
+        const end = (starts[0] + arr.length - 1) % 7;
+        return `${DAY[starts[0]]} to ${DAY[end]}`;
+      }
+    }
+    return joinAnd(arr.map((d) => DAY[d]));
+  };
+  const hoursText = (p) => (p.start_min == null || p.end_min == null ? "all day" : `${timeLabel(p.start_min)} to ${timeLabel(p.end_min)}`);
+  const datesText = (p) => {
+    if (p.starts_at && p.ends_at) return `${shortDate(p.starts_at)} to ${shortDate(p.ends_at)}`;
+    if (p.ends_at) return `until ${shortDate(p.ends_at)}`;
+    if (p.starts_at) return `from ${shortDate(p.starts_at)}`;
+    return "";
+  };
+
+  let menu = [];
+  let menuById = new Map();
+  const dishName = (id) => (menuById.get(id) || {}).name || "";
+
+  const targetNames = (p) => {
+    const cats = p.categories || [];
+    const dishes = (p.item_ids || []).map((id) => dishName(id) || "1 dish");
+    return [...cats, ...dishes];
+  };
+  const targetText = (p, forLabel) => {
+    const parts = targetNames(p);
+    if (!parts.length) return "selected dishes";
+    if (parts.length <= 3) return joinAnd(parts);
+    if (forLabel) return "selected dishes";
+    return `${parts.slice(0, 2).join(", ")} and ${parts.length - 2} more`;
+  };
+  const whatText = (p, forLabel) => {
+    if (p.kind === "percent_items") return `${p.percent || "?"}% off ${targetText(p, forLabel)}`;
+    if (p.kind === "bogo") {
+      const n = dishName(p.item_id);
+      return `Buy ${p.buy_qty || 1}${n ? " " + n : ""}, get ${p.free_qty || 1} free`;
+    }
+    if (p.kind === "percent_over") {
+      if (p.min_subtotal_cents > 0) return `${p.percent || "?"}% off orders over ${dollars(p.min_subtotal_cents)}`;
+      if (p.min_subtotal_cents === 0) return `${p.percent || "?"}% off every order`;
+      return `${p.percent || "?"}% off big orders`;
+    }
+    return "Offer";
+  };
+  const summary = (p) => [whatText(p, false), `${daysText(p.days)}, ${hoursText(p)}`, datesText(p)].filter(Boolean).join(" · ");
+  const autoLabel = (p) => {
+    let s = whatText(p, true);
+    if (p.kind === "percent_items" && s.length > 60) s = `${p.percent}% off selected dishes`;
+    if (p.kind === "bogo" && s.length > 60) s = `Buy ${p.buy_qty}, get ${p.free_qty} free`;
+    if (p.kind === "percent_over" && !(p.min_subtotal_cents > 0) && p.min_subtotal_cents !== 0) s = `${p.percent || "?"}% off big orders`;
+    return s.slice(0, 60);
+  };
+
+  // where an offer stands right now, in Florida time
+  const status = (p) => {
+    const t = now().getTime();
+    if (p.ends_at && t > Date.parse(p.ends_at)) return { cls: "ended", text: "Ended" };
+    if (!p.active) return { cls: "off", text: "Off. Customers don't see it." };
+    if (p.starts_at && t < Date.parse(p.starts_at)) return { cls: "wait", text: `On, starts ${shortDate(p.starts_at)}` };
+    const f = fl(now());
+    const nowMin = f.h * 60 + f.mi;
+    const days = normDays(p.days);
+    const dayOk = (d) => !days || days.includes(d);
+    const allDay = p.start_min == null || p.end_min == null;
+    const s = allDay ? 0 : p.start_min;
+    const e = allDay ? 1440 : p.end_min;
+    if (dayOk(f.dow) && nowMin >= s && nowMin < e) return { cls: "live", text: "Running now" };
+    for (let k = 0; k <= 7; k++) {
+      const dow = (f.dow + k) % 7;
+      if (!dayOk(dow) || (k === 0 && nowMin >= s)) continue;
+      const cal = new Date(Date.UTC(f.y, f.m - 1, f.d + k));
+      const at = flToUtc(cal.getUTCFullYear(), cal.getUTCMonth() + 1, cal.getUTCDate(), Math.floor(s / 60), s % 60, 0);
+      if (p.ends_at && at.getTime() > Date.parse(p.ends_at)) return { cls: "wait", text: "On, but its last day has no more times left" };
+      const when = k === 0 ? "today" : k === 1 ? "tomorrow" : DAY[dow];
+      return { cls: "wait", text: `On, starts again ${when}${allDay ? "" : " " + timeLabel(s)}` };
+    }
+    return { cls: "wait", text: "On, not running right now (outside its days and times)" };
+  };
+
+  /* -------------------------------------------------------------- api ---- */
+  const realTransport = async (payload) => {
+    const r = await fetch(API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: ANON,
+        Authorization: `Bearer ${ANON}`,
+        "x-manager-key": key,
+      },
+      body: JSON.stringify(payload),
+    });
+    const body = await r.json().catch(() => ({}));
+    return { status: r.status, body };
+  };
+
+  const api = async (payload) => {
+    const sentKey = key;
+    let res;
+    try {
+      res = window.LILYS_MANAGE_MOCK ? await mockTransport(payload) : await realTransport(payload);
+    } catch {
+      if (sentKey !== key) throw Object.assign(new Error("stale"), { stale: true });
+      throw new Error("Couldn't reach Lily's. Check your internet and try again.");
+    }
+    // a newer link was opened while this was in flight: ignore the old answer
+    if (sentKey !== key) throw Object.assign(new Error("stale"), { stale: true });
+    const { status: code, body } = res;
+    // only OUR "wrong key" answer logs out. A 401 from Supabase's own gateway
+    // is an outage, not a bad link, and must never wipe a working login.
+    if (code === 401 && body.error === "Wrong manager key") throw Object.assign(new Error("Wrong manager key"), { auth: true });
+    if (code === 503) throw new Error("Temporarily unavailable. Please try again in a minute.");
+    if (code < 200 || code >= 300) throw new Error(body.error || `Something went wrong (code ${code}). Please try again.`);
+    return body;
+  };
+
+  /* -------------------------------------------------------------- state ---- */
+  let key = "";
+  let promos = [];
+  let view = "list"; // list | form
+  let form = null;
+  const busy = new Set();
+  let loadedOnce = false;
+
+  /* -------------------------------------------------------- feedback ---- */
+  let toastTimer = 0;
+  const toast = (msg, bad = false) => {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle("bad", bad);
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, bad ? 6000 : 3000);
+  };
+
+  let dlgResolve = null;
+  dlg.addEventListener("close", () => {
+    const r = dlgResolve;
+    dlgResolve = null;
+    if (r) r(dlg.returnValue === "yes");
+  });
+  const ask = (title, body, yes, no, danger = false) => {
+    if (typeof dlg.showModal !== "function") return Promise.resolve(window.confirm(`${title} ${body}`));
+    document.getElementById("dlgT").textContent = title;
+    document.getElementById("dlgP").textContent = body;
+    const y = document.getElementById("dlgYes");
+    y.textContent = yes;
+    y.className = `btn ${danger ? "btn-danger" : "btn-primary"}`;
+    document.getElementById("dlgNo").textContent = no;
+    dlg.returnValue = "";
+    return new Promise((resolve) => {
+      dlgResolve = resolve;
+      dlg.showModal();
+      document.getElementById(danger ? "dlgNo" : "dlgYes").focus();
+    });
+  };
+
+  const handleErr = (e, where) => {
+    if (e && e.stale) return;
+    if (e && e.auth) return logout(true);
+    toast(e.message || "Something went wrong.", true);
+    if (where) console.warn("manage:", where, e);
+  };
+
+  /* -------------------------------------------------------------- flow ---- */
+  function logout(wasRejected) {
+    store.clear();
+    key = "";
+    promos = [];
+    view = "list";
+    form = null;
+    renderGate(wasRejected);
+  }
+
+  async function load() {
+    if (!key) return renderGate(false);
+    if (!loadedOnce) app.innerHTML = `<p class="status-msg">Loading your offers...</p>`;
+    try {
+      const j = await api({ action: "list" });
+      promos = Array.isArray(j.promos) ? j.promos : [];
+      menu = Array.isArray(j.menu) ? j.menu : [];
+      menuById = new Map(menu.map((m) => [m.id, m]));
+      const serverNow = Date.parse(j.now);
+      if (isFinite(serverNow)) skew = serverNow - Date.now();
+      loadedOnce = true;
+      if (view === "list") renderList();
+    } catch (e) {
+      if (e.stale) return;
+      if (e.auth) return logout(true);
+      if (loadedOnce) return toast(e.message, true);
+      app.innerHTML = `
+        <p class="eyebrow">Lily's Mediterranean</p>
+        <h1>Your offers</h1>
+        <div class="err-box" role="alert"><p>${esc(e.message)}</p>
+          <button class="btn btn-primary" data-act="retry">Try again</button></div>`;
+    }
+  }
+
+  /* ------------------------------------------------------------ views ---- */
+  function renderGate(wasRejected) {
+    app.innerHTML = `
+      <div class="gate">
+        <p class="eyebrow">Lily's Mediterranean</p>
+        <h1>Your offers</h1>
+        ${wasRejected ? `<p><strong>That link isn't working anymore.</strong></p>` : ""}
+        <p>Open this page from the link we sent you.</p>
+        <p class="muted">It's a private link just for Lily's. If it still won't open, ask us for a fresh one.</p>
+      </div>`;
+  }
+
+  function cardHtml(p) {
+    const st = status(p);
+    const on = !!p.active;
+    const b = busy.has(p.id);
+    return `
+      <article class="card${on ? "" : " is-off"}" data-id="${esc(p.id)}">
+        <div class="card-top">
+          <h2 class="card-title">${esc(p.label)}</h2>
+          <div class="sw-wrap${on ? " on" : ""}">
+            <span class="sw-text" aria-hidden="true">${on ? "On" : "Off"}</span>
+            <button class="sw" role="switch" aria-checked="${on}" aria-label="${esc(p.label)}: ${on ? "on" : "off"}"
+              data-act="toggle" data-id="${esc(p.id)}"${b ? " disabled" : ""}></button>
+          </div>
+        </div>
+        <p class="sum">${esc(summary(p))}</p>
+        <p class="st st-${st.cls}"><span class="dot" aria-hidden="true"></span>${esc(st.text)}</p>
+        <div class="acts">
+          <button class="btn btn-ghost" data-act="edit" data-id="${esc(p.id)}">Edit</button>
+          <button class="btn btn-ghost del" data-act="delete" data-id="${esc(p.id)}">Delete</button>
+        </div>
+      </article>`;
+  }
+
+  function renderList() {
+    view = "list";
+    // keep keyboard focus on the same control across a redraw
+    const a = document.activeElement;
+    const focusSel = a && a.dataset && a.dataset.act && a.dataset.id ? `[data-act="${a.dataset.act}"][data-id="${CSS.escape(a.dataset.id)}"]` : "";
+    app.innerHTML = `
+      <header class="top">
+        <div>
+          <p class="eyebrow">Lily's Mediterranean</p>
+          <h1>Your offers</h1>
+          <p class="lede">Offers here come off automatically when customers order online. Switch one on or off any time.</p>
+        </div>
+        ${promos.length ? `<button class="btn btn-primary" data-act="new">New offer</button>` : ""}
+      </header>
+      ${promos.length
+        ? `<div class="cards">${promos.map(cardHtml).join("")}</div>`
+        : `<div class="empty"><p>No offers yet. Lunch specials, buy one get one free, or money off big orders: tap New offer to make one.</p>
+            <button class="btn btn-primary" data-act="new">New offer</button></div>`}
+      <footer class="help">
+        <p>Offers only apply to online orders on lilysmediterraneanfresh.com.</p>
+        <p>If two offers apply to the same order, both come off.</p>
+      </footer>`;
+    if (focusSel) { const n = app.querySelector(focusSel); if (n) n.focus(); }
+  }
+
+  /* ------------------------------------------------------------- form ---- */
+  const newForm = () => ({
+    id: null, active: false, kind: null, percent: 15,
+    cats: new Set(), items: new Set(), item_id: "", buy: 1, free: 1, minDollars: "",
+    days: new Set(ALL_DAYS), allDay: true, start: 660, end: 900, first: "", last: "",
+    label: "", labelTouched: false, saving: false, error: "",
+  });
+  const formFromPromo = (p) => {
+    const f = {
+      id: p.id, active: !!p.active, kind: p.kind, percent: p.percent ?? 15,
+      cats: new Set(p.categories || []), items: new Set(p.item_ids || []), item_id: p.item_id || "",
+      buy: p.buy_qty || 1, free: p.free_qty || 1,
+      minDollars: p.min_subtotal_cents != null ? String(p.min_subtotal_cents % 100 ? (p.min_subtotal_cents / 100).toFixed(2) : p.min_subtotal_cents / 100) : "",
+      days: new Set(normDays(p.days) || ALL_DAYS),
+      allDay: p.start_min == null || p.end_min == null,
+      start: p.start_min ?? 660, end: p.end_min ?? 900,
+      first: p.starts_at ? dateInputFromIso(p.starts_at) : "",
+      last: p.ends_at ? dateInputFromIso(p.ends_at) : "",
+      label: p.label || "", labelTouched: true, saving: false, error: "",
+    };
+    // keep the name auto-updating if it is still the one we would have made
+    f.labelTouched = f.label !== autoLabel(promoFromForm(f));
+    return f;
+  };
+
+  const minCents = (f) => {
+    const s = String(f.minDollars).replace(/[$,\s]/g, "");
+    if (s === "") return null;
+    const n = Number(s);
+    return isFinite(n) && n >= 0 ? Math.round(n * 100) : NaN;
+  };
+
+  // the form, shaped like a Promo (what we save, and what the preview reads)
+  function promoFromForm(f) {
+    const p = { kind: f.kind, label: f.label.trim(), active: f.active };
+    if (f.id) p.id = f.id;
+    if (f.kind === "percent_items" || f.kind === "percent_over") p.percent = Number(f.percent);
+    if (f.kind === "percent_items") {
+      p.categories = [...f.cats];
+      p.item_ids = [...f.items].filter((id) => !f.cats.has((menuById.get(id) || {}).category));
+    }
+    if (f.kind === "bogo") { p.item_id = f.item_id; p.buy_qty = f.buy; p.free_qty = f.free; }
+    if (f.kind === "percent_over") p.min_subtotal_cents = minCents(f);
+    p.days = f.days.size === 7 ? null : [...f.days].sort((a, b) => a - b);
+    p.start_min = f.allDay ? null : f.start;
+    p.end_min = f.allDay ? null : f.end;
+    const a = parseDateInput(f.first), b = parseDateInput(f.last);
+    p.starts_at = a ? flToUtc(a.y, a.m, a.d, 0, 0, 0).toISOString() : null;
+    p.ends_at = b ? flToUtc(b.y, b.m, b.d, 23, 59, 59).toISOString() : null;
+    return p;
+  }
+
+  function validate(f) {
+    const pct = Number(f.percent);
+    if ((f.kind === "percent_items" || f.kind === "percent_over") && !(Number.isInteger(pct) && pct >= 1 && pct <= 50)) {
+      return { msg: "Pick how much off, from 1% to 50% (whole numbers).", focus: "percent" };
+    }
+    if (f.kind === "percent_items" && !f.cats.size && !f.items.size) return { msg: "Pick at least one dish or a whole category.", focus: "dishSearch" };
+    if (f.kind === "bogo") {
+      if (!f.item_id || !menuById.has(f.item_id)) return { msg: "Pick the dish for this offer.", focus: "dishSearch" };
+      if (!(f.buy >= 1 && f.buy <= 10 && f.free >= 1 && f.free <= f.buy)) return { msg: "The free amount can't be more than the amount bought." };
+    }
+    if (f.kind === "percent_over") {
+      const c = minCents(f);
+      if (c == null || !isFinite(c)) return { msg: "Enter the smallest order this works on, in dollars.", focus: "minOrder" };
+    }
+    if (!f.days.size) return { msg: "Pick at least one day." };
+    if (!f.allDay && !(f.start < f.end)) return { msg: "The finish time needs to be after the start time.", focus: "tFrom" };
+    const p = promoFromForm(f);
+    if (p.starts_at && p.ends_at && Date.parse(p.ends_at) < Date.parse(p.starts_at)) return { msg: "The last day can't be before the first day.", focus: "dLast" };
+    if (p.ends_at && Date.parse(p.ends_at) < now().getTime()) return { msg: "The last day has already passed. Pick a later day or leave it empty.", focus: "dLast" };
+    const len = f.label.trim().length;
+    if (len < 3 || len > 60) return { msg: "The name customers see needs 3 to 60 letters.", focus: "label" };
+    return null;
+  }
+
+  const timeOptions = (sel) => {
+    const steps = TIME_STEPS.includes(sel) ? TIME_STEPS : [...TIME_STEPS, sel].sort((a, b) => a - b);
+    return steps.map((m) => `<option value="${m}"${m === sel ? " selected" : ""}>${timeLabel(m)}</option>`).join("");
+  };
+
+  const groupedMenu = () => {
+    const groups = [];
+    const at = new Map();
+    for (const m of menu) {
+      if (!at.has(m.category)) { at.set(m.category, groups.length); groups.push({ cat: m.category, items: [] }); }
+      groups[at.get(m.category)].items.push(m);
+    }
+    return groups;
+  };
+
+  function dishPickerHtml(multi) {
+    const groups = groupedMenu();
+    const rows = groups.map((g) => `
+      <div class="grp" data-grp="${esc(g.cat)}">
+        <div class="grph">${esc(g.cat)}</div>
+        ${g.items.map((m) => `
+          <label class="dish" data-name="${esc(m.name.toLowerCase())}" data-cat="${esc(m.category)}">
+            <input type="${multi ? "checkbox" : "radio"}" name="${multi ? "dish" : "bogoDish"}" value="${esc(m.id)}" data-f="${multi ? "item" : "bogoItem"}">
+            <span class="nm">${esc(m.name)}</span>
+            ${multi ? `<span class="incl" hidden>Whole category</span>` : ""}
+          </label>`).join("")}
+      </div>`).join("");
+    return `
+      ${multi ? `
+        <div class="field">
+          <span class="lab" id="catLab">Whole categories</span>
+          <div class="chips" role="group" aria-labelledby="catLab">
+            ${groups.map((g) => `<button type="button" class="chip" data-act="cat" data-cat="${esc(g.cat)}" aria-pressed="false">${esc(g.cat)}</button>`).join("")}
+          </div>
+        </div>` : ""}
+      <div class="field">
+        <label class="lab" for="dishSearch">${multi ? "Or single dishes" : "Which dish?"}</label>
+        ${multi ? "" : `<p class="picked" id="picked"></p>`}
+        <input class="input dish-search" id="dishSearch" type="search" placeholder="Search dishes" autocomplete="off" enterkeyhint="search">
+        <div class="dishlist" id="dishList">${rows || `<p class="nomatch">The menu didn't load. Go back and try again.</p>`}
+          <p class="nomatch" id="noMatch" hidden>No dishes match that.</p></div>
+        ${multi ? `<p class="count" id="pickCount" aria-live="polite"></p>` : ""}
+      </div>`;
+  }
+
+  const percentHtml = (f) => `
+    <div class="field">
+      <span class="lab" id="pctLab">How much off?</span>
+      <div class="pct-row" role="group" aria-labelledby="pctLab">
+        ${[10, 15, 20, 25].map((n) => `<button type="button" class="chip" data-act="pct" data-v="${n}" aria-pressed="false">${n}%</button>`).join("")}
+        <div class="suffix"><input class="input" id="percent" data-f="percent" type="number" inputmode="numeric" min="1" max="50" step="1" value="${esc(f.percent)}" aria-label="Percent off"><span>%</span></div>
+      </div>
+      <p class="hint">Up to 50%.</p>
+    </div>`;
+
+  const stepperHtml = (id, label, val, min, max) => `
+    <div class="field">
+      <span class="lab" id="${id}Lab">${label}</span>
+      <div class="stepper" role="group" aria-labelledby="${id}Lab">
+        <button type="button" data-act="step" data-k="${id}" data-d="-1" aria-label="${label}: fewer"${val <= min ? " disabled" : ""}>&minus;</button>
+        <output id="${id}Out" aria-live="polite">${val}</output>
+        <button type="button" data-act="step" data-k="${id}" data-d="1" aria-label="${label}: more"${val >= max ? " disabled" : ""}>+</button>
+      </div>
+    </div>`;
+
+  function dealHtml(f) {
+    if (f.kind === "percent_items") {
+      return `<section class="fs"><h2>The deal</h2>
+        <p class="note">Take money off certain dishes, for example at lunchtime.</p>
+        ${percentHtml(f)}${dishPickerHtml(true)}</section>`;
+    }
+    if (f.kind === "bogo") {
+      return `<section class="fs"><h2>The deal</h2>
+        <p class="note">Customers buy some of one dish and get more of it free.</p>
+        ${dishPickerHtml(false)}
+        <div class="row2">
+          ${stepperHtml("buy", "Buy", f.buy, 1, 10)}
+          ${stepperHtml("free", "Get free", f.free, 1, f.buy)}
+        </div>
+        <p class="hint" id="bogoHint"></p></section>`;
+    }
+    return `<section class="fs"><h2>The deal</h2>
+      <p class="note">Take money off the whole order when it's big enough.</p>
+      ${percentHtml(f)}
+      <div class="field">
+        <label class="lab" for="minOrder">Smallest order it works on</label>
+        <div class="prefix"><span>$</span><input class="input" id="minOrder" data-f="minDollars" type="text" inputmode="decimal" placeholder="70" value="${esc(f.minDollars)}" autocomplete="off"></div>
+        <p class="hint">The food total before tax.</p>
+      </div></section>`;
+  }
+
+  function whenHtml(f) {
+    return `<section class="fs"><h2>When</h2>
+      <div class="field">
+        <span class="lab" id="daysLab">Days</span>
+        <div class="chips days" role="group" aria-labelledby="daysLab">
+          ${DAY.map((d, i) => `<button type="button" class="chip" data-act="day" data-v="${i}" aria-pressed="false" aria-label="${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][i]}">${d}</button>`).join("")}
+        </div>
+        <div class="chips quick">
+          <button type="button" class="chip" data-act="days" data-v="all">Every day</button>
+          <button type="button" class="chip" data-act="days" data-v="wk">Mon to Fri</button>
+          <button type="button" class="chip" data-act="days" data-v="we">Weekends</button>
+        </div>
+        <p class="hint" id="wedHint" hidden>You're closed on Wednesdays, so Wednesday makes no difference.</p>
+      </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="lab" id="allDayLab">All day</span>
+          <button type="button" class="sw" role="switch" id="allDay" data-act="allday" aria-labelledby="allDayLab" aria-checked="${f.allDay}"></button>
+        </div>
+        <div class="row2" id="times"${f.allDay ? " hidden" : ""}>
+          <div><label class="lab" for="tFrom">From</label><select class="input" id="tFrom" data-f="start">${timeOptions(f.start)}</select></div>
+          <div><label class="lab" for="tTo">To</label><select class="input" id="tTo" data-f="end">${timeOptions(f.end)}</select></div>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lab">Dates (optional)</span>
+        <div class="row2">
+          <div><label class="hint" for="dFirst" style="display:block;margin:0 0 4px">First day</label><input class="input" id="dFirst" data-f="first" type="date" value="${esc(f.first)}"></div>
+          <div><label class="hint" for="dLast" style="display:block;margin:0 0 4px">Last day</label><input class="input" id="dLast" data-f="last" type="date" value="${esc(f.last)}"></div>
+        </div>
+        <p class="hint">Leave these empty to keep it going until you switch it off.
+          <button type="button" class="linkbtn" data-act="cleardates" id="clearDates"${f.first || f.last ? "" : " hidden"}>Clear dates</button></p>
+      </div></section>`;
+  }
+
+  function renderForm() {
+    view = "form";
+    const f = form;
+    const back = `<div class="formhead"><button type="button" class="back" data-act="back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      ${f.kind && !f.id ? "Change type" : "Back to offers"}</button></div>`;
+    if (!f.kind) {
+      app.innerHTML = `${back}
+        <h1>New offer</h1>
+        <p class="lede">What kind of offer?</p>
+        <div class="types">
+          <button type="button" class="type" data-act="kind" data-v="percent_items"><strong>% off dishes (lunch specials)</strong><span>${esc(KINDS.percent_items.sub)}</span></button>
+          <button type="button" class="type" data-act="kind" data-v="bogo"><strong>Buy X, get Y free</strong><span>${esc(KINDS.bogo.sub)}</span></button>
+          <button type="button" class="type" data-act="kind" data-v="percent_over"><strong>% off big orders</strong><span>${esc(KINDS.percent_over.sub)}</span></button>
+        </div>`;
+      window.scrollTo(0, 0);
+      return;
+    }
+    app.innerHTML = `${back}
+      <h1>${f.id ? "Edit offer" : "New offer"}</h1>
+      <p class="lede">${esc(KINDS[f.kind].title)}</p>
+      <form id="offerForm" novalidate>
+        ${dealHtml(f)}
+        ${whenHtml(f)}
+        <section class="fs"><h2>Name customers see</h2>
+          <p class="note">We fill this in from your choices. You can change it.</p>
+          <label class="lab" for="label">Name <span class="counter" id="labelCount"></span></label>
+          <input class="input" id="label" data-f="label" type="text" maxlength="60" autocomplete="off" value="${esc(f.label)}">
+          <button type="button" class="linkbtn" data-act="relabel" id="relabel" hidden>Fill it in from my choices again</button>
+        </section>
+        <div class="preview" aria-live="polite">
+          <p class="k">Preview</p>
+          <p class="pl" id="pvLabel"></p>
+          <p class="ps" id="pvSum"></p>
+        </div>
+        <p class="form-err" id="formErr" role="alert" hidden></p>
+        <div class="savebar">
+          <button type="button" class="btn btn-ghost" data-act="back">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save offer</button>
+        </div>
+      </form>`;
+    syncForm();
+    window.scrollTo(0, 0);
+  }
+
+  // update everything that depends on the form state, in place (no rebuild,
+  // so typing and the dish list scroll position are never disturbed)
+  function syncForm() {
+    const f = form;
+    if (!f || !f.kind) return;
+    const $ = (id) => document.getElementById(id);
+    const p = promoFromForm(f);
+
+    if (!f.labelTouched) {
+      f.label = autoLabel(p);
+      p.label = f.label;
+      const li = $("label");
+      if (li && li.value !== f.label) li.value = f.label;
+    }
+    $("labelCount").textContent = `${f.label.trim().length}/60`;
+    $("relabel").hidden = !f.labelTouched;
+
+    app.querySelectorAll('[data-act="pct"]').forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.v) === Number(f.percent))));
+    app.querySelectorAll('[data-act="day"]').forEach((b) => b.setAttribute("aria-pressed", String(f.days.has(Number(b.dataset.v)))));
+    const ds = [...f.days].sort().join(",");
+    const quick = { all: "0,1,2,3,4,5,6", wk: "1,2,3,4,5", we: "0,6" };
+    app.querySelectorAll('[data-act="days"]').forEach((b) => b.setAttribute("aria-pressed", String(quick[b.dataset.v] === ds)));
+    $("wedHint").hidden = !(f.days.size === 1 && f.days.has(3));
+    $("allDay").setAttribute("aria-checked", String(f.allDay));
+    $("times").hidden = f.allDay;
+    $("clearDates").hidden = !(f.first || f.last);
+
+    if (f.kind === "percent_items") {
+      app.querySelectorAll('[data-act="cat"]').forEach((b) => b.setAttribute("aria-pressed", String(f.cats.has(b.dataset.cat))));
+      app.querySelectorAll(".dish").forEach((row) => {
+        const input = row.querySelector("input");
+        const inCat = f.cats.has(row.dataset.cat);
+        input.checked = inCat || f.items.has(input.value);
+        input.disabled = inCat;
+        row.classList.toggle("in-cat", inCat);
+        row.querySelector(".incl").hidden = !inCat;
+      });
+      const nd = p.item_ids.length, nc = p.categories.length;
+      const bits = [];
+      if (nd) bits.push(`${nd} ${nd === 1 ? "dish" : "dishes"}`);
+      if (nc) bits.push(`${nc} ${nc === 1 ? "category" : "categories"}`);
+      $("pickCount").textContent = bits.length ? `Picked: ${bits.join(", ")}` : "Nothing picked yet";
+    }
+    if (f.kind === "bogo") {
+      app.querySelectorAll(".dish input").forEach((i) => { i.checked = i.value === f.item_id; });
+      const n = dishName(f.item_id);
+      $("picked").textContent = n ? `Picked: ${n}` : "Nothing picked yet";
+      ["buy", "free"].forEach((k) => {
+        const max = k === "buy" ? 10 : f.buy;
+        const v = f[k];
+        $(`${k}Out`).textContent = v;
+        const [minus, plus] = app.querySelectorAll(`[data-act="step"][data-k="${k}"]`);
+        minus.disabled = v <= 1;
+        plus.disabled = v >= max;
+      });
+      $("bogoHint").textContent = `${n ? n + ": order" : "Order"} ${f.buy + f.free}, pay for ${f.buy}.`;
+    }
+
+    $("pvLabel").textContent = f.label.trim() || "(no name yet)";
+    $("pvSum").textContent = summary(p);
+    if (f.error) { $("formErr").textContent = f.error; $("formErr").hidden = false; } else { $("formErr").hidden = true; }
+    const sb = $("saveBtn");
+    sb.disabled = f.saving;
+    sb.textContent = f.saving ? "Saving..." : "Save offer";
+  }
+
+  function filterDishes(q) {
+    const s = q.trim().toLowerCase();
+    let any = false;
+    app.querySelectorAll(".grp").forEach((g) => {
+      let shown = 0;
+      g.querySelectorAll(".dish").forEach((row) => {
+        const hit = !s || row.dataset.name.includes(s) || row.dataset.cat.toLowerCase().includes(s);
+        row.hidden = !hit;
+        if (hit) shown++;
+      });
+      g.hidden = !shown;
+      if (shown) any = true;
+    });
+    const nm = document.getElementById("noMatch");
+    if (nm) nm.hidden = any || !menu.length;
+  }
+
+  async function saveForm() {
+    const f = form;
+    if (!f || f.saving) return;
+    const bad = validate(f);
+    if (bad) {
+      f.error = bad.msg;
+      syncForm();
+      const t = bad.focus && document.getElementById(bad.focus);
+      if (t) { t.focus(); t.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      else document.getElementById("formErr").scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    f.error = "";
+    f.saving = true;
+    syncForm();
+    const isNew = !f.id;
+    const payload = promoFromForm(f);
+    if (isNew) payload.active = false; // new offers start off; we ask right after
+    try {
+      const r = await api({ action: "save", promo: payload });
+      const saved = r.promo || payload;
+      const i = promos.findIndex((x) => x.id === saved.id);
+      if (i >= 0) promos[i] = saved; else promos.push(saved);
+      form = null;
+      renderList();
+      window.scrollTo(0, 0);
+      if (isNew && saved.id) {
+        const yes = await ask("Switch it on now?", "Customers will get it straight away whenever it's running.", "Yes, switch it on", "Not yet");
+        if (yes) toggle(saved.id, true);
+        else toast("Saved. It's off for now.");
+      } else {
+        toast("Saved");
+      }
+    } catch (e) {
+      if (e.stale) return;
+      if (e.auth) return logout(true);
+      if (form !== f) return;
+      f.saving = false;
+      f.error = e.message;
+      syncForm();
+      document.getElementById("formErr").scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }
+
+  async function toggle(id, to) {
+    const p = promos.find((x) => x.id === id);
+    if (!p || busy.has(id)) return;
+    const prev = !!p.active;
+    p.active = to;
+    busy.add(id);
+    if (view === "list") renderList();
+    try {
+      const r = await api({ action: "set_active", id, active: to });
+      if (typeof r.active === "boolean") p.active = r.active;
+      toast(p.active ? "On. Customers get it when it's running." : "Off. Customers won't see it.");
+    } catch (e) {
+      p.active = prev;
+      handleErr(e, "toggle");
+    } finally {
+      busy.delete(id);
+      if (view === "list" && key) renderList();
+    }
+  }
+
+  async function remove(id) {
+    const p = promos.find((x) => x.id === id);
+    if (!p) return;
+    const yes = await ask("Delete this offer?", "This can't be undone.", "Delete", "Keep it", true);
+    if (!yes) return;
+    busy.add(id);
+    try {
+      await api({ action: "delete", id });
+      promos = promos.filter((x) => x.id !== id);
+      toast("Offer deleted");
+    } catch (e) {
+      handleErr(e, "delete");
+    } finally {
+      busy.delete(id);
+      if (view === "list" && key) renderList();
+    }
+  }
+
+  /* ----------------------------------------------------------- events ---- */
+  const leaveForm = async () => {
+    form = null;
+    renderList();
+    window.scrollTo(0, 0);
+  };
+
+  app.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-act]");
+    if (!t || !app.contains(t)) return;
+    const act = t.dataset.act;
+    const f = form;
+    switch (act) {
+      case "retry": load(); break;
+      case "new": form = newForm(); renderForm(); break;
+      case "edit": {
+        const p = promos.find((x) => x.id === t.dataset.id);
+        if (p) { form = formFromPromo(p); renderForm(); }
+        break;
+      }
+      case "delete": remove(t.dataset.id); break;
+      case "toggle": {
+        const p = promos.find((x) => x.id === t.dataset.id);
+        if (p) toggle(p.id, !p.active);
+        break;
+      }
+      case "back":
+        if (f && f.kind && !f.id && t.classList.contains("back")) {
+          // "Change type": back to the three choices, start fresh
+          form = newForm();
+          renderForm();
+        } else {
+          leaveForm();
+        }
+        break;
+      case "kind":
+        f.kind = t.dataset.v;
+        f.percent = f.kind === "percent_over" ? 10 : 15;
+        renderForm();
+        break;
+      case "pct": f.percent = Number(t.dataset.v); { const i = document.getElementById("percent"); if (i) i.value = f.percent; } f.error = ""; syncForm(); break;
+      case "cat": {
+        const c = t.dataset.cat;
+        if (f.cats.has(c)) f.cats.delete(c); else f.cats.add(c);
+        f.error = ""; syncForm(); break;
+      }
+      case "day": {
+        const d = Number(t.dataset.v);
+        if (f.days.has(d)) f.days.delete(d); else f.days.add(d);
+        f.error = ""; syncForm(); break;
+      }
+      case "days":
+        f.days = new Set({ all: ALL_DAYS, wk: [1, 2, 3, 4, 5], we: [0, 6] }[t.dataset.v]);
+        f.error = ""; syncForm(); break;
+      case "allday": f.allDay = !f.allDay; f.error = ""; syncForm(); break;
+      case "cleardates":
+        f.first = ""; f.last = "";
+        document.getElementById("dFirst").value = "";
+        document.getElementById("dLast").value = "";
+        syncForm(); break;
+      case "relabel": f.labelTouched = false; syncForm(); break;
+      case "step": {
+        const k = t.dataset.k;
+        const max = k === "buy" ? 10 : f.buy;
+        f[k] = Math.min(max, Math.max(1, f[k] + Number(t.dataset.d)));
+        if (f.free > f.buy) f.free = f.buy;
+        f.error = ""; syncForm(); break;
+      }
+      default: break;
+    }
+  });
+
+  const onField = (e) => {
+    const t = e.target;
+    const f = form;
+    if (!f) return;
+    if (t.id === "dishSearch") { filterDishes(t.value); return; }
+    const k = t.dataset && t.dataset.f;
+    if (!k) return;
+    if (k === "item") { if (t.checked) f.items.add(t.value); else f.items.delete(t.value); }
+    else if (k === "bogoItem") { if (t.checked) f.item_id = t.value; }
+    else if (k === "percent") f.percent = t.value === "" ? "" : Number(t.value);
+    else if (k === "start" || k === "end") f[k] = Number(t.value);
+    else if (k === "label") { f.label = t.value; f.labelTouched = true; }
+    else f[k] = t.value;
+    f.error = "";
+    syncForm();
+  };
+  app.addEventListener("input", onField);
+  app.addEventListener("change", onField);
+  app.addEventListener("submit", (e) => { e.preventDefault(); saveForm(); });
+
+  // tapping the link again while the page is open picks up the (new) key
+  window.addEventListener("hashchange", () => {
+    const k = takeHashKey();
+    if (k) { key = k; loadedOnce = false; view = "list"; form = null; load(); }
+  });
+  // keep "Running now" honest, and pick up changes made on another device
+  setInterval(() => { if (view === "list" && key && loadedOnce && !dlg.open) renderList(); }, 60000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && view === "list" && key && loadedOnce && !dlg.open) load();
+  });
+
+  /* ------------------------------------------------------------- mock ---- */
+  // Local testing only. Inert unless window.LILYS_MANAGE_MOCK is set from the
+  // browser console, e.g. LILYS_MANAGE_MOCK = true; location.hash = "#key=test"
+  // or LILYS_MANAGE_MOCK = { fail: "set_active", status: 503 } to test errors.
+  let mockDb = null;
+  const mockSlug = (s) => s.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  async function mockTransport(payload) {
+    const cfg = typeof window.LILYS_MANAGE_MOCK === "object" ? window.LILYS_MANAGE_MOCK : {};
+    await new Promise((r) => setTimeout(r, cfg.delay ?? 350));
+    if (!mockDb) {
+      const m = [];
+      ((window.LILYS && window.LILYS.MENU) || []).forEach((g) => g.items.forEach(([name]) => m.push({ id: mockSlug(name), name, category: g.c })));
+      mockDb = {
+        menu: m, n: 3,
+        promos: [
+          { id: "p1", kind: "percent_items", label: "Lunch special: 15% off bowls", active: true, percent: 15, item_ids: [], categories: ["Lily's Bowls"], days: [1, 2, 3, 4, 5], start_min: 660, end_min: 900, starts_at: null, ends_at: null },
+          { id: "p2", kind: "bogo", label: "Buy 1 Hummus, get 1 free", active: false, item_id: "hummus", buy_qty: 1, free_qty: 1, days: null, start_min: null, end_min: null, starts_at: null, ends_at: null },
+          { id: "p3", kind: "percent_over", label: "10% off orders over $70", active: true, percent: 10, min_subtotal_cents: 7000, days: [0, 6], start_min: null, end_min: null, starts_at: null, ends_at: null },
+        ],
+      };
+    }
+    const db = mockDb;
+    if (cfg.fail === "auth") return { status: 401, body: { error: "Wrong manager key" } };
+    if (cfg.fail === payload.action) return { status: cfg.status || 400, body: { error: cfg.error || (cfg.status === 503 ? "Temporarily unavailable" : "Mock says no") } };
+    const copy = (x) => JSON.parse(JSON.stringify(x));
+    switch (payload.action) {
+      case "list": return { status: 200, body: { promos: copy(db.promos), menu: copy(db.menu), now: new Date().toISOString() } };
+      case "save": {
+        const p = copy(payload.promo);
+        if (!p.label || p.label.length < 3 || p.label.length > 60) return { status: 400, body: { error: "The name must be 3 to 60 characters." } };
+        if (!p.id) { p.id = "p" + (++db.n); db.promos.push(p); }
+        else { const i = db.promos.findIndex((x) => x.id === p.id); if (i < 0) return { status: 400, body: { error: "That offer doesn't exist anymore." } }; db.promos[i] = p; }
+        p.created_at = new Date().toISOString();
+        return { status: 200, body: { ok: true, promo: copy(p) } };
+      }
+      case "set_active": {
+        const p = db.promos.find((x) => x.id === payload.id);
+        if (!p) return { status: 400, body: { error: "That offer doesn't exist anymore." } };
+        p.active = !!payload.active;
+        return { status: 200, body: { ok: true, id: p.id, active: p.active } };
+      }
+      case "delete": db.promos = db.promos.filter((x) => x.id !== payload.id); return { status: 200, body: { ok: true } };
+      default: return { status: 400, body: { error: "Unknown action" } };
+    }
+  }
+
+  /* ------------------------------------------------------------- boot ---- */
+  key = takeHashKey() || store.get();
+  if (key) load(); else renderGate(false);
+})();
+</script>
+</body>
+</html>
