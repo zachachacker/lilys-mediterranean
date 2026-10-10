@@ -56,6 +56,9 @@ window.LILYS = {
     // shows/hides the Delivery option. The server has its own switch
     // (app_config.delivery_enabled) and refuses delivery while that is off.
     deliveryEnabled: false,
+    // Lily's Club welcome gift, shown at checkout. The server's own figure is
+    // app_config.club_welcome_percent: keep the two the same.
+    clubPercent: 5,
   },
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
   // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,

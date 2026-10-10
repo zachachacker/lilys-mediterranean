@@ -513,6 +513,8 @@
   /* -------------------------------------------------------------- state ---- */
   let key = "";
   let promos = [];
+  let clubCount = 0;     // Lily's Club members (confirmed, not unsubscribed)
+  let lastSend = null;   // the last offer email: {sent_at, subject, recipients}
   let view = "list"; // list | form
   let form = null;
   const busy = new Set();
@@ -573,6 +575,8 @@
     try {
       const j = await api({ action: "list" });
       promos = Array.isArray(j.promos) ? j.promos : [];
+      clubCount = Number(j.subscribers) || 0;
+      lastSend = j.last_send || null;
       menu = Array.isArray(j.menu) ? j.menu : [];
       menuById = new Map(menu.map((m) => [m.id, m]));
       const serverNow = Date.parse(j.now);
@@ -622,6 +626,7 @@
         <div class="acts">
           <button class="btn btn-ghost" data-act="edit" data-id="${esc(p.id)}">Edit</button>
           <button class="btn btn-ghost del" data-act="delete" data-id="${esc(p.id)}">Delete</button>
+          ${on && clubCount ? `<button class="btn btn-ghost" data-act="email" data-id="${esc(p.id)}">Email to club (${clubCount})</button>` : ""}
         </div>
       </article>`;
   }
@@ -637,6 +642,7 @@
           <p class="eyebrow">Lily's Mediterranean</p>
           <h1>Your offers</h1>
           <p class="lede">Offers here come off automatically when customers order online. Switch one on or off any time.</p>
+          <p class="lede club-line"><b>Lily's Club:</b> ${clubCount} member${clubCount === 1 ? "" : "s"}${lastSend ? ` · last offer email ${esc(new Date(lastSend.sent_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }))} to ${lastSend.recipients}` : ""}. Customers join by ticking a box when they order.</p>
         </div>
         ${promos.length ? `<button class="btn btn-primary" data-act="new">New offer</button>` : ""}
       </header>
@@ -1063,6 +1069,27 @@
     }
   }
 
+  // send an offer to every Lily's Club member (the server allows one every 3 days)
+  async function emailOffer(id) {
+    const p = promos.find((x) => x.id === id);
+    if (!p || busy.has(id)) return;
+    const yes = await ask(`Email this offer to ${clubCount} club member${clubCount === 1 ? "" : "s"}?`,
+      `"${p.label}" goes to everyone in Lily's Club with an Order now button. Send one every week or two at most, so people stay in the club.`,
+      "Send email", "Not now");
+    if (!yes) return;
+    busy.add(id);
+    try {
+      const r = await api({ action: "email_offer", id });
+      lastSend = { sent_at: new Date().toISOString(), subject: p.label, recipients: r.sent };
+      toast(`Sent to ${r.sent} club member${r.sent === 1 ? "" : "s"}.`);
+    } catch (e) {
+      handleErr(e, "email");
+    } finally {
+      busy.delete(id);
+      if (view === "list" && key) renderList();
+    }
+  }
+
   /* ----------------------------------------------------------- events ---- */
   const leaveForm = async () => {
     form = null;
@@ -1084,6 +1111,7 @@
         break;
       }
       case "delete": remove(t.dataset.id); break;
+      case "email": emailOffer(t.dataset.id); break;
       case "toggle": {
         const p = promos.find((x) => x.id === t.dataset.id);
         if (p) toggle(p.id, !p.active);

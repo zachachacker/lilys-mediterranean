@@ -119,6 +119,11 @@
           <label>Notes for the kitchen <span class="cf-opt">(optional)</span>
             <textarea id="cfNotes" maxlength="500" rows="2" placeholder="No onions, extra garlic sauce…"></textarea>
           </label>
+          <label class="club-opt" for="cfClub">
+            <input type="checkbox" id="cfClub">
+            <span class="club-txt"><b>Join Lily's Club <i class="club-tag">Members only</i></b>
+              <em id="cfClubText">5% off your next order for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.</em></span>
+          </label>
           <button class="btn cart-checkout" id="checkoutBtn" type="submit">Pay &amp; place order <span class="arw">→</span></button>
           <p class="cart-error" id="cartError" role="alert" hidden></p>
           <p class="cart-fine" id="cartFine">Secure card payment by Stripe. Show your order code at the counter.</p>
@@ -166,7 +171,7 @@
     </div>
   </div>
   <div class="footer-base">
-    <span>© 2026 Lily's Mediterranean Fresh Grill</span>
+    <span>© 2026 Lily's Mediterranean Fresh Grill · <a class="ink" href="club.html">Lily's Club</a> · <a class="ink" href="privacy.html">Privacy</a></span>
     <span>Halal &amp; kosher kitchen · Indialantic, FL</span>
   </div>
 </footer>

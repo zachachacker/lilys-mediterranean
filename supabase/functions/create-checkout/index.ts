@@ -194,6 +194,8 @@ function applyPromotions(lines: PLine[], promos: Promo[]) {
      referral  one link per customer. A friend's first order gets the
                discount, and the referrer earns the same off their next order.
                Held OFF (app_config.referral_enabled) until Kareem sets terms.
+     club      Lily's Club welcome gift: one per member, usable once, on any
+               order (members have usually ordered before). Minted by deals.
    Applied after the menu promotions, on what is left, at most one per order. */
 const TOKEN_RE = /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{10}$/;
 const PAID_STATUSES = ["paid", "making", "ready", "done"];
@@ -336,7 +338,7 @@ Deno.serve(async (req) => {
   let body: {
     items?: CartLine[]; name?: string; phone?: string; notes?: string;
     action?: string; fulfilment?: string; address?: string; tip_cents?: unknown;
-    source?: unknown; source_detail?: unknown; promo_token?: unknown;
+    source?: unknown; source_detail?: unknown; promo_token?: unknown; offers_opt_in?: unknown;
   };
   try {
     body = await req.json();
@@ -371,9 +373,11 @@ Deno.serve(async (req) => {
       const { error: scanErr } = await db0.rpc("note_scan", { p_token: token });
       if (scanErr) console.error("note_scan failed:", scanErr.message);
     }
-    if (t.kind === "sticker" && t.order_id) {
+    if ((t.kind === "sticker" || t.kind === "club") && t.order_id) {
       const { data: o } = await db0.from("orders").select("status").eq("id", t.order_id).maybeSingle();
-      if (o && o.status !== "canceled") return json({ error: "This sticker has already been used." }, 409);
+      if (o && o.status !== "canceled") {
+        return json({ error: t.kind === "club" ? "Your welcome offer has already been used." : "This sticker has already been used." }, 409);
+      }
     }
     const percent = t.kind === "referral" ? Number(c.referral_percent ?? "10") : t.percent;
     return json({ ok: true, kind: t.kind, percent });
@@ -586,7 +590,7 @@ Deno.serve(async (req) => {
       if (t.kind === "referral" && t.referrer_hash === custHash) {
         return json({ error: "That's your own share link. Send it to a friend instead!" }, 400);
       }
-      if (!(await firstOrder())) {
+      if (t.kind !== "club" && !(await firstOrder())) {
         return json({ error: "That discount is for your first online order. Remove it to continue." }, 400);
       }
       tokenRow = t;
@@ -594,7 +598,9 @@ Deno.serve(async (req) => {
       const cents = Math.min(codeDiscountCents(subtotal - discount, pct), subtotal - discount);
       if (cents > 0) {
         discount += cents;
-        applied.push({ id: t.kind, label: t.kind === "sticker" ? `${pct}% off your first online order` : `Friend's ${pct}% off`, cents });
+        const label = t.kind === "sticker" ? `${pct}% off your first online order`
+          : t.kind === "club" ? `Lily's Club: ${pct}% off` : `Friend's ${pct}% off`;
+        applied.push({ id: t.kind, label, cents });
       }
     } else if (referralOn && custHash) {
       // earned rewards whose friend actually paid, oldest first; one per order
@@ -680,6 +686,9 @@ Deno.serve(async (req) => {
         source_detail: sourceDetail,
         customer_hash: custHash,
         promo_token: tokenRow?.token ?? null,
+        // ticked "Get special offers" (unticked by default); the webhook adds
+        // the Stripe email to the deals list once the order is paid
+        offers_opt_in: body.offers_opt_in === true,
         demo,
         payment_provider: demo ? "demo" : provider,
         // our own session token — the confirmation page looks orders up by it.
@@ -699,9 +708,9 @@ Deno.serve(async (req) => {
   // the race cancels this (unpaid) order rather than charging full price.
   {
     let lost = "";
-    if (tokenRow?.kind === "sticker") {
+    if (tokenRow?.kind === "sticker" || tokenRow?.kind === "club") {
       const { data, error } = await db.rpc("claim_sticker", { p_token: tokenRow.token, p_order: order.id });
-      if (error || data !== true) lost = "This sticker has already been used.";
+      if (error || data !== true) lost = tokenRow.kind === "club" ? "Your welcome offer has already been used." : "This sticker has already been used.";
     } else if (tokenRow?.kind === "referral") {
       const { error } = await db.from("referral_rewards").insert({
         customer_hash: tokenRow.referrer_hash, from_order_id: order.id, percent: referralPct,

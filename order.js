@@ -187,6 +187,9 @@
   if (!tabs || !body) return;
 
   if ($("prepMin")) $("prepMin").textContent = O.prepMinutes;
+  if ($("cfClubText") && O.clubPercent) {
+    $("cfClubText").textContent = `${O.clubPercent}% off your next order for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.`;
+  }
   if ($("delMin")) $("delMin").textContent = O.deliveryMinutes;
   if (!O.deliveryEnabled) {
     // held until Kareem confirms drivers — shown, but not selectable
@@ -265,6 +268,8 @@
       note.className = "order-code-note";
       note.textContent = j.kind === "sticker"
         ? `Thanks for scanning! ${j.percent}% off your first online order, taken off at checkout.`
+        : j.kind === "club"
+        ? `Welcome to Lily's Club! Your ${j.percent}% off is applied at checkout.`
         : `A friend sent you ${j.percent}% off your first online order, taken off at checkout.`;
       $("closedNote")?.before(note);
     } catch { /* offline: no discount shown, nothing lost */ }
@@ -698,6 +703,7 @@
           address: ful === "delivery" ? addrEl.value.trim() : "",
           tip_cents: tipCents,
           promo_token: promoCode?.token || "",
+          offers_opt_in: $("cfClub")?.checked === true,
           source: window.LILYS_TRACK?.source() || "direct",
           source_detail: window.LILYS_TRACK?.detail() || "",
         }),
@@ -769,6 +775,8 @@
     const code = promoCode
       ? `<div class="offer">${promoCode.kind === "sticker"
           ? `${promoCode.percent}% off your first online order (bag sticker)`
+          : promoCode.kind === "club"
+          ? `Lily's Club: ${promoCode.percent}% off this order`
           : `${promoCode.percent}% off from a friend's link`}
           <button type="button" class="offer-x" id="codeX">Remove</button></div>`
       : "";

@@ -426,7 +426,7 @@ export function codeDiscountCents(afterPromos: number, percent: number): number 
   return Math.round((afterPromos * percent) / 100);
 }
 
-/* ── manage-api/index.ts — offer validation (2026-10-10) ─────────────── */
+/* ── manage-api/index.ts — offer validation + offer emails (2026-10-10) ─ */
 export type PromoRow = {
   kind: string; label: string; active?: boolean;
   item_id: string | null; buy_qty: number | null; free_qty: number | null;
@@ -503,6 +503,52 @@ export function validatePromo(
   }
   if (typeof p.active === "boolean") row.active = p.active;
   return { ok: true, row };
+}
+
+/* ── "Email this offer" (2026-10-10) ──────────────────────────────────────
+   Sends an offer to the special-offers list: only people who ticked the box at
+   checkout or confirmed a signup, never the receipt emails Stripe collected.
+   Every email carries the restaurant's address and a one-click unsubscribe
+   (CAN-SPAM; Gmail/Yahoo bulk rules). At most one offer email every 3 days, so
+   a double tap or an eager week can't burn the list. */
+export const SITE = "https://lilysmediterraneanfresh.com";
+export const FN = "https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1";
+export const SEND_GAP_DAYS = 3;
+export const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const hm = (m: number) => { const h = Math.floor(m / 60), mi = m % 60; return `${h % 12 || 12}${mi ? ":" + String(mi).padStart(2, "0") : ""}${h < 12 || h === 24 ? "am" : "pm"}`; };
+export const escH = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+export function whenText(p: { days: number[] | null; start_min: number | null; end_min: number | null; ends_at: string | null }): string {
+  const days = p.days?.length && p.days.length < 7
+    ? (p.days.join() === "1,2,3,4,5" ? "Monday to Friday" : p.days.join() === "0,6" ? "weekends" : p.days.map((d) => DAY[d]).join(", "))
+    : "every day";
+  const time = p.start_min != null && p.end_min != null ? `, ${hm(p.start_min)} to ${hm(p.end_min)}` : "";
+  const until = p.ends_at
+    ? `, until ${new Date(p.ends_at).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric" })}` : "";
+  return `Online orders, ${days}${time}${until}.`;
+}
+
+export function offerEmail(p: Record<string, unknown>, token: string) {
+  const unsub = `${FN}/deals?u=${token}`;
+  const order = `${SITE}/order.html?src=email&utm_campaign=${encodeURIComponent(String(p.id))}`;
+  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1A1E1C">
+    <div style="background:#14532b;color:#F4F1E8;padding:18px 22px;border-radius:10px 10px 0 0">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E4A72E;font-weight:700">Members only</div>
+      <div style="font-size:22px;font-weight:700;margin-top:4px">Lily's Mediterranean</div></div>
+    <div style="border:1px solid #e3ded2;border-top:0;border-radius:0 0 10px 10px;padding:24px">
+      <h1 style="font-size:26px;line-height:1.15;margin:0 0 10px;color:#B4472B">${escH(String(p.label))}</h1>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 20px">${escH(whenText(p as never))} It comes off automatically at checkout, no code needed.</p>
+      <p style="margin:0 0 22px"><a href="${order}" style="display:inline-block;background:#B4472B;color:#fff;text-decoration:none;font-weight:700;font-size:16px;padding:13px 26px;border-radius:99px">Order now</a></p>
+      <p style="font-size:12px;color:#888;margin:0;line-height:1.5">You're getting this because you're a Lily's Club member.
+        <a href="${unsub}" style="color:#888">Unsubscribe</a><br>Lily's Mediterranean Fresh Grill, 2 5th Ave STE C, Indialantic, FL 32903 · (321) 312-4444</p>
+    </div></div>`;
+  const text = `${p.label}
+${whenText(p as never)} Comes off automatically at checkout.
+Order: ${order}
+
+Unsubscribe: ${unsub}
+Lily's Mediterranean Fresh Grill, 2 5th Ave STE C, Indialantic, FL 32903`;
+  return { html, text, unsub };
 }
 
 // database row -> what the page shows (bogo: paid count, not group size)

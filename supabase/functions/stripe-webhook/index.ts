@@ -28,6 +28,9 @@ async function verifySignature(payload: string, header: string, secret: string):
   return v1s.some((v) => timingSafeEqual(expected, enc.encode(v)));
 }
 
+// shown next to the checkout tickbox (order.html); kept with each subscriber as proof of consent
+const OFFERS_CONSENT = "Join Lily's Club: 5% off your next order for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.";
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("POST only", { status: 405 });
 
@@ -63,12 +66,25 @@ Deno.serve(async (req) => {
     // match by session id, with metadata.order_id as belt-and-braces fallback
     let q = db.from("orders").update(patch).eq("status", "pending");
     q = orderId ? q.or(`stripe_session_id.eq.${session.id},id.eq.${orderId}`) : q.eq("stripe_session_id", session.id);
-    const { data, error } = await q.select("id");
+    const { data, error } = await q.select("id,offers_opt_in,customer_email");
     if (error) {
       console.error("order update failed:", error.message);
       return "retry";
     }
-    if ((data ?? []).length > 0) return "ok";
+    if ((data ?? []).length > 0) {
+      // ticked "Join Lily's Club" at checkout: join the deals list with the
+      // exact wording they agreed to. Ticking it is fresh consent, so it also
+      // undoes an earlier unsubscribe; NOT ticking it never touches the list.
+      const o = data[0];
+      if (to === "paid" && o.offers_opt_in && o.customer_email) {
+        const { error: subErr } = await db.from("subscribers").upsert({
+          email: o.customer_email, source: "checkout", confirmed_at: new Date().toISOString(),
+          unsubscribed_at: null, consent_text: OFFERS_CONSENT, order_id: o.id,
+        }, { onConflict: "email" });
+        if (subErr) console.error("subscriber add failed:", subErr.message); // the order itself is fine
+      }
+      return "ok";
+    }
     // 0 rows: already processed (idempotent redelivery) or order unknown
     const { data: existing, error: exErr } = await db
       .from("orders")

@@ -1283,3 +1283,41 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .order-code-note { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; max-width: 46ch;
   background: color-mix(in srgb, var(--go) 22%, transparent); border: 1px solid color-mix(in srgb, var(--go) 60%, transparent);
   color: var(--foam); font-size: 0.95rem; }
+
+/* Lily's Club tickbox at checkout (2026-10-10): unticked by default; framed as
+   a club with a gift, because "email me deals" is a box nobody ticks */
+.cart-form .club-opt {
+  display: grid; grid-template-columns: auto 1fr; gap: 0.7rem; align-items: start; cursor: pointer;
+  font-family: var(--sans); font-size: 0.9rem; letter-spacing: 0; text-transform: none; color: var(--char);
+  border: 1px dashed color-mix(in srgb, var(--lemon) 75%, var(--char)); border-radius: 8px; padding: 0.75rem 0.85rem;
+  background: color-mix(in srgb, var(--lemon) 12%, #fff);
+}
+.cart-form .club-opt:has(input:checked) { border-style: solid; border-color: var(--teal); background: color-mix(in srgb, var(--teal) 8%, #fff); }
+.club-opt input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--teal); }
+.club-txt b { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.98rem; }
+.club-txt em { display: block; font-style: normal; font-size: 0.8rem; line-height: 1.4; margin-top: 0.15rem; color: color-mix(in srgb, var(--char) 72%, transparent); }
+.club-tag { font-style: normal; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #6b4a00; background: var(--lemon); border-radius: 99px; padding: 0.2em 0.6em; }
+
+/* Lily's Club page */
+.club-hero { min-height: 70vh; display: flex; align-items: center; }
+.club-box { max-width: 560px; }
+.club-lede { font-size: var(--step-0); line-height: 1.55; margin: 0.6rem 0 1.1rem; }
+.club-perks { list-style: none; padding: 0; margin: 0 0 1.4rem; display: grid; gap: 0.5rem; }
+.club-perks li { padding-left: 1.6rem; position: relative; line-height: 1.4; }
+.club-perks li::before { content: ""; position: absolute; left: 0.2rem; top: 0.45em; width: 0.6rem; height: 0.6rem; transform: rotate(45deg); background: var(--lemon); }
+.club-perks b { color: var(--lemon); font-weight: 700; }
+.club-form { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.club-form input { flex: 1 1 220px; min-width: 0; font: inherit; font-size: 16px; padding: 0.8em 1em; border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--foam) 40%, transparent); background: color-mix(in srgb, var(--foam) 8%, transparent); color: var(--foam); }
+.club-form input::placeholder { color: color-mix(in srgb, var(--foam) 55%, transparent); }
+.club-form input:focus { outline: 2px solid var(--lemon); outline-offset: 2px; }
+.club-fine { font-size: 0.8rem; opacity: 0.75; margin-top: 0.8rem; }
+.club-msg { color: #ffb4a6; margin-top: 0.6rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+/* privacy page */
+.prose { max-width: 680px; }
+.prose h2 { font-size: var(--step-1); margin: 1.8rem 0 0.5rem; }
+.prose h2:first-child { margin-top: 0; }
+.prose p { line-height: 1.65; margin: 0 0 0.9rem; }

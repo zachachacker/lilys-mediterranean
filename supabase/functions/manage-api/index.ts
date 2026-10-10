@@ -102,6 +102,52 @@ function validatePromo(
   return { ok: true, row };
 }
 
+/* ── "Email this offer" (2026-10-10) ──────────────────────────────────────
+   Sends an offer to the special-offers list: only people who ticked the box at
+   checkout or confirmed a signup, never the receipt emails Stripe collected.
+   Every email carries the restaurant's address and a one-click unsubscribe
+   (CAN-SPAM; Gmail/Yahoo bulk rules). At most one offer email every 3 days, so
+   a double tap or an eager week can't burn the list. */
+const SITE = "https://lilysmediterraneanfresh.com";
+const FN = "https://hytvfqydahwsrcdbnvfq.supabase.co/functions/v1";
+const SEND_GAP_DAYS = 3;
+const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const hm = (m: number) => { const h = Math.floor(m / 60), mi = m % 60; return `${h % 12 || 12}${mi ? ":" + String(mi).padStart(2, "0") : ""}${h < 12 || h === 24 ? "am" : "pm"}`; };
+const escH = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function whenText(p: { days: number[] | null; start_min: number | null; end_min: number | null; ends_at: string | null }): string {
+  const days = p.days?.length && p.days.length < 7
+    ? (p.days.join() === "1,2,3,4,5" ? "Monday to Friday" : p.days.join() === "0,6" ? "weekends" : p.days.map((d) => DAY[d]).join(", "))
+    : "every day";
+  const time = p.start_min != null && p.end_min != null ? `, ${hm(p.start_min)} to ${hm(p.end_min)}` : "";
+  const until = p.ends_at
+    ? `, until ${new Date(p.ends_at).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric" })}` : "";
+  return `Online orders, ${days}${time}${until}.`;
+}
+
+function offerEmail(p: Record<string, unknown>, token: string) {
+  const unsub = `${FN}/deals?u=${token}`;
+  const order = `${SITE}/order.html?src=email&utm_campaign=${encodeURIComponent(String(p.id))}`;
+  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1A1E1C">
+    <div style="background:#14532b;color:#F4F1E8;padding:18px 22px;border-radius:10px 10px 0 0">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E4A72E;font-weight:700">Members only</div>
+      <div style="font-size:22px;font-weight:700;margin-top:4px">Lily's Mediterranean</div></div>
+    <div style="border:1px solid #e3ded2;border-top:0;border-radius:0 0 10px 10px;padding:24px">
+      <h1 style="font-size:26px;line-height:1.15;margin:0 0 10px;color:#B4472B">${escH(String(p.label))}</h1>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 20px">${escH(whenText(p as never))} It comes off automatically at checkout, no code needed.</p>
+      <p style="margin:0 0 22px"><a href="${order}" style="display:inline-block;background:#B4472B;color:#fff;text-decoration:none;font-weight:700;font-size:16px;padding:13px 26px;border-radius:99px">Order now</a></p>
+      <p style="font-size:12px;color:#888;margin:0;line-height:1.5">You're getting this because you're a Lily's Club member.
+        <a href="${unsub}" style="color:#888">Unsubscribe</a><br>Lily's Mediterranean Fresh Grill, 2 5th Ave STE C, Indialantic, FL 32903 · (321) 312-4444</p>
+    </div></div>`;
+  const text = `${p.label}
+${whenText(p as never)} Comes off automatically at checkout.
+Order: ${order}
+
+Unsubscribe: ${unsub}
+Lily's Mediterranean Fresh Grill, 2 5th Ave STE C, Indialantic, FL 32903`;
+  return { html, text, unsub };
+}
+
 // database row -> what the page shows (bogo: paid count, not group size)
 function toPage<T extends { kind: string; buy_qty: number | null; free_qty: number | null }>(r: T): T {
   return r.kind === "bogo" && r.buy_qty != null && r.free_qty != null ? { ...r, buy_qty: r.buy_qty - r.free_qty } : r;
@@ -144,7 +190,11 @@ Deno.serve(async (req) => {
         db.from("promotions").select(COLS).order("created_at"), menu(),
       ]);
       if (error) throw new Error(error.message);
-      return json({ promos: (data ?? []).map(toPage), menu: items, now: new Date().toISOString() });
+      const [{ count: subs }, { data: last }] = await Promise.all([
+        db.from("subscribers").select("email", { count: "exact", head: true }).not("confirmed_at", "is", null).is("unsubscribed_at", null),
+        db.from("deal_sends").select("sent_at,subject,recipients").order("sent_at", { ascending: false }).limit(1),
+      ]);
+      return json({ promos: (data ?? []).map(toPage), menu: items, subscribers: subs ?? 0, last_send: last?.[0] ?? null, now: new Date().toISOString() });
     }
 
     if (body.action === "save") {
@@ -170,6 +220,50 @@ Deno.serve(async (req) => {
       if (error) throw new Error(error.message);
       if (!(data ?? []).length) return json({ error: "That offer no longer exists." }, 404);
       return json({ ok: true, id: body.id, active: data[0].active });
+    }
+
+    if (body.action === "email_offer") {
+      if (typeof body.id !== "string") return json({ error: "Bad request" }, 400);
+      const { data: p, error: pe } = await db.from("promotions").select(COLS).eq("id", body.id).maybeSingle();
+      if (pe) throw new Error(pe.message);
+      if (!p) return json({ error: "That offer no longer exists." }, 404);
+      if (!p.active) return json({ error: "Switch the offer on first, so customers actually get it when they order." }, 400);
+      const { data: last } = await db.from("deal_sends").select("sent_at").order("sent_at", { ascending: false }).limit(1);
+      const lastAt = last?.[0] ? Date.parse(last[0].sent_at) : 0;
+      if (Date.now() - lastAt < SEND_GAP_DAYS * 86400_000) {
+        const next = new Date(lastAt + SEND_GAP_DAYS * 86400_000)
+          .toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long", month: "short", day: "numeric" });
+        return json({ error: `You sent an offer email recently. To keep people subscribed, the next one can go out on ${next}.` }, 400);
+      }
+      const { data: subs, error: se } = await db.from("subscribers").select("email,token")
+        .not("confirmed_at", "is", null).is("unsubscribed_at", null);
+      if (se) throw new Error(se.message);
+      if (!subs?.length) return json({ error: "Lily's Club has no members yet. Customers join by ticking the box when they order." }, 400);
+      const { data: k } = await db.from("app_config").select("value").eq("key", "resend_api_key").maybeSingle();
+      const apiKey = Deno.env.get("RESEND_API_KEY") || k?.value || "";
+      if (!apiKey) return json({ error: "Email isn't set up yet." }, 503);
+      // record first, so a retry after a timeout can't double-send
+      const { error: re } = await db.from("deal_sends").insert({ promo_id: p.id, subject: p.label, recipients: subs.length });
+      if (re) throw new Error(re.message);
+      let sent = 0;
+      for (let i = 0; i < subs.length; i += 100) {
+        const batch = subs.slice(i, i + 100).map((s: { email: string; token: string }) => {
+          const m = offerEmail(p, s.token);
+          return {
+            from: "Lily's Club <club@lilysmediterraneanfresh.com>", to: [s.email], subject: p.label,
+            html: m.html, text: m.text,
+            headers: { "List-Unsubscribe": `<${m.unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+          };
+        });
+        const r = await fetch("https://api.resend.com/emails/batch", {
+          method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(batch),
+        });
+        if (!r.ok) { console.error("offer batch failed:", r.status, await r.text().catch(() => "")); break; }
+        sent += batch.length;
+      }
+      if (sent < subs.length) await db.from("deal_sends").update({ recipients: sent }).eq("promo_id", p.id).order("sent_at", { ascending: false }).limit(1);
+      return sent ? json({ ok: true, sent }) : json({ error: "The email didn't go out. Please try again later." }, 502);
     }
 
     if (body.action === "delete") {

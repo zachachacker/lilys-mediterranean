@@ -1,0 +1,11 @@
+-- Lily's Club, the special-offers email list (2026-10-10). APPLIED via MCP as
+-- "deals_list" and "lilys_club".
+-- subscribers: email PK, token (unsubscribe/claim), source checkout|signup,
+--   confirmed_at, consent_text (exact wording agreed to), welcome_sent_at,
+--   welcome_token (their one welcome gift, a promo_tokens row of kind 'club').
+-- deal_sends: one row per offer email (manage-api allows one every 3 days).
+-- orders.offers_opt_in: the checkout tickbox; stripe-webhook subscribes on payment.
+-- promo_tokens kind 'club' (single-use like stickers, any order); claim_sticker
+-- claims both. Trigger subscribers_welcome -> deals {action:"welcome"} for
+-- confirmed members without a welcome. app_config club_welcome_percent = '5'
+-- (keep data.js ORDERING.clubPercent the same). RLS on, no policies.

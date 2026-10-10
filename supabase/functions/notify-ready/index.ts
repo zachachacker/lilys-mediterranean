@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
       <div style="font-family:Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:2px;background:#F4F1E8;border-radius:8px;padding:12px;text-align:center;margin:0 0 16px">${esc(o.code)}</div>
       <ul style="padding-left:18px;font-size:15px;margin:0 0 16px">${items}</ul>
       ${delivery ? "" : `<p style="margin:0 0 6px"><a href="${DIRECTIONS}" style="color:#1F5A5F">Directions</a></p>`}
+      <p style="font-size:15px;margin:16px 0 0;padding:12px 14px;background:#FFF6DF;border-radius:8px">Enjoy it! <b>Join Lily's Club</b> for 5% off your next order and members-only offers: <a href="https://lilysmediterraneanfresh.com/club.html?src=ready-email" style="color:#B4472B;font-weight:700">join free</a></p>
       <p style="font-size:14px;color:#555;margin:14px 0 0">Questions? Call us at <a href="tel:+13213124444" style="color:#1F5A5F">(321) 312-4444</a>. Replies to this email aren't read.</p>
     </div>
   </div>`;

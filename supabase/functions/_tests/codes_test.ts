@@ -12,8 +12,10 @@ Deno.test("drift: discount-link rules in create-checkout", async () => {
   assertStringIncludes(s, "const TOKEN_RE = /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{10}$/;");
   assertStringIncludes(s, 'const PAID_STATUSES = ["paid", "making", "ready", "done"];');
   assertStringIncludes(s, "if (!Number.isFinite(percent) || percent <= 0 || percent > 50 || afterPromos <= 0) return 0;");
-  // first online order only, for stickers and referral friends alike
-  assertStringIncludes(s, 'if (!(await firstOrder())) {');
+  // first online order only for stickers and referral friends; club gifts work on any order
+  assertStringIncludes(s, 'if (t.kind !== "club" && !(await firstOrder())) {');
+  // stickers and club welcome gifts are both single-use, claimed atomically
+  assertStringIncludes(s, 'if (tokenRow?.kind === "sticker" || tokenRow?.kind === "club") {');
   // a sticker is claimed in the database after the order exists; losing cancels the order
   assertStringIncludes(s, 'await db.rpc("claim_sticker", { p_token: tokenRow.token, p_order: order.id });');
   assert(s.indexOf('db.rpc("claim_sticker"') > s.indexOf('.from("orders")\n      .insert('));
