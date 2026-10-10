@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Order Online · Lily's Mediterranean Fresh Grill</title>
+<meta name="description" content="Order Lily's Mediterranean for pickup in Indialantic, FL — pay online, straight to the kitchen, ready in about 20 minutes.">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#14532b">
+<link rel="apple-touch-icon" href="assets/app-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lily's">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUV8FyLNQOQZAnv9ZwIlOkuy91B.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUT8FyLNQOQZAnv9ZwNpOskzP9Ddt0.woff2">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="styles.css">
+<!-- Google tag (Kareem's Google Ads, AW-18438934153, added 2026-10-07) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18438934153"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18438934153');</script>
+</head>
+<body class="menu-page order-page v2">
+<a class="skip-link" href="#order-menu">Skip to menu</a>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="nav solid" id="nav">
+  <a class="brand" href="index.html" aria-label="Lily's Mediterranean Fresh Grill — home">
+    <span class="name">Lily<em>'s</em></span>
+    <span class="kicker">Mediterranean · Fresh Grill</span>
+  </a>
+  <nav class="nav-links" aria-label="Primary">
+    <a class="ink" href="index.html#story">Our Table</a>
+    <a class="ink" href="menu.html">Menu</a>
+    <a class="ink" href="order.html" aria-current="page">Order</a>
+    <a class="ink" href="index.html#visit">Visit</a>
+  </nav>
+  <div class="nav-actions">
+    <a class="nav-phone ink" href="tel:+13213124444">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg>
+      (321) 312-4444
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-label="Site navigation" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" inert>
+  <a href="index.html#story">Our Table</a>
+  <a href="menu.html">Menu</a>
+  <a href="order.html">Order</a>
+  <a href="index.html#visit">Visit</a>
+  <div class="mm-meta">(321) 312-4444 · 2 5th Ave, Indialantic</div>
+</div>
+
+<main>
+<section class="section dark menu-hero order-hero" id="order-menu">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Pickup · pay online · straight to the kitchen</span>
+      <h1>Order for pickup.</h1>
+      <p>Pickup in about <strong id="prepMin">30</strong> minutes at 2 5th Ave STE C, Indialantic<span id="heroDel">, or delivery within 7 miles in about <strong id="delMin">40</strong></span>.</p>
+      <div class="menu-status"><span id="statusMount"></span></div>
+      <div class="order-closed-note" id="closedNote" hidden>
+        The kitchen is closed right now — you can build a cart, and ordering opens with the kitchen.
+      </div>
+    </div>
+
+    <div class="order-layout">
+      <div class="order-menu-col">
+        <nav class="menu-tabs" id="orderTabs" aria-label="Menu categories"></nav>
+        <div id="orderBody"></div>
+        <p class="menu-note">Chicken Wings and custom orders are by phone — call <a class="ink" href="tel:+13213124444">(321) 312-4444</a>. Please confirm allergen information with our staff.</p>
+      </div>
+
+      <aside class="cart-panel" id="cartPanel" aria-label="Your order">
+        <h2 class="cart-title">Your order</h2>
+        <div id="offers" class="offers" hidden></div>
+        <div class="cart-lines" id="cartLines" aria-live="polite"></div>
+        <div class="cart-empty" id="cartEmpty">Your cart is empty — pick something delicious.</div>
+        <div class="cart-totals" id="cartTotals" hidden>
+          <div class="ct-row"><span>Subtotal</span><span id="ctSub"></span></div>
+          <div class="ct-row"><span>FL sales tax (7%)</span><span id="ctTax"></span></div>
+          <div class="ct-row" id="ctDelRow" hidden><span>Delivery</span><span id="ctDel"></span></div>
+          <div class="ct-row" id="ctTipRow" hidden><span id="ctTipL">Tip</span><span id="ctTip"></span></div>
+          <div class="ct-row ct-total"><span>Total</span><span id="ctTotal"></span></div>
+        </div>
+        <form class="cart-form" id="cartForm" hidden>
+          <fieldset class="cf-ful">
+            <legend>How would you like it?</legend>
+            <label class="ful-opt"><input type="radio" name="ful" value="pickup" checked>
+              <span><b>Pickup</b><em>Ready in about 30 min · no fee</em></span><i class="ful-tag">Fastest</i></label>
+            <label class="ful-opt" id="fulDelivery"><input type="radio" name="ful" value="delivery">
+              <span><b>Delivery</b><em id="fulDelNote">About 40 min · free within 2 miles</em></span></label>
+          </fieldset>
+          <div class="cf-del" id="cfDel" hidden>
+            <label>Delivery address
+              <input id="cfAddr" type="text" autocomplete="street-address" maxlength="200" placeholder="Street, city, ZIP">
+            </label>
+            <p class="cf-quote" id="cfQuote" aria-live="polite"></p>
+          </div>
+          <div class="cf-tip">
+            <span class="cf-tip-l" id="cfTipL">Add a tip for the team</span>
+            <div class="tip-row" id="tipRow">
+              <button type="button" data-tip="0" class="on">No tip</button>
+              <button type="button" data-tip="200">$2</button>
+              <button type="button" data-tip="300">$3</button>
+              <button type="button" data-tip="500">$5</button>
+              <button type="button" data-tip="other">Other</button>
+            </div>
+            <input id="cfTipOther" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="Tip in dollars" aria-label="Tip in dollars" hidden>
+          </div>
+          <label>Your name
+            <input id="cfName" type="text" autocomplete="name" maxlength="80" required placeholder="Your name">
+          </label>
+          <label>Phone
+            <input id="cfPhone" type="tel" autocomplete="tel" maxlength="25" required placeholder="(321) 555-0100">
+          </label>
+          <label>Notes for the kitchen <span class="cf-opt">(optional)</span>
+            <textarea id="cfNotes" maxlength="500" rows="2" placeholder="No onions, extra garlic sauce…"></textarea>
+          </label>
+          <label class="club-opt" for="cfClub">
+            <input type="checkbox" id="cfClub">
+            <span class="club-txt"><b>Join Lily's Club <i class="club-tag">Members only</i></b>
+              <em id="cfClubText">5% off your next order for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.</em></span>
+          </label>
+          <button class="btn cart-checkout" id="checkoutBtn" type="submit">Pay &amp; place order <span class="arw">→</span></button>
+          <p class="cart-error" id="cartError" role="alert" hidden></p>
+          <p class="cart-fine" id="cartFine">Secure card payment by Stripe. Show your order code at the counter.</p>
+        </form>
+      </aside>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- mobile cart bar -->
+<div class="cart-bar" id="cartBar" hidden>
+  <button class="btn" id="cartBarBtn">View cart · <span id="cartBarCount">0</span> · <span id="cartBarTotal">$0.00</span></button>
+</div>
+
+<div class="tile-strip" aria-hidden="true"></div>
+<footer class="footer">
+  <div class="footer-grid">
+    <div>
+      <div class="brand">
+        <span class="name">Lily<em>'s</em></span>
+        <span class="kicker">Mediterranean · Fresh Grill</span>
+      </div>
+      <p class="footer-blurb">Family-run Lebanese &amp; Mediterranean grill on Florida's Space Coast. Fresh, never frozen — grilled to order since 2020.</p>
+    </div>
+    <div>
+      <h4>Visit</h4>
+      <ul>
+        <li>2 5th Ave STE C</li>
+        <li>Indialantic, FL 32903</li>
+        <li><a class="ink" href="tel:+13213124444">(321) 312-4444</a></li>
+        <li>Mon–Tue, Thu &amp; Sun · 11am–10pm</li>
+        <li>Fri–Sat · 11am–11pm</li>
+        <li>Wed · Closed</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Order &amp; follow</h4>
+      <ul>
+        <li><a class="ink" href="menu.html">Full menu</a></li>
+        <li><a class="ink" href="index.html">Home</a></li>
+        <li><a class="ink" href="tel:+13213124444">Catering — (321) 312-4444</a></li>
+        <li><a class="ink" href="https://www.instagram.com/lilysmediterranean/" target="_blank" rel="noopener">Instagram</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-base">
+    <span>© 2026 Lily's Mediterranean Fresh Grill · <a class="ink" href="club.html">Lily's Club</a> · <a class="ink" href="privacy.html">Privacy</a></span>
+    <span>Halal &amp; kosher kitchen · Indialantic, FL</span>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="track.js"></script>
+<script src="main.js"></script>
+<script src="order.js"></script>
+<script src="chat.js"></script>
+</body>
+</html>

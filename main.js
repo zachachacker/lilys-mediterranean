@@ -46,6 +46,10 @@
     "fries basket": "seasoned-fries-basket.png", "seasoned fries basket": "seasoned-fries-basket.png", "sweet potato fries": "sweet-potato-french-fries.png",
     "garlic rice": "garlic-rice.png",
     "homemade baklava": "baklava.png", "ny cheesecake": "ny-cheesecake.png", "tiramisu": "tiramisu.png",
+    // current menu names that the aliases above missed (2026-10-10)
+    "homemade kibbeh": "kibbeh.png", "angus cheeseburger": "cheeseburger.png", "new york cheesecake": "ny-cheesecake.png",
+    "lamb & beef gyro platter": "lamb-beef-gyro-platter.png", "tawouk platter": "tawouk-platter-chicken-kabob.png",
+    "kid burger": "kid-cheeseburger.png",
   };
   window.LILYS_PHOTOS = PHOTOS; // order.js reuses the same thumbs
 

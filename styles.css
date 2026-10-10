@@ -1321,3 +1321,65 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .prose h2 { font-size: var(--step-1); margin: 1.8rem 0 0.5rem; }
 .prose h2:first-child { margin-top: 0; }
 .prose p { line-height: 1.65; margin: 0 0 0.9rem; }
+
+/* ---- ordering v2 (preview: order-v2.html, 2026-10-10) ----------------------
+   Food first: big photos on light "plates" against the dark room, a Most
+   loved row up top, and every dish opens full size. */
+.v2 .loved { margin-bottom: clamp(2rem, 4vw, 3rem); }
+.v2 .loved-h { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.v2 .loved-h h3 { font-size: var(--step-2); margin: 0; }
+.v2 .loved-h span { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lemon); }
+.v2 .loved-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 31%); gap: 14px;
+  overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.v2 .loved-row .od { scroll-snap-align: start; }
+@media (max-width: 720px) { .v2 .loved-row { grid-auto-columns: 74%; } }
+
+.v2 .od-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-bottom: 1.2rem; }
+@media (max-width: 520px) { .v2 .od-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+.v2 .od { background: var(--foam); color: var(--char); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 18px 40px -24px color-mix(in srgb, var(--ink) 90%, transparent); transition: transform var(--dur-fast) var(--ease-2); }
+.v2 .od:hover { transform: translateY(-2px); }
+.v2 .od-ph { display: block; padding: 0; border: 0; background: #ddd; aspect-ratio: 4 / 3; overflow: hidden; cursor: pointer; }
+.v2 .od-ph img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s var(--ease); }
+.v2 .od:hover .od-ph img { transform: scale(1.04); }
+.v2 .od-body { padding: 0.75rem 0.85rem 0.85rem; display: flex; flex-direction: column; gap: 0.35rem; flex: 1; }
+.v2 .od-name { margin: 0; font-family: var(--serif); font-size: 1.08rem; line-height: 1.2; font-weight: 600; font-variation-settings: "opsz" 40; }
+.v2 .od-name button { all: unset; cursor: pointer; }
+.v2 .od-name button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.v2 .od-name .tag { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--olive); margin-left: 0.4em; vertical-align: middle; }
+.v2 .od-desc { margin: 0; font-size: 0.82rem; line-height: 1.4; color: color-mix(in srgb, var(--char) 68%, transparent);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.v2 .od-foot { margin-top: auto; padding-top: 0.35rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.v2 .od-price { font-family: var(--mono); font-weight: 700; font-size: 0.95rem; color: var(--ember); }
+.v2 .od .oi-slot { margin: 0; }
+.v2 .od .oi-add { min-height: 38px; padding: 0.5em 1.1em; }
+.v2 .od .oi-step b { color: var(--char); }
+.v2 .od.soldout .od-ph img { filter: grayscale(1); opacity: 0.5; }
+.v2 .od.soldout .od-name, .v2 .od.soldout .od-price { opacity: 0.5; }
+@media (max-width: 520px) {
+  .v2 .od-desc { -webkit-line-clamp: 2; font-size: 0.78rem; }
+  .v2 .od-foot { flex-wrap: wrap; }
+  .v2 .od .oi-add { padding: 0.45em 0.9em; }
+}
+.v2 .od-rows .mi-name .od-link { all: unset; cursor: pointer; }
+.v2 .od-rows .mi-name .od-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.v2 .od-rows .menu-item { grid-template-columns: 1fr auto; }
+.v2 .od-rows .menu-item .mi-desc, .v2 .od-rows .menu-item .oi-slot { grid-column: 1 / -1; }
+
+/* dish sheet with a big photo */
+.ao-sheet.has-photo .ao-photo { aspect-ratio: 16 / 10; overflow: hidden; flex: none; background: #ddd; }
+.ao-sheet.has-photo .ao-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ao-sheet.has-photo .ao-x { position: absolute; top: 10px; right: 10px; margin: 0; background: color-mix(in srgb, var(--foam) 92%, transparent); }
+.ao-sheet { position: fixed; }
+.ao-sheet.has-photo .ao-form { overflow-y: auto; }
+.ao-sheet.has-photo .ao-body { overflow: visible; }
+
+/* cart: goes great with */
+.cart-suggest { display: grid; gap: 0.4rem; padding: 0.5rem 0 0.2rem; }
+.cs-h { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink); }
+.cs-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.6rem; text-align: left; font: inherit; font-size: 0.85rem;
+  border: 1px dashed var(--mist); border-radius: 8px; padding: 0.35rem 0.6rem; background: #fff; cursor: pointer; color: var(--char); }
+.cs-item:hover { border-color: var(--ember); }
+.cs-item img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; }
+.cs-item b { font-family: var(--mono); color: var(--ember); font-size: 0.8rem; }
+.ao-sheet.has-photo .ao-foot { position: sticky; bottom: 0; z-index: 2; }

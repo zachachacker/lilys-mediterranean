@@ -339,9 +339,7 @@
 
       // patch the rows in place — the menu is built once inline, so there is
       // no whole-page re-render to call here
-      ITEMS.forEach((it) => {
-        const row = document.querySelector(`.order-item[data-item="${it.id}"]`);
-        if (!row) return;
+      ITEMS.forEach((it) => document.querySelectorAll(`.order-item[data-item="${it.id}"]`).forEach((row) => {
         row.style.display = it.hidden ? "none" : ""; // hidden in the kitchen = not on the menu at all
         row.classList.toggle("soldout", !it.inStock);
         const slot = row.querySelector(".oi-slot");
@@ -350,7 +348,7 @@
         else if (it.orderable && !slot.querySelector(".oi-action")) {
           slot.innerHTML = `<span class="oi-action" data-id="${it.id}"></span>`;
         }
-      });
+      }));
       renderActions();
       renderCart();
     } catch { /* offline — server still refuses at checkout */ }
@@ -367,6 +365,39 @@
   const cats = [...new Set(ITEMS.map((it) => it.cat))];
   const catId = (c) => "oc-" + c.toLowerCase().replace(/[^a-z]+/g, "-");
 
+  /* v2 layout (order-v2.html, 2026-10-10): food first. A "Most loved" row of
+     big photos up top, photo cards per section (dishes without a photo stay
+     compact rows underneath), and a tap on any od opens it full size. Same
+     cart, prices and checkout underneath: only the presentation changes. */
+  const V2 = document.body.classList.contains("v2");
+  const cardSrc = (ph) => `assets/photos/cards/${ph.replace(/\.png$/, ".webp")}`;
+  const actionHTML = (it) => !it.inStock
+    ? `<span class="oi-soldout">Sold out</span>`
+    : it.orderable
+    ? `<span class="oi-action" data-id="${it.id}"></span>`
+    : `<a class="oi-call ink" href="tel:+13213124444">Call to order</a>`;
+  const dishCard = (it, ph, wide = false) => `
+    <article class="od order-item${wide ? " od-wide" : ""}${it.inStock ? "" : " soldout"}" data-item="${it.id}">
+      <button type="button" class="od-ph" data-open="${it.id}" aria-label="${esc(it.name)}: see the od">
+        <img loading="lazy" decoding="async" width="640" height="480" src="${cardSrc(ph)}" alt=""></button>
+      <div class="od-body">
+        <h4 class="od-name"><button type="button" data-open="${it.id}">${esc(it.name)}</button>${it.tag ? `<span class="tag">${it.tag}</span>` : ""}</h4>
+        ${it.desc ? `<p class="od-desc">${esc(it.desc)}</p>` : ""}
+        <div class="od-foot"><span class="od-price">${it.orderable ? money(it.cents) : it.price}</span><span class="oi-slot">${actionHTML(it)}</span></div>
+      </div>
+    </article>`;
+  if (V2) {
+    const loved = (L.signatures || []).map((n) => ITEMS.find((it) => it.name === n))
+      .filter((it) => it && it.orderable && PHOTOS[it.name.toLowerCase()]);
+    if (loved.length) {
+      const sec = document.createElement("div");
+      sec.className = "loved";
+      sec.innerHTML = `<div class="loved-h"><h3>Most loved</h3><span>Our regulars' favourites</span></div>
+        <div class="loved-row">${loved.map((it) => dishCard(it, PHOTOS[it.name.toLowerCase()], true)).join("")}</div>`;
+      body.appendChild(sec);
+    }
+  }
+
   cats.forEach((c, i) => {
     const b = document.createElement("button");
     b.textContent = c;
@@ -377,6 +408,22 @@
     const sec = document.createElement("div");
     sec.className = "menu-cat";
     sec.id = catId(c);
+    if (V2) {
+      const inCat = ITEMS.filter((it) => it.cat === c);
+      const withPh = inCat.filter((it) => PHOTOS[it.name.toLowerCase()]);
+      const rest = inCat.filter((it) => !PHOTOS[it.name.toLowerCase()]);
+      const restRows = rest.map((it) => `<div class="menu-item order-item${it.inStock ? "" : " soldout"}" data-item="${it.id}">
+          <span class="mi-name"><button type="button" class="od-link" data-open="${it.id}">${esc(it.name)}</button>${it.tag ? `<span class="tag">${it.tag}</span>` : ""}</span>
+          <span class="mi-price">${it.orderable ? money(it.cents) : it.price}</span>
+          ${it.desc ? `<span class="mi-desc">${esc(it.desc)}</span>` : ""}
+          <span class="oi-slot">${actionHTML(it)}</span>
+        </div>`).join("");
+      sec.innerHTML = `<h3>${c}</h3>
+        ${withPh.length ? `<div class="od-grid">${withPh.map((it) => dishCard(it, PHOTOS[it.name.toLowerCase()])).join("")}</div>` : ""}
+        ${rest.length ? `<div class="menu-list order-list od-rows">${restRows}</div>` : ""}`;
+      body.appendChild(sec);
+      return;
+    }
     const rows = ITEMS.filter((it) => it.cat === c)
       .map((it) => {
         const ph = PHOTOS[it.name.toLowerCase()];
@@ -440,6 +487,20 @@
   const cartLines = $("cartLines"), cartEmpty = $("cartEmpty"), cartTotals = $("cartTotals"), cartForm = $("cartForm");
   const cartBar = $("cartBar");
 
+  // v2: two easy extras that go with most orders, never something already in the cart
+  const SUGGEST = ["homemade-baklava", "hummus", "seasoned-fries-basket", "grape-leaves", "garlic-rice", "tiramisu"];
+  function suggestHTML() {
+    const picks = SUGGEST.map((id) => byId.get(id))
+      .filter((it) => it && it.orderable && it.inStock && !it.hidden && !it.groups.length && !qtyOf(it.id)).slice(0, 2);
+    if (!picks.length) return "";
+    return `<div class="cart-suggest"><span class="cs-h">Goes great with</span>${picks.map((it) => {
+      const ph = PHOTOS[it.name.toLowerCase()];
+      return `<button type="button" class="cs-item" data-add="${it.id}">
+        ${ph ? `<img src="assets/photos/thumbs/${ph.replace(/\.png$/, ".webp")}" alt="" width="40" height="40">` : ""}
+        <span>${esc(it.name)}</span><b>+${money(it.cents)}</b></button>`;
+    }).join("")}</div>`;
+  }
+
   const renderCart = () => {
     const n = count();
     cartEmpty.hidden = n > 0;
@@ -456,7 +517,7 @@
           <span class="cl-price">${money(lineCents(l) * l.qty)}</span>
         </div>`;
       })
-      .join("");
+      .join("") + (V2 && n > 0 ? suggestHTML() : "");
     if (n > 0) {
       const sub = subtotal();
       const tax = Math.round(sub * O.taxRate);
@@ -497,6 +558,12 @@
   }
 
   document.addEventListener("click", (e) => {
+    const d = e.target.closest("[data-open]");
+    if (d && !submitting) {
+      const it = byId.get(d.dataset.open);
+      if (it && it.orderable && it.inStock) openAddons(it.id);
+      return;
+    }
     const c = e.target.closest("[data-custom]");
     if (c && !submitting) { openAddons(c.dataset.custom); return; }
     const t = e.target.closest("[data-add],[data-inc],[data-dec]");
@@ -544,7 +611,10 @@
         </label>`).join("")}
       </fieldset>`;
     }).join("");
+    const ph = V2 && PHOTOS[it.name.toLowerCase()];
+    sheet.classList.toggle("has-photo", !!ph);
     sheet.innerHTML = `<form method="dialog" class="ao-form">
+      ${ph ? `<div class="ao-photo"><img src="${cardSrc(ph)}" alt=""></div>` : ""}
       <div class="ao-head">
         <h2 id="aoTitle">${esc(it.name)}</h2>
         <button type="button" class="ao-x" aria-label="Close">×</button>
