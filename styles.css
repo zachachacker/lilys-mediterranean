@@ -1172,3 +1172,53 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .co-rate-b button:hover { border-color: var(--teal); }
 .co-rate textarea { font: inherit; font-size: 16px; width: 100%; padding: 0.6em 0.8em; border: 1px solid var(--mist); border-radius: 6px; }
 .co-rate .muted { opacity: 0.6; font-size: 0.85em; }
+
+/* ---- add-ons (2026-10-10) --------------------------------------------------
+   A native <dialog>: a bottom sheet on phones, a centred card on desktop.
+   Light like the cart counter, so choosing extras reads as part of ordering. */
+.oi-n { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; margin-left: 0.4em;
+  border-radius: 99px; background: var(--foam); color: var(--ember); font-size: 0.85em; letter-spacing: 0; }
+.cl-addons, .co-addons { display: block; font-size: 0.8rem; line-height: 1.35; margin-top: 0.15rem;
+  color: color-mix(in srgb, var(--char) 65%, transparent); }
+.co-addons { color: inherit; opacity: 0.7; }
+.ao-sheet {
+  border: 0; padding: 0; margin: auto; width: min(520px, 100%); max-height: min(86vh, 760px);
+  background: var(--foam); color: var(--char); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 40px 90px -30px color-mix(in srgb, var(--ink) 80%, transparent);
+}
+.ao-sheet[open] { display: flex; }
+.ao-sheet::backdrop { background: color-mix(in srgb, var(--ink) 62%, transparent); }
+.ao-form { display: flex; flex-direction: column; width: 100%; max-height: inherit; }
+.ao-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem 1.2rem 0.8rem; border-bottom: 1px solid var(--mist); flex: none; }
+.ao-head h2 { font-size: var(--step-1); line-height: 1.15; font-variation-settings: "opsz" 60, "SOFT" 20; margin: 0; }
+.ao-x { font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; margin: -0.5rem -0.6rem 0 0; flex: none;
+  border-radius: 99px; color: var(--char); }
+.ao-x:hover { background: color-mix(in srgb, var(--char) 8%, transparent); }
+.ao-body { overflow-y: auto; overscroll-behavior: contain; padding: 0.4rem 1.2rem 1rem; flex: 1 1 auto; }
+.ao-desc { font-size: 0.9rem; margin: 0.4rem 0 0.2rem; color: color-mix(in srgb, var(--char) 70%, transparent); }
+.ao-group { border: 0; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.4rem; }
+.ao-group legend { display: flex; justify-content: space-between; gap: 1rem; width: 100%; margin-bottom: 0.4rem;
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink); }
+.ao-group legend span { letter-spacing: 0.04em; text-transform: none; opacity: 0.75; }
+.ao-opt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem;
+  border: 1px solid var(--mist); border-radius: 6px; padding: 0.7rem 0.85rem; background: #fff; cursor: pointer; min-height: 48px; }
+.ao-opt:has(input:checked) { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
+.ao-opt:has(input:disabled) { cursor: not-allowed; opacity: 0.5; }
+.ao-opt input { width: 20px; height: 20px; accent-color: var(--teal); margin: 0; }
+.ao-n { font-size: 0.95rem; }
+.ao-p { font-family: var(--mono); font-size: 0.82rem; white-space: nowrap; }
+.ao-opt.off .ao-p { color: var(--ember); font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.ao-foot { display: flex; align-items: center; gap: 0.8rem; padding: 0.9rem 1.2rem calc(0.9rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--mist); background: var(--foam); flex: none; }
+.ao-qty { border-color: color-mix(in srgb, var(--char) 30%, transparent); flex: none; }
+.ao-qty button { color: var(--ember); }
+.ao-qty b { color: var(--char); }
+.ao-add { flex: 1; justify-content: center; min-height: 48px; }
+@media (max-width: 600px) {
+  .ao-sheet { margin: auto 0 0; width: 100%; max-width: 100%; max-height: 90dvh; border-radius: 14px 14px 0 0; }
+}
+
+/* menu page: the kitchen's stock switches (sold out today, or hidden) */
+.menu-item:not(.order-item).soldout .mi-name, .menu-item:not(.order-item).soldout .mi-desc { opacity: 0.5; }
+.menu-item:not(.order-item).soldout .mi-price::after { content: " · sold out"; font-size: 0.8em; color: var(--ember); }

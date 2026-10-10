@@ -84,11 +84,29 @@
         const thumb = ph
           ? `<span class="mi-thumb photo"><img loading="lazy" decoding="async" width="58" height="58" src="assets/photos/thumbs/${ph.replace(/\.png$/, ".webp")}" alt=""></span>`
           : `<span class="mi-thumb none" aria-hidden="true"></span>`;
-        rows += `<div class="menu-item${ph ? " has-thumb" : ""}">${thumb}<span class="mi-name">${n}${tag ? `<span class="tag">${tag}</span>` : ""}</span><span class="mi-price">${window.LILYS ? window.LILYS.onlinePrice(p) : p}</span><span class="mi-desc">${d}</span></div>`;
+        const sid = n.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); // = sync-menu slug
+        rows += `<div class="menu-item${ph ? " has-thumb" : ""}" data-item="${sid}">${thumb}<span class="mi-name">${n}${tag ? `<span class="tag">${tag}</span>` : ""}</span><span class="mi-price">${window.LILYS ? window.LILYS.onlinePrice(p) : p}</span><span class="mi-desc">${d}</span></div>`;
       });
       sec.innerHTML = `<h3>${leaf}${cat.c}</h3><div class="menu-list">${rows}</div>`;
       body.appendChild(sec);
     });
+    // the kitchen's stock switches: hidden dishes leave the menu, sold-out ones
+    // say so. Silent on failure; the printed menu is still right.
+    const O = window.LILYS && window.LILYS.ORDERING;
+    if (O) {
+      fetch(`${O.supabaseUrl}/rest/v1/menu_items?select=id,out_until,hidden`, {
+        headers: { apikey: O.anonKey, Authorization: `Bearer ${O.anonKey}` },
+      }).then((r) => (r.ok ? r.json() : [])).then((rows) => {
+        if (!Array.isArray(rows)) return;
+        rows.forEach((row) => {
+          const el = body.querySelector(`.menu-item[data-item="${row.id}"]`);
+          if (!el) return;
+          const t = row.out_until ? Date.parse(row.out_until) : NaN;
+          el.style.display = row.hidden ? "none" : "";
+          el.classList.toggle("soldout", Number.isFinite(t) && t > Date.now());
+        });
+      }).catch(() => {});
+    }
     tabs.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (!btn) return;

@@ -265,6 +265,23 @@
   .k-stock-row.off { background:#241a19; border-color:rgba(200,80,70,0.35); }
   .k-stock-row.off .n { color:#9aa39d; text-decoration:line-through; }
   .k-stock-row.off .s { color:#d9705f; }
+  /* four-state switch (Available / Out today / Out / Hidden), as in Sauce */
+  .k-stock-tools { padding:10px 14px 0; flex:none; }
+  .k-stock-tools input { width:100%; background:#0f1211; color:#f4f1ea; border:1px solid rgba(255,255,255,0.16);
+    border-radius:10px; padding:0.75rem 0.9rem; font-size:1rem; }
+  .k-stock-row { cursor:default; flex-wrap:wrap; }
+  .k-stock-row.s-today { background:#262014; border-color:rgba(232,176,60,0.4); }
+  .k-stock-row.s-off { background:#241a19; border-color:rgba(200,80,70,0.35); }
+  .k-stock-row.s-off .n, .k-stock-row.s-hidden .n { color:#9aa39d; text-decoration:line-through; }
+  .k-stock-row.s-hidden { opacity:0.7; }
+  .k-seg { display:inline-flex; background:#0f1211; border:1px solid rgba(255,255,255,0.12); border-radius:9px; padding:3px; gap:3px; }
+  .k-seg button { background:transparent; color:#9aa39d; border:0; border-radius:7px; min-height:42px;
+    padding:0 0.8rem; font-size:0.82rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .k-seg button.on[data-state="on"] { background:#2a9d5c; color:#08130c; }
+  .k-seg button.on[data-state="today"] { background:#e8b03c; color:#1a1305; }
+  .k-seg button.on[data-state="off"] { background:#d9705f; color:#1d0b08; }
+  .k-seg button.on[data-state="hidden"] { background:#5d6661; color:#f4f1ea; }
+  .t-adds { display:block; font-size:17px; font-weight:500; color:#ffd27a; line-height:1.3; margin-top:2px; }
 
   /* ---- offers sheet -----------------------------------------------------
      Reuses the 86 sheet's shell. Rows never strike through: an offer that is

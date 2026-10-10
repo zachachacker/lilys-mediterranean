@@ -45,7 +45,54 @@ function timingSafeEqual(a: string, b: string): boolean {
   return out === 0;
 }
 
-type CartLine = { id: string; qty: number };
+type CartLine = { id: string; qty: number; opts?: unknown };
+
+/* ── add-ons (Kareem, 2026-10-10) ────────────────────────────────────────
+   Sides, sauces, extra skewers, protein, spice. Priced HERE from
+   addon_options, like the dishes themselves: the browser sends only option
+   ids. An option must belong to a group the dish actually offers, the group's
+   pick limit holds, and a sold-out option is refused by name. The same dish
+   with different add-ons is a different cart line, so lines are keyed on
+   dish + sorted options. */
+type AddonOpt = { id: string; group_id: string; name: string; price_cents: number; sort: number; available: boolean };
+
+// byte-identical to kitchen-api/index.ts stockState: dishes and add-ons are
+// on, out today, out until switched back, or hidden (Kareem, 2026-10-10)
+type StockState = "on" | "today" | "off" | "hidden";
+function stockState(outUntil: string | null | undefined, hidden: boolean | null | undefined, now: number): StockState {
+  if (hidden) return "hidden";
+  const t = outUntil ? Date.parse(outUntil) : NaN;
+  if (!Number.isFinite(t) || t <= now) return "on";
+  return t >= Date.parse("2900-01-01T00:00:00Z") ? "off" : "today";
+}
+type AddonGroup = { id: string; max_select: number; sort: number };
+type AddonPick = { id: string; name: string; cents: number };
+
+function lineKey(id: string, opts: string[]): string {
+  return opts.length ? `${id}|${[...opts].sort().join(",")}` : id;
+}
+
+function priceAddons(
+  itemGroups: string[], optIds: string[], opts: Map<string, AddonOpt>, groups: Map<string, AddonGroup>,
+): { ok: true; addons: AddonPick[]; cents: number } | { ok: false; error: string } {
+  if (new Set(optIds).size !== optIds.length) return { ok: false, error: "Invalid cart contents." };
+  const perGroup = new Map<string, number>();
+  const picked: AddonOpt[] = [];
+  for (const id of optIds) {
+    const o = opts.get(id);
+    if (!o || !itemGroups.includes(o.group_id)) return { ok: false, error: "Invalid cart contents." };
+    const g = groups.get(o.group_id);
+    const n = (perGroup.get(o.group_id) ?? 0) + 1;
+    if (!g || n > g.max_select) return { ok: false, error: "Invalid cart contents." };
+    if (!o.available) return { ok: false, error: `Sorry, ${o.name} is sold out today. Please remove it and try again.` };
+    perGroup.set(o.group_id, n);
+    picked.push(o);
+  }
+  // kitchen reading order: group order, then the option's place in its group
+  picked.sort((a, b) => (groups.get(a.group_id)!.sort - groups.get(b.group_id)!.sort) || (a.sort - b.sort));
+  const addons = picked.map((o) => ({ id: o.id, name: o.name, cents: o.price_cents }));
+  return { ok: true, addons, cents: addons.reduce((s, a) => s + a.cents, 0) };
+}
 
 /* ── promotions ──────────────────────────────────────────────────────────
    Discounts are computed HERE, on the server, from the same line prices the
@@ -65,7 +112,7 @@ type Promo = {
   item_id?: string | null; buy_qty?: number | null; free_qty?: number | null;
   percent?: number | null; min_subtotal_cents?: number | null;
 };
-type PLine = { id: string; qty: number; unit_cents: number };
+type PLine = { id: string; qty: number; unit_cents: number; base_cents?: number };
 
 function applyPromotions(lines: PLine[], promos: Promo[]) {
   const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
@@ -76,10 +123,15 @@ function applyPromotions(lines: PLine[], promos: Promo[]) {
     const buy = Math.floor(Number(p.buy_qty ?? 0));
     const free = Math.floor(Number(p.free_qty ?? 0));
     if (!p.item_id || buy <= 0 || free <= 0 || free > buy) continue;
-    const line = lines.find((l) => l.id === p.item_id);
-    if (!line) continue;
-    const sets = Math.floor(line.qty / buy);
-    const cents = sets * free * line.unit_cents;
+    // one dish can sit on several lines (different add-ons): count them
+    // together, and the free one is the dish alone at its cheapest, never
+    // its add-ons
+    const its = lines.filter((l) => l.id === p.item_id);
+    if (!its.length) continue;
+    const qty = its.reduce((s, l) => s + l.qty, 0);
+    const unit = Math.min(...its.map((l) => l.base_cents ?? l.unit_cents));
+    const sets = Math.floor(qty / buy);
+    const cents = sets * free * unit;
     if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
   }
 
@@ -120,15 +172,15 @@ async function customerHash(salt: string, phone: string): Promise<string | null>
 }
 
 /* ── delivery ────────────────────────────────────────────────────────────
-   Kareem, 2026-10-07: free within 2 miles, $5 to 3.5 miles, $10 to 5 miles,
-   nothing beyond; at least $15 of food; customers may tip the driver.
+   Kareem, 2026-10-10 (replacing the 10-07 tiers): free within 2 miles, $15
+   out to 7 miles, nothing beyond; at least $15 of food.
    Distance is a straight line from the restaurant. Lily's sits at the east
    end of the causeway, so it tracks the real drive closely. Like prices and
    discounts, all of this is decided HERE: the order page only shows what the
    quote mode below reports, and whatever fee it sends is ignored. */
 const LILYS_LAT = 28.09175;
 const LILYS_LON = -80.56608;
-const DELIVERY_MAX_MILES = 5;
+const DELIVERY_MAX_MILES = 7;
 const DELIVERY_MIN_CENTS = 1500;
 const TIP_MAX_CENTS = 10000;
 
@@ -143,8 +195,7 @@ function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number): n
 function deliveryFeeCents(miles: number): number | null {
   if (!Number.isFinite(miles) || miles < 0 || miles > DELIVERY_MAX_MILES) return null;
   if (miles <= 2) return 0;
-  if (miles <= 3.5) return 500;
-  return 1000;
+  return 1500;
 }
 
 function parseTipCents(raw: unknown): number | null {
@@ -247,8 +298,8 @@ Deno.serve(async (req) => {
 
   const fulfilment = body.fulfilment === "delivery" ? "delivery" : "pickup";
   const address = String(body.address ?? "").trim().slice(0, 200);
-  // tips are for the driver, so only delivery carries one
-  const tip = fulfilment === "delivery" ? parseTipCents(body.tip_cents) : 0;
+  // tips on pickup too (Kareem, 2026-10-10): the driver's on delivery, the team's on pickup
+  const tip = parseTipCents(body.tip_cents);
   if (tip === null) return json({ error: "That tip amount doesn't look right." }, 400);
 
   const name = (body.name ?? "").trim().slice(0, 80);
@@ -271,9 +322,15 @@ Deno.serve(async (req) => {
     if (typeof line.id !== "string" || !Number.isInteger(line.qty) || line.qty < 1 || line.qty > 20) {
       return json({ error: "Invalid cart contents." }, 400);
     }
+    if (line.opts !== undefined &&
+      (!Array.isArray(line.opts) || line.opts.length > 20 || line.opts.some((o) => typeof o !== "string"))) {
+      return json({ error: "Invalid cart contents." }, 400);
+    }
   }
-  const ids = items.map((l) => l.id);
-  if (new Set(ids).size !== ids.length) return json({ error: "Duplicate cart lines." }, 400);
+  const optsOf = (l: CartLine) => (Array.isArray(l.opts) ? l.opts as string[] : []);
+  const keys = items.map((l) => lineKey(l.id, optsOf(l)));
+  if (new Set(keys).size !== keys.length) return json({ error: "Duplicate cart lines." }, 400);
+  const ids = [...new Set(items.map((l) => l.id))];
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -353,16 +410,46 @@ Deno.serve(async (req) => {
 
   const { data: menu, error: menuErr } = await db
     .from("menu_items")
-    .select("id,name,price_cents,orderable")
+    .select("id,name,price_cents,orderable,addon_groups,out_until,hidden")
     .in("id", ids);
   if (menuErr) return json({ error: "Menu lookup failed." }, 500);
-  const byId = new Map((menu ?? []).map((m: { id: string; name: string; price_cents: number; orderable: boolean }) => [m.id, m]));
+  type MenuRow = {
+    id: string; name: string; price_cents: number; orderable: boolean; addon_groups: string[] | null;
+    out_until: string | null; hidden: boolean;
+  };
+  const nowMs = Date.now();
+  const byId = new Map((menu ?? []).map((m: MenuRow) => [m.id, m]));
 
-  const lines: { id: string; name: string; qty: number; unit_cents: number }[] = [];
+  // add-on catalogue, only when the cart has any
+  const addonOpts = new Map<string, AddonOpt>();
+  const addonGroups = new Map<string, AddonGroup>();
+  if (items.some((l) => optsOf(l).length)) {
+    const [o, g] = await Promise.all([
+      db.from("addon_options").select("id,group_id,name,price_cents,sort,out_until,hidden"),
+      db.from("addon_groups").select("id,max_select,sort"),
+    ]);
+    if (o.error || g.error) {
+      console.error("add-on lookup failed:", o.error?.message ?? g.error?.message);
+      return json({ error: "Menu lookup failed." }, 500);
+    }
+    (o.data ?? []).forEach((r: Omit<AddonOpt, "available"> & { out_until: string | null; hidden: boolean }) =>
+      addonOpts.set(r.id, { ...r, available: stockState(r.out_until, r.hidden, nowMs) === "on" }));
+    (g.data ?? []).forEach((r: AddonGroup) => addonGroups.set(r.id, r));
+  }
+
+  const lines: { id: string; name: string; qty: number; unit_cents: number; base_cents: number; addons?: AddonPick[] }[] = [];
   for (const l of items) {
     const m = byId.get(l.id);
-    if (!m || !m.orderable) return json({ error: `Sorry — an item in your cart isn't available online.` }, 400);
-    lines.push({ id: m.id, name: m.name, qty: l.qty, unit_cents: m.price_cents });
+    if (!m || !m.orderable || stockState(m.out_until, m.hidden, nowMs) !== "on") {
+      return json({ error: `Sorry — an item in your cart isn't available online.` }, 400);
+    }
+    const a = priceAddons(m.addon_groups ?? [], optsOf(l), addonOpts, addonGroups);
+    if (!a.ok) return json({ error: a.error }, 400);
+    lines.push({
+      id: m.id, name: m.name, qty: l.qty,
+      unit_cents: m.price_cents + a.cents, base_cents: m.price_cents,
+      ...(a.addons.length ? { addons: a.addons } : {}),
+    });
   }
 
   // active promotions, read server-side. A failed read must not silently drop
@@ -475,7 +562,7 @@ Deno.serve(async (req) => {
         reference_id: order.code,
         line_items: [
           ...lines.map((l) => ({
-            name: l.name,
+            name: l.addons?.length ? `${l.name} + ${l.addons.map((a) => a.name).join(", ")}`.slice(0, 250) : l.name,
             quantity: String(l.qty),
             base_price_money: money(l.unit_cents),
           })),
@@ -539,11 +626,13 @@ Deno.serve(async (req) => {
     form.set(`line_items[${i}][quantity]`, String(l.qty));
     form.set(`line_items[${i}][price_data][currency]`, "usd");
     form.set(`line_items[${i}][price_data][unit_amount]`, String(l.unit_cents));
-    form.set(`line_items[${i}][price_data][product_data][name]`, l.name);
+    // Stripe caps a product name; the add-ons are listed in full on our side
+    const label = l.addons?.length ? `${l.name} + ${l.addons.map((a) => a.name).join(", ")}` : l.name;
+    form.set(`line_items[${i}][price_data][product_data][name]`, label.slice(0, 250));
   });
   const extras: [string, number][] = [[taxLabel, tax]];
   if (deliveryFee > 0) extras.push([`Delivery (${deliveryMiles?.toFixed(1)} mi)`, deliveryFee]);
-  if (tip > 0) extras.push(["Driver tip", tip]);
+  if (tip > 0) extras.push([fulfilment === "delivery" ? "Driver tip" : "Tip", tip]);
   extras.forEach(([label, cents], j) => {
     const n = lines.length + j;
     form.set(`line_items[${n}][quantity]`, "1");

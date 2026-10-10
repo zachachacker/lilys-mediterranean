@@ -316,7 +316,8 @@
 
   function ticket(o) {
     const items = (o.items || [])
-      .map((l) => `<div class="t-item"><b>${l.qty}×</b><span>${esc(l.name)}</span></div>`)
+      .map((l) => `<div class="t-item"><b>${l.qty}×</b><span>${esc(l.name)}${l.addons?.length
+        ? `<span class="t-adds">+ ${l.addons.map((a) => esc(a.name)).join(", ")}</span>` : ""}</span></div>`)
       .join("");
     const meta = `<div class="t-meta"><span>${esc(o.customer_name)}</span> · <a href="${telHref(o.customer_phone)}">${esc(o.customer_phone)}</a>${o.demo ? '<span class="t-demo">test</span>' : ""}</div>`;
     const band = `
@@ -330,14 +331,17 @@
       </div>`;
     const notes = o.notes ? `<div class="t-notes">${esc(o.notes)}</div>` : "";
     const del = deliveryBlock(o);
+    // a pickup tip is for the team; delivery tips show in the delivery block
+    const tipNote = o.fulfilment !== "delivery" && o.tip_cents > 0
+      ? `<div class="t-del-tip">Tip ${money(o.tip_cents)} for the team (paid online)</div>` : "";
     if (o.status === "paid") {
       return `<div class="t new ${o._fresh ? "fresh" : ""}" data-start="${o.id}">
-        ${band}<div class="t-body">${items}${notes}${del}</div>${meta}
+        ${band}<div class="t-body">${items}${notes}${del}${tipNote}</div>${meta}
         <div class="t-hint">Tap to start</div>
       </div>`;
     }
     return `<div class="t">
-      ${band}<div class="t-body">${items}${notes}${del}</div>${meta}
+      ${band}<div class="t-body">${items}${notes}${del}${tipNote}</div>${meta}
       <div class="t-actions">
         <button class="t-go" data-ready="${o.id}">Ready</button>
         <button class="t-more" data-more="${o.id}" aria-label="More options for ${esc(o.code)}">···</button>
@@ -442,9 +446,14 @@
   let lastSnapshot = "";
   /* ---- 86 / stock -------------------------------------------------------
      An overlay rather than a view swap: the order board must never disappear
-     while someone is mid-service. Availability is menu_items.orderable, the
-     same switch create-checkout enforces and the order page reads. */
-  let stockItems = null;
+     while someone is mid-service. Same four states as Kareem's Sauce editor,
+     for dishes AND add-ons: Available, Out today (back by itself at 4am),
+     Out (until switched back), Hidden (off the menu). The server stores and
+     enforces them; this sheet is only the switch. */
+  let stockItems = null;   // [{id, name, category, state}]
+  let stockAddons = null;  // [{id, label, options: [{id, name, state}]}]
+  let stockQuery = "";
+  const STATES = [["on", "Available"], ["today", "Out today"], ["off", "Out"], ["hidden", "Hidden"]];
 
   async function openStock() {
     let wrap = document.getElementById("kStockWrap");
@@ -453,13 +462,18 @@
       wrap.id = "kStockWrap";
       document.body.appendChild(wrap);
     }
+    stockQuery = "";
     wrap.innerHTML = `<div class="k-sheet"><div class="k-sheet-head">
-        <h2>Out of stock</h2><button class="k-sheet-x" id="kStockX">Done</button>
-      </div><div class="k-sheet-body"><p class="k-none">Loading the menu…</p></div></div>`;
+        <h2>Stock</h2><button class="k-sheet-x" id="kStockX">Done</button>
+      </div>
+      <div class="k-stock-tools"><input id="kStockQ" type="search" placeholder="Find a dish or add-on" autocomplete="off"></div>
+      <div class="k-sheet-body"><p class="k-none">Loading the menu…</p></div></div>`;
     document.getElementById("kStockX").addEventListener("click", closeStock);
+    document.getElementById("kStockQ").addEventListener("input", (e) => { stockQuery = e.target.value.trim().toLowerCase(); paintStock(); });
     try {
-      const { items } = await call({ action: "stock" });
-      stockItems = items || [];
+      const r = await call({ action: "stock" });
+      stockItems = r.items || [];
+      stockAddons = r.addons || [];
       paintStock();
     } catch (e) {
       if (e.auth) { closeStock(); logout(e.message); return; }
@@ -470,39 +484,62 @@
 
   function closeStock() {
     document.getElementById("kStockWrap")?.remove();
-    stockItems = null;
+    stockItems = stockAddons = null;
+  }
+
+  function stockRow(kind, i) {
+    return `<div class="k-stock-row s-${i.state}">
+      <span class="n">${esc(i.name)}</span>
+      <span class="k-seg" role="group" aria-label="${esc(i.name)}">
+        ${STATES.map(([st, label]) => `<button data-kind="${kind}" data-id="${esc(i.id)}" data-state="${st}"
+          class="${i.state === st ? "on" : ""}" aria-pressed="${i.state === st}">${label}</button>`).join("")}
+      </span>
+    </div>`;
   }
 
   function paintStock() {
     const body = document.querySelector("#kStockWrap .k-sheet-body");
-    if (!body) return;
-    const out = stockItems.filter((i) => !i.orderable).length;
+    if (!body || !stockItems) return;
+    const q = stockQuery;
+    const hit = (name, group) => !q || name.toLowerCase().includes(q) || group.toLowerCase().includes(q);
+    const allAddons = stockAddons.flatMap((g) => g.options);
+    const off = [...stockItems, ...allAddons].filter((i) => i.state !== "on");
+    const today = off.filter((i) => i.state === "today").length;
     const cats = [...new Set(stockItems.map((i) => i.category))];
+    const dishHTML = cats.map((c) => {
+      const rows = stockItems.filter((i) => i.category === c && hit(i.name, c));
+      return rows.length ? `<div class="k-stock-cat">${esc(c)}</div>${rows.map((i) => stockRow("item", i)).join("")}` : "";
+    }).join("");
+    const addonHTML = stockAddons.map((g) => {
+      const rows = g.options.filter((o) => hit(o.name, g.label));
+      return rows.length ? `<div class="k-stock-cat">Add-ons · ${esc(g.label)}</div>${rows.map((o) => stockRow("addon", o)).join("")}` : "";
+    }).join("");
     body.innerHTML = `
-      <p class="k-sheet-note">${out ? `${out} item${out > 1 ? "s" : ""} marked out of stock.` : "Everything is on."}
-        Tapping an item hides it from the website straight away.</p>
-      ${cats.map((c) => `
-        <div class="k-stock-cat">${esc(c)}</div>
-        ${stockItems.filter((i) => i.category === c).map((i) => `
-          <button class="k-stock-row${i.orderable ? "" : " off"}" data-stock="${esc(i.id)}">
-            <span class="n">${esc(i.name)}</span>
-            <span class="s">${i.orderable ? "On" : "Out of stock"}</span>
-          </button>`).join("")}`).join("")}`;
-    body.querySelectorAll("[data-stock]").forEach((btn) =>
-      btn.addEventListener("click", () => toggleStock(btn.dataset.stock)));
+      <p class="k-sheet-note">${off.length
+        ? `${off.length} switched off${today ? `, ${today} back automatically tomorrow morning` : ""}.`
+        : "Everything is available."}
+        Changes reach the website straight away. <b>Out today</b> comes back by itself at 4am.</p>
+      ${dishHTML + addonHTML || `<p class="k-none">Nothing matches “${esc(stockQuery)}”.</p>`}`;
   }
 
-  async function toggleStock(id) {
-    const it = stockItems?.find((i) => i.id === id);
-    if (!it) return;
-    const want = !it.orderable;
-    it.orderable = want;      // optimistic — a tap must feel instant on a tablet
+  // one listener for the whole sheet, so repainting never loses a handler
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("#kStockWrap [data-state]");
+    if (b) setStock(b.dataset.kind, b.dataset.id, b.dataset.state);
+  });
+
+  async function setStock(kind, id, want) {
+    const list = kind === "addon" ? stockAddons?.flatMap((g) => g.options) : stockItems;
+    const it = list?.find((i) => i.id === id);
+    if (!it || it.state === want) return;
+    const was = it.state;
+    it.state = want;          // optimistic — a tap must feel instant on a tablet
     paintStock();
     try {
-      const r = await call({ action: "set_stock", id, available: want });
-      if (typeof r.available === "boolean" && r.available !== want) { it.orderable = r.available; paintStock(); }
+      const r = await call({ action: "set_stock", kind, id, state: want });
+      if (r.state && r.state !== want) { it.state = r.state; paintStock(); }
     } catch (e) {
-      it.orderable = !want;   // put it back; never leave a toggle lying
+      it.state = was;         // put it back; never leave a switch lying
       paintStock();
       if (e.auth) { closeStock(); logout(e.message); }
     }

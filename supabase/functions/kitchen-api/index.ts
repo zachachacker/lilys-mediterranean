@@ -30,6 +30,50 @@ const ALLOWED_FROM: Record<string, string[]> = {
   canceled: ["paid", "making", "ready"],
 };
 
+/* ── stock (2026-10-10) ──────────────────────────────────────────────────
+   Same four states as Kareem's Sauce menu editor, for dishes and add-ons:
+   on, out today (back by itself at 4am Florida time), out until switched
+   back, hidden. Stored as out_until + hidden; byte-identical copy of
+   stockState in create-checkout/index.ts, which enforces it. */
+const OUT_FOREVER = "2999-01-01T00:00:00.000Z";
+type StockState = "on" | "today" | "off" | "hidden";
+
+function stockState(outUntil: string | null | undefined, hidden: boolean | null | undefined, now: number): StockState {
+  if (hidden) return "hidden";
+  const t = outUntil ? Date.parse(outUntil) : NaN;
+  if (!Number.isFinite(t) || t <= now) return "on";
+  return t >= Date.parse("2900-01-01T00:00:00Z") ? "off" : "today";
+}
+
+// The next 4:00am on Florida's clock, as a UTC instant. 4am rather than
+// midnight so a late close never brings an item back mid-service.
+function nextFloridaMorning(now: Date): string {
+  const wall = (d: Date) => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).formatToParts(d).map((x) => [x.type, x.value]));
+    return { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour, mi: +p.minute, s: +p.second };
+  };
+  // Florida minus UTC at an instant, in ms (negative)
+  const offsetAt = (d: Date) => {
+    const w = wall(d);
+    return Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s) - Math.floor(d.getTime() / 1000) * 1000;
+  };
+  const w = wall(now);
+  const target = Date.UTC(w.y, w.mo - 1, w.d, 4, 0, 0) + (w.h >= 4 ? 86400000 : 0);
+  // offset measured at the target itself, so a DST change overnight still lands on 4am
+  const guess = target - offsetAt(now);
+  return new Date(target - offsetAt(new Date(guess))).toISOString();
+}
+
+function stockPatch(state: StockState, now: Date): { out_until: string | null; hidden: boolean } {
+  if (state === "hidden") return { out_until: null, hidden: true };
+  if (state === "off") return { out_until: OUT_FOREVER, hidden: false };
+  if (state === "today") return { out_until: nextFloridaMorning(now), hidden: false };
+  return { out_until: null, hidden: false };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -63,7 +107,7 @@ Deno.serve(async (req) => {
   }
   if (prevOk) console.log("kitchen-api: request on the previous key (rotation grace period)");
 
-  let body: { action?: string; id?: string; to?: string; available?: boolean; active?: boolean };
+  let body: { action?: string; id?: string; to?: string; available?: boolean; active?: boolean; kind?: string; state?: string };
   try {
     body = await req.json();
   } catch {
@@ -71,39 +115,59 @@ Deno.serve(async (req) => {
   }
 
   /* ---- stock control ---------------------------------------------------
-     86'ing an item. The switch is menu_items.orderable, which create-checkout
-     already enforces server-side — this only exposes it to the tablet. */
+     Dishes and add-ons, four states each (see stockState above). The same
+     columns are what create-checkout refuses on and what the order page
+     greys out, so the tablet is only ever a switch. */
   if (body.action === "stock") {
-    const { data, error } = await db
-      .from("menu_items")
-      .select("id,name,category,orderable")
-      .order("category")
-      .order("name");
-    if (error) {
-      console.error("stock list failed:", error.message);
+    const [items, opts, groups] = await Promise.all([
+      db.from("menu_items").select("id,name,category,orderable,out_until,hidden").eq("orderable", true)
+        .order("category").order("name"),
+      db.from("addon_options").select("id,name,group_id,sort,out_until,hidden").order("sort"),
+      db.from("addon_groups").select("id,label,sort").order("sort"),
+    ]);
+    const err = items.error ?? opts.error ?? groups.error;
+    if (err) {
+      console.error("stock list failed:", err.message);
       return json({ error: "Temporarily unavailable" }, 503);
     }
-    return json({ items: data ?? [] });
+    const now = Date.now();
+    return json({
+      items: (items.data ?? []).map((i) => ({
+        id: i.id, name: i.name, category: i.category,
+        state: stockState(i.out_until, i.hidden, now),
+        orderable: stockState(i.out_until, i.hidden, now) === "on", // older tablets read this
+      })),
+      addons: (groups.data ?? []).map((g) => ({
+        id: g.id, label: g.label,
+        options: (opts.data ?? []).filter((o) => o.group_id === g.id)
+          .map((o) => ({ id: o.id, name: o.name, state: stockState(o.out_until, o.hidden, now) })),
+      })),
+    });
   }
 
   if (body.action === "set_stock") {
     const id = typeof body.id === "string" ? body.id : "";
-    if (!id || typeof body.available !== "boolean") {
+    // older tablets send {available: true|false}; new ones send a state
+    const state = typeof body.state === "string" ? body.state
+      : typeof body.available === "boolean" ? (body.available ? "on" : "off") : "";
+    const table = body.kind === "addon" ? "addon_options" : "menu_items";
+    if (!id || !["on", "today", "off", "hidden"].includes(state)) {
       return json({ error: "Bad request" }, 400);
     }
     // .select() so a bad id is a 404 rather than a silent no-op — the tablet
     // must never show a toggle as flipped when nothing changed
     const { data, error } = await db
-      .from("menu_items")
-      .update({ orderable: body.available })
+      .from(table)
+      .update(stockPatch(state as StockState, new Date()))
       .eq("id", id)
-      .select("id,orderable");
+      .select("id,out_until,hidden");
     if (error) {
       console.error("set_stock failed:", error.message);
       return json({ error: "Temporarily unavailable" }, 503);
     }
     if (!(data ?? []).length) return json({ error: "Unknown item" }, 404);
-    return json({ ok: true, id, available: data[0].orderable });
+    const now = stockState(data[0].out_until, data[0].hidden, Date.now());
+    return json({ ok: true, id, state: now, available: now === "on" });
   }
 
   /* ---- offers ----------------------------------------------------------

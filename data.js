@@ -69,6 +69,82 @@ window.LILYS = {
     "Chicken Gyro Wrap", "Mixed Grill Platter", "Chicken Shawarma Platter",
     "Grilled Chicken Bowl", "Falafel Bowl",
   ],
+  /* Add-ons, copied from Kareem's Sauce menu editor (screenshots, 2026-10-10).
+     Prices are IN-HOUSE like the MENU and get the same online markup. Option
+     ids are permanent: the server and saved carts key on them, so rename the
+     label freely but never reuse an id for a different thing.
+     Option: [id, label, price]. `max` = how many a customer may pick. */
+  ADDONS: {
+    groups: {
+      side: { label: "Add a side", max: 3, options: [
+        ["side-fries", "Seasoned Fries", "$4.17"],
+        ["side-salad", "Salad", "$4.17"],
+        ["side-rice", "Rice", "$4.17"],
+      ]},
+      sauce: { label: "Extra sauces & toppings", max: 4, options: [
+        ["sauce-tzatziki", "Tzatziki Sauce (2oz)", "$1.75"],
+        ["sauce-tahini", "Tahini Sauce (2oz)", "$1.15"],
+        ["sauce-veg", "Tomatoes & Cucumber", "$2.99"],
+        ["sauce-pickles", "Pickles & Turnips", "$3.99"],
+      ]},
+      protein: { label: "Add protein", max: 3, options: [
+        ["protein-chicken", "Grilled Chicken (6oz)", "$5.21"],
+        ["protein-shawarma", "Beef Shawarma (6oz)", "$5.21"],
+        ["protein-gyro", "Gyro Meat (6oz)", "$5.21"],
+      ]},
+      extra: { label: "Add extras", max: 9, options: [
+        ["extra-gyro", "Extra Gyro Meat", "$4.99"],
+        ["extra-chicken", "1 Chicken Kabob Skewer", "$7.99"],
+        ["extra-kafta", "1 Kafta Skewer", "$7.99"],
+        ["extra-beef", "1 Beef Tenderloin Skewer", "$8.99"],
+        ["extra-shrimp", "1 Shrimp Skewer", "$8.49"],
+        ["extra-lamb", "1 Lamb Kabob Skewer", "$9.99"],
+        ["extra-veg", "Sautéed Veggies", "$4.49"],
+        ["extra-rice", "Extra Rice", "$3.99"],
+        ["extra-gf", "Gluten-Free Bread", "$1.90"],
+      ]},
+      family: { label: "Add to the table", max: 11, options: [
+        ["fam-chicken", "1 Chicken Kabob Skewer", "$7.99"],
+        ["fam-kafta", "1 Kafta Skewer", "$7.99"],
+        ["fam-beef", "1 Beef Tenderloin Skewer", "$8.99"],
+        ["fam-lamb", "1 Lamb Kabob Skewer", "$8.99"],
+        ["fam-shrimp", "1 Jumbo Shrimp Skewer", "$8.99"],
+        ["fam-hummus", "8oz Hummus", "$9.99"],
+        ["fam-garlic", "6oz Garlic Sauce", "$7.99"],
+        ["fam-tzatziki", "8oz Tzatziki Sauce", "$9.99"],
+        ["fam-pita", "2 Pita Bread", "$2.99"],
+        ["fam-gf-pita", "Gluten-Free Pita", "$1.99"],
+        ["fam-veg", "Sautéed Mixed Vegetables", "$5.99"],
+      ]},
+      spice: { label: "Spice level", max: 1, options: [
+        ["spice-hot", "Make it spicy", "$0.75"],
+      ]},
+    },
+    // whole categories first, then single dishes; a dish gets both
+    byCategory: {
+      "Wraps, Gyros & Subs": ["side", "sauce"],
+      "Lily's Platters": ["extra", "sauce"],
+      "Lily's Bowls": ["extra", "sauce"],
+      "Burgers": ["side", "sauce"],
+      "Quesadillas": ["side"],
+      "Family Specials": ["family"],
+    },
+    byItem: {
+      "Greek Salad": ["protein"],
+      "Fattoush Salad": ["protein"],
+      "Caesar Salad": ["protein"],
+      "Lamb & Beef Gyro Wrap": ["spice"],
+      "Chicken Gyro Wrap": ["spice"],
+      "Lamb & Beef Gyro Platter": ["spice"],
+      "Chicken Gyro Platter": ["spice"],
+      "Family Mixed Gyro": ["spice"],
+    },
+  },
+  /** Add-on group ids for a dish, in display order. */
+  addonGroupsFor(category, name) {
+    const A = this.ADDONS;
+    return [...new Set([...(A.byCategory[category] || []), ...(A.byItem[name] || [])])];
+  },
   MENU: [
     { c: "Mezze & Starters", items: [
       ["Lily's Ultimate Hummus", "Creamy hummus topped with feta, olives and tomatoes, served with warm pita.", "$13.49", "Veg"],
@@ -103,8 +179,8 @@ window.LILYS = {
       ["Beef Shawarma Wrap", "Thinly sliced marinated beef, tomato, onion, turnip and tahini sauce.", "$14.99", ""],
       ["Mixed Shawarma Wrap", "Beef and chicken shawarma with hummus, pickles and tomatoes over garlic sauce.", "$14.99", ""],
       ["Beef Kafta Wrap", "Chargrilled seasoned ground beef with hummus, tomatoes, pickles, onion and tahini.", "$13.99", ""],
-      ["Lamb & Beef Gyro Wrap", "Spiced gyro meat with grilled green pepper, onion, feta, tomatoes and lettuce, topped with tzatziki. Ask for it spicy.", "$13.99", ""],
-      ["Chicken Gyro Wrap", "Seasoned chicken gyro with grilled pepper, onion, feta, tomatoes, lettuce and tzatziki. Ask for it spicy.", "$13.49", ""],
+      ["Lamb & Beef Gyro Wrap", "Spiced gyro meat with grilled green pepper, onion, feta, tomatoes and lettuce, topped with tzatziki. Can be made spicy.", "$13.99", ""],
+      ["Chicken Gyro Wrap", "Seasoned chicken gyro with grilled pepper, onion, feta, tomatoes, lettuce and tzatziki. Can be made spicy.", "$13.49", ""],
       ["Garlic Rice Chicken Wrap", "Fried chicken, green pepper, provolone, garlic rice, red onion, tomatoes and lettuce with mayo.", "$15.49", ""],
       ["Falafel Wrap", "Crispy falafel with lettuce, tomatoes, pickles and tahini sauce.", "$11.99", "Vegan"],
       ["Falafel Gyro Style Wrap", "Crispy falafel, tomatoes, lettuce, feta and tzatziki sauce.", "$12.99", "Veg"],

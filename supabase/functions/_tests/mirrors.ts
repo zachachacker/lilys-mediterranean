@@ -142,7 +142,7 @@ export const telHref = (s: unknown) => "tel:" + String(s ?? "").replace(/[^+\d]/
    Faithful TRANSCRIPTION (not a byte-copy — the original is inline in the
    request handler). Returns the first rejection, or the normalised fields.
    Order of checks matches the original exactly.                          */
-export type CartLine = { id: string; qty: number };
+export type CartLine = { id: string; qty: number; opts?: unknown };
 export type ValidationResult =
   | { ok: true; name: string; phone: string; notes: string | null; items: CartLine[] }
   | { ok: false; status: number; error: string };
@@ -166,9 +166,14 @@ export function validateCheckoutBody(body: {
     if (typeof line.id !== "string" || !Number.isInteger(line.qty) || line.qty < 1 || line.qty > 20) {
       return { ok: false, status: 400, error: "Invalid cart contents." };
     }
+    if (line.opts !== undefined &&
+      (!Array.isArray(line.opts) || line.opts.length > 20 || line.opts.some((o) => typeof o !== "string"))) {
+      return { ok: false, status: 400, error: "Invalid cart contents." };
+    }
   }
-  const ids = items.map((l) => l.id);
-  if (new Set(ids).size !== ids.length) return { ok: false, status: 400, error: "Duplicate cart lines." };
+  const optsOf = (l: CartLine) => (Array.isArray(l.opts) ? l.opts as string[] : []);
+  const keys = items.map((l) => lineKey(l.id, optsOf(l)));
+  if (new Set(keys).size !== keys.length) return { ok: false, status: 400, error: "Duplicate cart lines." };
 
   return { ok: true, name, phone, notes, items };
 }
@@ -226,7 +231,7 @@ export type Promo = {
   item_id?: string | null; buy_qty?: number | null; free_qty?: number | null;
   percent?: number | null; min_subtotal_cents?: number | null;
 };
-export type PLine = { id: string; qty: number; unit_cents: number };
+export type PLine = { id: string; qty: number; unit_cents: number; base_cents?: number };
 
 export function applyPromotions(lines: PLine[], promos: Promo[]) {
   const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
@@ -237,10 +242,12 @@ export function applyPromotions(lines: PLine[], promos: Promo[]) {
     const buy = Math.floor(Number(p.buy_qty ?? 0));
     const free = Math.floor(Number(p.free_qty ?? 0));
     if (!p.item_id || buy <= 0 || free <= 0 || free > buy) continue;
-    const line = lines.find((l) => l.id === p.item_id);
-    if (!line) continue;
-    const sets = Math.floor(line.qty / buy);
-    const cents = sets * free * line.unit_cents;
+    const its = lines.filter((l) => l.id === p.item_id);
+    if (!its.length) continue;
+    const qty = its.reduce((s, l) => s + l.qty, 0);
+    const unit = Math.min(...its.map((l) => l.base_cents ?? l.unit_cents));
+    const sets = Math.floor(qty / buy);
+    const cents = sets * free * unit;
     if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
   }
 
@@ -257,10 +264,10 @@ export function applyPromotions(lines: PLine[], promos: Promo[]) {
   return { subtotal, discount, applied };
 }
 
-/* ── create-checkout/index.ts — delivery helpers (2026-10-07) ─────────── */
+/* ── create-checkout/index.ts — delivery helpers (2026-10-07, repriced 10-10) */
 export const LILYS_LAT = 28.09175;
 export const LILYS_LON = -80.56608;
-export const DELIVERY_MAX_MILES = 5;
+export const DELIVERY_MAX_MILES = 7;
 export const DELIVERY_MIN_CENTS = 1500;
 export const TIP_MAX_CENTS = 10000;
 
@@ -275,8 +282,7 @@ export function milesBetween(lat1: number, lon1: number, lat2: number, lon2: num
 export function deliveryFeeCents(miles: number): number | null {
   if (!Number.isFinite(miles) || miles < 0 || miles > DELIVERY_MAX_MILES) return null;
   if (miles <= 2) return 0;
-  if (miles <= 3.5) return 500;
-  return 1000;
+  return 1500;
 }
 
 export function parseTipCents(raw: unknown): number | null {
@@ -302,4 +308,75 @@ export async function customerHash(salt: string, phone: string): Promise<string 
   if (!salt || digits.length < 10) return null;
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${digits}`));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/* ── create-checkout/index.ts — add-ons (2026-10-10) ──────────────────── */
+export type AddonOpt = { id: string; group_id: string; name: string; price_cents: number; sort: number; available: boolean };
+export type AddonGroup = { id: string; max_select: number; sort: number };
+export type AddonPick = { id: string; name: string; cents: number };
+
+export function lineKey(id: string, opts: string[]): string {
+  return opts.length ? `${id}|${[...opts].sort().join(",")}` : id;
+}
+
+export function priceAddons(
+  itemGroups: string[], optIds: string[], opts: Map<string, AddonOpt>, groups: Map<string, AddonGroup>,
+): { ok: true; addons: AddonPick[]; cents: number } | { ok: false; error: string } {
+  if (new Set(optIds).size !== optIds.length) return { ok: false, error: "Invalid cart contents." };
+  const perGroup = new Map<string, number>();
+  const picked: AddonOpt[] = [];
+  for (const id of optIds) {
+    const o = opts.get(id);
+    if (!o || !itemGroups.includes(o.group_id)) return { ok: false, error: "Invalid cart contents." };
+    const g = groups.get(o.group_id);
+    const n = (perGroup.get(o.group_id) ?? 0) + 1;
+    if (!g || n > g.max_select) return { ok: false, error: "Invalid cart contents." };
+    if (!o.available) return { ok: false, error: `Sorry, ${o.name} is sold out today. Please remove it and try again.` };
+    perGroup.set(o.group_id, n);
+    picked.push(o);
+  }
+  // kitchen reading order: group order, then the option's place in its group
+  picked.sort((a, b) => (groups.get(a.group_id)!.sort - groups.get(b.group_id)!.sort) || (a.sort - b.sort));
+  const addons = picked.map((o) => ({ id: o.id, name: o.name, cents: o.price_cents }));
+  return { ok: true, addons, cents: addons.reduce((s, a) => s + a.cents, 0) };
+}
+
+/* ── kitchen-api/index.ts — stock states (2026-10-10) ─────────────────── */
+export const OUT_FOREVER = "2999-01-01T00:00:00.000Z";
+export type StockState = "on" | "today" | "off" | "hidden";
+
+export function stockState(outUntil: string | null | undefined, hidden: boolean | null | undefined, now: number): StockState {
+  if (hidden) return "hidden";
+  const t = outUntil ? Date.parse(outUntil) : NaN;
+  if (!Number.isFinite(t) || t <= now) return "on";
+  return t >= Date.parse("2900-01-01T00:00:00Z") ? "off" : "today";
+}
+
+// The next 4:00am on Florida's clock, as a UTC instant. 4am rather than
+// midnight so a late close never brings an item back mid-service.
+export function nextFloridaMorning(now: Date): string {
+  const wall = (d: Date) => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).formatToParts(d).map((x) => [x.type, x.value]));
+    return { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour, mi: +p.minute, s: +p.second };
+  };
+  // Florida minus UTC at an instant, in ms (negative)
+  const offsetAt = (d: Date) => {
+    const w = wall(d);
+    return Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s) - Math.floor(d.getTime() / 1000) * 1000;
+  };
+  const w = wall(now);
+  const target = Date.UTC(w.y, w.mo - 1, w.d, 4, 0, 0) + (w.h >= 4 ? 86400000 : 0);
+  // offset measured at the target itself, so a DST change overnight still lands on 4am
+  const guess = target - offsetAt(now);
+  return new Date(target - offsetAt(new Date(guess))).toISOString();
+}
+
+export function stockPatch(state: StockState, now: Date): { out_until: string | null; hidden: boolean } {
+  if (state === "hidden") return { out_until: null, hidden: true };
+  if (state === "off") return { out_until: OUT_FOREVER, hidden: false };
+  if (state === "today") return { out_until: nextFloridaMorning(now), hidden: false };
+  return { out_until: null, hidden: false };
 }

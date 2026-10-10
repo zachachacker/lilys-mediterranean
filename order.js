@@ -44,7 +44,7 @@
         ["ready", delivery ? "Out for delivery" : "Ready for pickup"],
       ];
       const items = (o.items || [])
-        .map((l) => `<div class="co-line"><span>${l.qty} × ${esc(l.name)}</span><span>${money(l.unit_cents * l.qty)}</span></div>`)
+        .map((l) => `<div class="co-line"><span>${l.qty} × ${esc(l.name)}${l.addons?.length ? `<small class="co-addons">+ ${l.addons.map((a) => esc(a.name)).join(", ")}</small>` : ""}</span><span>${money(l.unit_cents * l.qty)}</span></div>`)
         .join("");
       const pending = o.status === "pending";
       const activeIdx = o.status === "done" ? 3 : STEPS.findIndex(([s]) => s === o.status);
@@ -76,7 +76,7 @@
           ${o.discount_cents > 0 ? `<div class="co-line co-sub"><span>Offers</span><span>−${money(o.discount_cents)}</span></div>` : ""}
           <div class="co-line co-sub"><span>Tax</span><span>${money(o.tax_cents)}</span></div>
           ${o.delivery_fee_cents > 0 ? `<div class="co-line co-sub"><span>Delivery</span><span>${money(o.delivery_fee_cents)}</span></div>` : ""}
-          ${o.tip_cents > 0 ? `<div class="co-line co-sub"><span>Driver tip</span><span>${money(o.tip_cents)}</span></div>` : ""}
+          ${o.tip_cents > 0 ? `<div class="co-line co-sub"><span>${delivery ? "Driver tip" : "Tip"}</span><span>${money(o.tip_cents)}</span></div>` : ""}
           <div class="co-line co-total"><span>${totalLabel}</span><span>${money(o.total_cents)}</span></div>
         </div>`;
     };
@@ -193,21 +193,46 @@
       // `orderable` = can be bought online at all (has a fixed price).
       // `inStock`   = the kitchen hasn't 86'd it today. Fetched below; assume
       // in stock until told otherwise so a slow network never hides the menu.
-      ITEMS.push({ id: slug(name), name, desc, price, cents, tag, cat: cat.c, orderable: cents !== null, inStock: true });
+      ITEMS.push({
+        id: slug(name), name, desc, price, cents, tag, cat: cat.c, orderable: cents !== null, inStock: true,
+        groups: L.addonGroupsFor ? L.addonGroupsFor(cat.c, name) : [],
+      });
     })
   );
   const byId = new Map(ITEMS.map((it) => [it.id, it]));
+
+  /* add-ons: same prices the server's addon_options table holds (sync-menu.mjs
+     generates both from data.js); the server re-prices them anyway */
+  const GROUPS = (L.ADDONS && L.ADDONS.groups) || {};
+  const OPT = new Map();
+  Object.entries(GROUPS).forEach(([g, grp]) =>
+    grp.options.forEach(([oid, label, price]) => OPT.set(oid, { id: oid, group: g, name: label, cents: parsePrice(price), available: true, hidden: false })));
+  // = stockState in create-checkout: out_until in the future means out of stock
+  const isOut = (row) => { const t = row.out_until ? Date.parse(row.out_until) : NaN; return Number.isFinite(t) && t > Date.now(); };
+  const lineKey = (id, opts) => (opts.length ? `${id}|${[...opts].sort().join(",")}` : id); // = create-checkout lineKey
+  const optsCents = (opts) => opts.reduce((s, o) => s + (OPT.get(o)?.cents || 0), 0);
+  const lineCents = (l) => byId.get(l.id).cents + optsCents(l.opts);
   const PHOTOS = window.LILYS_PHOTOS || {};
 
   /* ------------------------------------------------------------- cart ---- */
   const CART_KEY = "lilys-cart-v1";
-  let cart = new Map(); // id -> qty
-  try {
+  // key (dish + its add-ons) -> { id, opts, qty }. The same dish with different
+  // add-ons is a separate line, exactly as the server counts it.
+  let cart = new Map();
+  const validOpts = (it, opts) => Array.isArray(opts) &&
+    opts.every((o) => OPT.has(o) && it.groups.includes(OPT.get(o).group));
+  function loadCart() {
+    const next = new Map();
+    // saved as [id, qty, opts]; carts from before add-ons are [id, qty]
     const saved = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
-    saved.forEach(([id, qty]) => {
-      if (byId.get(id)?.orderable && Number.isInteger(qty) && qty > 0) cart.set(id, Math.min(qty, 20));
+    saved.forEach(([id, qty, opts = []]) => {
+      const it = byId.get(id);
+      if (!it?.orderable || !Number.isInteger(qty) || qty < 1 || !validOpts(it, opts)) return;
+      next.set(lineKey(id, opts), { id, opts: [...opts], qty: Math.min(qty, 20) });
     });
-  } catch { /* fresh cart */ }
+    cart = next;
+  }
+  try { loadCart(); } catch { /* fresh cart */ }
 
   /* ---- live availability ------------------------------------------------
      The kitchen can mark an item out of stock; the server already refuses it
@@ -217,7 +242,7 @@
      purchasable and the server is still the backstop. */
   async function loadAvailability() {
     try {
-      const r = await fetch(`${L.ORDERING.supabaseUrl}/rest/v1/menu_items?select=id,orderable`, {
+      const r = await fetch(`${L.ORDERING.supabaseUrl}/rest/v1/menu_items?select=id,orderable,out_until,hidden`, {
         headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` },
       });
       if (!r.ok) return;
@@ -226,12 +251,24 @@
       let changed = false;
       rows.forEach((row) => {
         const it = byId.get(row.id);
-        if (it && it.inStock !== row.orderable) { it.inStock = !!row.orderable; changed = true; }
+        if (!it) return;
+        const inStock = !!row.orderable && !isOut(row) && !row.hidden;
+        if (it.inStock !== inStock || it.hidden !== !!row.hidden) { it.inStock = inStock; it.hidden = !!row.hidden; changed = true; }
       });
+      try {
+        const ra = await fetch(`${L.ORDERING.supabaseUrl}/rest/v1/addon_options?select=id,out_until,hidden`, {
+          headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` },
+        });
+        const opts = ra.ok ? await ra.json() : [];
+        if (Array.isArray(opts)) opts.forEach((row) => {
+          const o = OPT.get(row.id);
+          if (o) { o.hidden = !!row.hidden; o.available = !o.hidden && !isOut(row); }
+        });
+      } catch { /* add-ons stay pickable; the server refuses a sold-out one by name */ }
       // an out-of-stock item already in the basket has to go, and be seen to go
       let dropped = 0;
-      [...cart.keys()].forEach((id) => {
-        if (byId.get(id) && !byId.get(id).inStock) { cart.delete(id); dropped++; }
+      [...cart].forEach(([key, l]) => {
+        if (!byId.get(l.id).inStock || l.opts.some((o) => OPT.get(o)?.available === false)) { cart.delete(key); dropped++; }
       });
       if (dropped) {
         saveCart();
@@ -244,10 +281,11 @@
       ITEMS.forEach((it) => {
         const row = document.querySelector(`.order-item[data-item="${it.id}"]`);
         if (!row) return;
+        row.style.display = it.hidden ? "none" : ""; // hidden in the kitchen = not on the menu at all
         row.classList.toggle("soldout", !it.inStock);
         const slot = row.querySelector(".oi-slot");
         if (!slot) return;
-        if (!it.inStock) slot.innerHTML = `<span class="oi-soldout">Sold out today</span>`;
+        if (!it.inStock) slot.innerHTML = `<span class="oi-soldout">Sold out</span>`;
         else if (it.orderable && !slot.querySelector(".oi-action")) {
           slot.innerHTML = `<span class="oi-action" data-id="${it.id}"></span>`;
         }
@@ -256,10 +294,13 @@
       renderCart();
     } catch { /* offline — server still refuses at checkout */ }
   }
-  const saveCart = () => localStorage.setItem(CART_KEY, JSON.stringify([...cart]));
+  const saveCart = () => {
+    try { localStorage.setItem(CART_KEY, JSON.stringify([...cart.values()].map((l) => [l.id, l.qty, l.opts]))); } catch { /* private mode */ }
+  };
 
-  const subtotal = () => [...cart].reduce((s, [id, qty]) => s + byId.get(id).cents * qty, 0);
-  const count = () => [...cart.values()].reduce((s, q) => s + q, 0);
+  const subtotal = () => [...cart.values()].reduce((s, l) => s + lineCents(l) * l.qty, 0);
+  const count = () => [...cart.values()].reduce((s, l) => s + l.qty, 0);
+  const qtyOf = (id) => [...cart.values()].reduce((s, l) => s + (l.id === id ? l.qty : 0), 0);
 
   /* ------------------------------------------------------ render menu ---- */
   const cats = [...new Set(ITEMS.map((it) => it.cat))];
@@ -282,11 +323,11 @@
           ? `<span class="mi-thumb photo"><img loading="lazy" decoding="async" width="58" height="58" src="assets/photos/thumbs/${ph.replace(/\.png$/, ".webp")}" alt=""></span>`
           : `<span class="mi-thumb none" aria-hidden="true"></span>`;
         const action = !it.inStock
-          ? `<span class="oi-soldout">Sold out today</span>`
+          ? `<span class="oi-soldout">Sold out</span>`
           : it.orderable
           ? `<span class="oi-action" data-id="${it.id}"></span>`
           : `<a class="oi-call ink" href="tel:+13213124444">Call to order</a>`;
-        return `<div class="menu-item order-item${ph ? " has-thumb" : ""}${it.inStock ? "" : " soldout"}" data-item="${it.id}">
+        return `<div class="menu-item order-item${ph ? " has-thumb" : ""}${it.inStock ? "" : " soldout"}${it.groups.length ? " has-addons" : ""}" data-item="${it.id}">
           ${thumb}
           <span class="mi-name">${esc(it.name)}${it.tag ? `<span class="tag">${it.tag}</span>` : ""}</span>
           <span class="mi-price">${it.orderable ? money(it.cents) : it.price}</span>
@@ -310,19 +351,29 @@
   });
 
   /* ------------------------------------------------- steppers + panel ---- */
-  const stepper = (id) => {
-    const qty = cart.get(id) || 0;
+  // a stepper works on a cart line (dish + add-ons); its key is the dish id
+  // when there are no add-ons
+  const stepper = (key, name) => {
+    const qty = cart.get(key)?.qty || 0;
     return qty === 0
-      ? `<button class="oi-add" data-add="${id}" aria-label="Add ${esc(byId.get(id).name)} to cart">Add</button>`
+      ? `<button class="oi-add" data-add="${esc(key)}" aria-label="Add ${esc(name)} to cart">Add</button>`
       : `<span class="oi-step">
-           <button data-dec="${id}" aria-label="One less ${esc(byId.get(id).name)}">−</button>
+           <button data-dec="${esc(key)}" aria-label="One less ${esc(name)}">−</button>
            <b>${qty}</b>
-           <button data-inc="${id}" aria-label="One more ${esc(byId.get(id).name)}">+</button>
+           <button data-inc="${esc(key)}" aria-label="One more ${esc(name)}">+</button>
          </span>`;
   };
 
+  // dishes with add-ons open the picker instead; the badge counts every
+  // version of the dish in the cart
+  const menuAction = (it) => {
+    if (!it.groups.length) return stepper(it.id, it.name);
+    const n = qtyOf(it.id);
+    return `<button class="oi-add" data-custom="${it.id}" aria-label="Add ${esc(it.name)}, choose add-ons">Add${n ? ` <span class="oi-n">${n}</span>` : ""}</button>`;
+  };
+
   const renderActions = () => {
-    document.querySelectorAll(".oi-action").forEach((el) => { el.innerHTML = stepper(el.dataset.id); });
+    document.querySelectorAll(".oi-action").forEach((el) => { el.innerHTML = menuAction(byId.get(el.dataset.id)); });
   };
 
   const cartLines = $("cartLines"), cartEmpty = $("cartEmpty"), cartTotals = $("cartTotals"), cartForm = $("cartForm");
@@ -334,12 +385,14 @@
     cartTotals.hidden = n === 0;
     cartForm.hidden = n === 0;
     cartLines.innerHTML = [...cart]
-      .map(([id, qty]) => {
-        const it = byId.get(id);
+      .map(([key, l]) => {
+        const it = byId.get(l.id);
+        const adds = l.opts.map((o) => OPT.get(o)).filter(Boolean)
+          .sort((a, b) => it.groups.indexOf(a.group) - it.groups.indexOf(b.group));
         return `<div class="cart-line">
-          <span class="cl-qty">${stepper(id)}</span>
-          <span class="cl-name">${esc(it.name)}</span>
-          <span class="cl-price">${money(it.cents * qty)}</span>
+          <span class="cl-qty">${stepper(key, it.name)}</span>
+          <span class="cl-name">${esc(it.name)}${adds.length ? `<small class="cl-addons">+ ${adds.map((a) => esc(a.name)).join(", ")}</small>` : ""}</span>
+          <span class="cl-price">${money(lineCents(l) * l.qty)}</span>
         </div>`;
       })
       .join("");
@@ -349,12 +402,13 @@
       // display only: the server recomputes every figure from its own rules
       const delivery = ful === "delivery";
       const fee = delivery && quote ? quote.fee_cents : 0;
-      const tip = delivery ? tipCents : 0;
+      const tip = tipCents;
       $("ctSub").textContent = money(sub);
       $("ctTax").textContent = money(tax);
       $("ctDelRow").hidden = !delivery;
       $("ctDel").textContent = !delivery ? "" : quote ? (fee ? money(fee) : "Free") : "—";
-      $("ctTipRow").hidden = !(delivery && tip > 0);
+      $("ctTipRow").hidden = !(tip > 0);
+      $("ctTipL").textContent = delivery ? "Driver tip" : "Tip";
       $("ctTip").textContent = money(tip);
       $("ctTotal").textContent = money(sub + tax + fee + tip);
       $("cartBarCount").textContent = n === 1 ? "1 item" : `${n} items`;
@@ -367,24 +421,113 @@
   };
 
   let submitting = false;
+  // add `qty` of a dish with these add-ons; false if the cart is full
+  function addLine(id, opts, qty) {
+    const key = lineKey(id, opts);
+    const line = cart.get(key);
+    if (!line && cart.size >= 40) {
+      showErr("That's a lot of different dishes! Please call us for orders this size.");
+      return false;
+    }
+    if (line) line.qty = Math.min(line.qty + qty, 20);
+    else cart.set(key, { id, opts: [...opts], qty: Math.min(qty, 20) });
+    window.LILYS_TRACK?.event("add_to_cart", id);
+    return true;
+  }
+
   document.addEventListener("click", (e) => {
+    const c = e.target.closest("[data-custom]");
+    if (c && !submitting) { openAddons(c.dataset.custom); return; }
     const t = e.target.closest("[data-add],[data-inc],[data-dec]");
     if (!t || submitting) return;
-    const id = t.dataset.add || t.dataset.inc || t.dataset.dec;
-    const qty = cart.get(id) || 0;
+    const key = t.dataset.add || t.dataset.inc || t.dataset.dec;
+    const line = cart.get(key);
     if (t.dataset.dec) {
-      if (qty <= 1) cart.delete(id);
-      else cart.set(id, qty - 1);
-    } else {
-      if (qty === 0 && cart.size >= 40) {
-        showErr("That's a lot of different dishes! Please call us for orders this size.");
-        return;
-      }
-      cart.set(id, Math.min(qty + 1, 20));
-      window.LILYS_TRACK?.event("add_to_cart", id);
+      if (!line) return;
+      if (line.qty <= 1) cart.delete(key);
+      else line.qty -= 1;
+    } else if (line) {
+      line.qty = Math.min(line.qty + 1, 20);
+      window.LILYS_TRACK?.event("add_to_cart", line.id);
+    } else if (byId.get(key)) {
+      if (!addLine(key, [], 1)) return;
     }
     renderCart();
   });
+
+  /* ---- add-ons picker ---------------------------------------------------
+     A native <dialog>: focus trap, Esc to close and a backdrop for free. */
+  let sheet = null;
+  function openAddons(id) {
+    const it = byId.get(id);
+    if (!it || !it.inStock) return;
+    if (!sheet) {
+      sheet = document.createElement("dialog");
+      sheet.className = "ao-sheet";
+      sheet.setAttribute("aria-labelledby", "aoTitle");
+      document.body.appendChild(sheet);
+      sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); }); // backdrop tap
+    }
+    let qty = 1;
+    const groupsHTML = it.groups.map((g) => {
+      const grp = GROUPS[g];
+      if (!grp) return "";
+      const opts = grp.options.map(([oid]) => OPT.get(oid)).filter((o) => o && o.cents !== null && !o.hidden);
+      if (!opts.length) return "";
+      return `<fieldset class="ao-group" data-g="${g}" data-max="${grp.max}">
+        <legend>${esc(grp.label)}<span>${grp.max === 1 ? "Optional" : `Optional · up to ${grp.max}`}</span></legend>
+        ${opts.map((o) => `<label class="ao-opt${o.available ? "" : " off"}">
+          <input type="checkbox" value="${o.id}"${o.available ? "" : " disabled"}>
+          <span class="ao-n">${esc(o.name)}</span>
+          <span class="ao-p">${o.available ? `+${money(o.cents)}` : "Sold out"}</span>
+        </label>`).join("")}
+      </fieldset>`;
+    }).join("");
+    sheet.innerHTML = `<form method="dialog" class="ao-form">
+      <div class="ao-head">
+        <h2 id="aoTitle">${esc(it.name)}</h2>
+        <button type="button" class="ao-x" aria-label="Close">×</button>
+      </div>
+      <div class="ao-body">
+        ${it.desc ? `<p class="ao-desc">${esc(it.desc)}</p>` : ""}
+        ${groupsHTML}
+      </div>
+      <div class="ao-foot">
+        <span class="oi-step ao-qty">
+          <button type="button" data-q="-1" aria-label="One less">−</button><b id="aoQty">1</b><button type="button" data-q="1" aria-label="One more">+</button>
+        </span>
+        <button type="submit" class="btn ao-add" id="aoAdd">Add</button>
+      </div>
+    </form>`;
+    const picked = () => [...sheet.querySelectorAll("input:checked")].map((i) => i.value);
+    const refresh = () => {
+      // a full group greys out the rest of it, so the limit is visible, not an error
+      sheet.querySelectorAll(".ao-group").forEach((fs) => {
+        const n = fs.querySelectorAll("input:checked").length;
+        const full = n >= Number(fs.dataset.max);
+        fs.querySelectorAll("input:not(:checked)").forEach((i) => {
+          i.disabled = full || OPT.get(i.value).available === false;
+        });
+      });
+      $("aoQty").textContent = qty;
+      $("aoAdd").textContent = `Add ${qty > 1 ? qty + " " : ""}· ${money((it.cents + optsCents(picked())) * qty)}`;
+    };
+    sheet.querySelector(".ao-x").addEventListener("click", () => sheet.close());
+    sheet.querySelector(".ao-body").addEventListener("change", refresh);
+    sheet.querySelector(".ao-qty").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-q]");
+      if (!b) return;
+      qty = Math.max(1, Math.min(20, qty + Number(b.dataset.q)));
+      refresh();
+    });
+    sheet.querySelector("form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (addLine(it.id, picked(), qty)) { sheet.close(); renderCart(); }
+      else sheet.close();
+    });
+    refresh();
+    sheet.showModal();
+  }
 
   // mobile: the bar scrolls you to the cart panel
   $("cartBarBtn")?.addEventListener("click", () => {
@@ -414,6 +557,7 @@
     r.addEventListener("change", () => {
       ful = r.value;
       $("cfDel").hidden = ful !== "delivery";
+      $("cfTipL").textContent = ful === "delivery" ? "Tip for the driver" : "Add a tip for the team";
       $("cartFine").textContent = ful === "delivery"
         ? "Secure card payment by Stripe. We'll call this number if the driver can't find you."
         : "Secure card payment by Stripe. Show your order code at the counter.";
@@ -490,13 +634,13 @@
         method: "POST",
         headers: HDRS,
         body: JSON.stringify({
-          items: [...cart].map(([id, qty]) => ({ id, qty })),
+          items: [...cart.values()].map((l) => (l.opts.length ? { id: l.id, qty: l.qty, opts: l.opts } : { id: l.id, qty: l.qty })),
           name,
           phone,
           notes: $("cfNotes").value.trim(),
           fulfilment: ful,
           address: ful === "delivery" ? addrEl.value.trim() : "",
-          tip_cents: ful === "delivery" ? tipCents : 0,
+          tip_cents: tipCents,
           source: window.LILYS_TRACK?.source() || "direct",
           source_detail: window.LILYS_TRACK?.detail() || "",
         }),
@@ -528,13 +672,7 @@
     const btn = $("checkoutBtn");
     btn.disabled = false;
     btn.innerHTML = 'Pay &amp; place order <span class="arw">→</span>';
-    try {
-      cart = new Map();
-      const saved = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
-      saved.forEach(([id, qty]) => {
-        if (byId.get(id)?.orderable && Number.isInteger(qty) && qty > 0) cart.set(id, Math.min(qty, 20));
-      });
-    } catch { /* keep in-memory cart */ }
+    try { loadCart(); } catch { /* keep in-memory cart */ }
     renderCart();
   });
 

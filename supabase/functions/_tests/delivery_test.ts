@@ -1,5 +1,5 @@
-/* Delivery + tips (Kareem, 2026-10-07): free <=2 mi, $5 <=3.5 mi, $10 <=5 mi,
- * refused beyond; $15 food minimum; tips 0..$100, delivery only.
+/* Delivery + tips (Kareem, 2026-10-10): free <=2 mi, $15 <=7 mi, refused
+ * beyond; $15 food minimum; tips 0..$100 on pickup and delivery.
  * Drift cases pin the real source; behaviour cases pin the money rules. */
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import {
@@ -19,11 +19,11 @@ Deno.test("drift: delivery helpers in create-checkout match the mirrors", async 
   assertStringIncludes(s, "if (!Number.isInteger(n) || n < 0 || n > TIP_MAX_CENTS) return null;");
   assertStringIncludes(s, "const LILYS_LAT = 28.09175;");
   assertStringIncludes(s, "const LILYS_LON = -80.56608;");
-  assertStringIncludes(s, "const DELIVERY_MAX_MILES = 5;");
+  assertStringIncludes(s, "const DELIVERY_MAX_MILES = 7;");
   assertStringIncludes(s, "const DELIVERY_MIN_CENTS = 1500;");
   assertStringIncludes(s, "const TIP_MAX_CENTS = 10000;");
   assertStringIncludes(s, "if (miles <= 2) return 0;");
-  assertStringIncludes(s, "if (miles <= 3.5) return 500;");
+  assertStringIncludes(s, "  return 1500;\n}");
   assertStringIncludes(s, "return 2 * 3958.8 * Math.asin(Math.sqrt(a));");
 });
 
@@ -45,9 +45,9 @@ Deno.test("drift: Square refuses anything it cannot charge correctly", async () 
   assertStringIncludes(s, 'if (provider === "square" && (discount > 0 || deliveryFee > 0 || tip > 0)) {');
 });
 
-Deno.test("drift: tips only ride delivery orders; minimum is checked on food after discounts", async () => {
+Deno.test("drift: tips ride pickup and delivery; minimum is checked on food after discounts", async () => {
   const s = await src();
-  assertStringIncludes(s, 'const tip = fulfilment === "delivery" ? parseTipCents(body.tip_cents) : 0;');
+  assertStringIncludes(s, "const tip = parseTipCents(body.tip_cents);");
   assertStringIncludes(s, "if (subtotal - discount < DELIVERY_MIN_CENTS) {");
 });
 
@@ -61,18 +61,18 @@ Deno.test("drift: delivery is refused unless app_config.delivery_enabled is exac
 Deno.test("fee: every tier boundary", () => {
   assertEquals(deliveryFeeCents(0), 0);
   assertEquals(deliveryFeeCents(2), 0);
-  assertEquals(deliveryFeeCents(2.01), 500);
-  assertEquals(deliveryFeeCents(3.5), 500);
-  assertEquals(deliveryFeeCents(3.51), 1000);
-  assertEquals(deliveryFeeCents(5), 1000);
-  assertEquals(deliveryFeeCents(5.01), null);
+  assertEquals(deliveryFeeCents(2.01), 1500);
+  assertEquals(deliveryFeeCents(5), 1500);
+  assertEquals(deliveryFeeCents(7), 1500);
+  assertEquals(deliveryFeeCents(7.01), null);
   assertEquals(deliveryFeeCents(-0.1), null);
   assertEquals(deliveryFeeCents(NaN), null);
   assertEquals(deliveryFeeCents(Infinity), null);
 });
 
-Deno.test("fee: never more than $10, and the constants agree with Kareem's rules", () => {
-  for (let m = 0; m <= DELIVERY_MAX_MILES; m += 0.05) assert((deliveryFeeCents(m) ?? 0) <= 1000);
+Deno.test("fee: never more than $15, and the constants agree with Kareem's rules", () => {
+  for (let m = 0; m <= DELIVERY_MAX_MILES; m += 0.05) assert((deliveryFeeCents(m) ?? 0) <= 1500);
+  assertEquals(DELIVERY_MAX_MILES, 7);
   assertEquals(DELIVERY_MIN_CENTS, 1500);
   assertEquals(TIP_MAX_CENTS, 10000);
 });
@@ -87,7 +87,7 @@ Deno.test("distance: real Census-geocoded addresses land in the right tier", () 
   // 1000 W New Haven Ave, Melbourne (across the causeway)
   const melb = milesBetween(LILYS_LAT, LILYS_LON, 28.07889, -80.63804);
   assert(melb > 4.2 && melb < 4.7, `Melbourne ${melb}`);
-  assertEquals(deliveryFeeCents(melb), 1000);
+  assertEquals(deliveryFeeCents(melb), 1500);
   // 2200 A1A, Indian Harbour Beach (up the island)
   const ihb = milesBetween(LILYS_LAT, LILYS_LON, 28.14088, -80.58168);
   assert(ihb > 3.3 && ihb < 3.8, `IHB ${ihb}`);

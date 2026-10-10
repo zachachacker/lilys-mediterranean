@@ -120,7 +120,8 @@ Deno.test("drift: create-checkout validation block is unchanged", async () => {
     src,
     `if (typeof line.id !== "string" || !Number.isInteger(line.qty) || line.qty < 1 || line.qty > 20) {`,
   );
-  assertStringIncludes(src, `if (new Set(ids).size !== ids.length)`);
+  assertStringIncludes(src, `if (new Set(keys).size !== keys.length)`);
+  assertStringIncludes(src, `(!Array.isArray(line.opts) || line.opts.length > 20 || line.opts.some((o) => typeof o !== "string"))) {`);
 });
 
 Deno.test("drift: create-checkout provider/demo decision is unchanged", async () => {
@@ -171,7 +172,7 @@ Deno.test("drift: order.js still interpolates l.qty WITHOUT esc()", async () => 
   // someone fixed it — update the sink audit in SECURITY_TEST_PLAN.md.
   const repo = new URL("../../", root);
   const orderJs = await Deno.readTextFile(new URL("order.js", repo));
-  assertStringIncludes(orderJs, "<span>${l.qty} × ${esc(l.name)}</span>");
+  assertStringIncludes(orderJs, "<span>${l.qty} × ${esc(l.name)}${l.addons?.length");
 });
 
 Deno.test("drift: main.js still interpolates menu name/desc WITHOUT esc()", async () => {

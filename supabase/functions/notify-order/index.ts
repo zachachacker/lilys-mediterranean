@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
   const { data: o, error } = await db
     .from("orders")
-    .select("id,code,status,customer_name,customer_phone,notes,items,total_cents,created_at,demo,notified_at")
+    .select("id,code,status,customer_name,customer_phone,notes,items,total_cents,created_at,demo,notified_at,fulfilment")
     .eq("id", orderId)
     .maybeSingle();
   if (error || !o) return json({ error: "order not found" }, 404);
@@ -46,11 +46,13 @@ Deno.serve(async (req) => {
   }
 
   const items = (o.items ?? [])
-    .map((l: { qty: number; name: string }) => `<tr><td style="padding:4px 12px 4px 0;font-weight:700">${l.qty}×</td><td style="padding:4px 0">${esc(l.name)}</td></tr>`)
+    .map((l: { qty: number; name: string; addons?: { name: string }[] }) =>
+      `<tr><td style="padding:4px 12px 4px 0;font-weight:700;vertical-align:top">${l.qty}×</td><td style="padding:4px 0">${esc(l.name)}${
+        l.addons?.length ? `<br><span style="color:#8a5a00">+ ${l.addons.map((a) => esc(a.name)).join(", ")}</span>` : ""}</td></tr>`)
     .join("");
   const html = `
     <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:480px">
-      <h2 style="margin:0 0 4px">${o.demo ? "[TEST] " : ""}New pickup order ${esc(o.code)}</h2>
+      <h2 style="margin:0 0 4px">${o.demo ? "[TEST] " : ""}New ${o.fulfilment === "delivery" ? "delivery" : "pickup"} order ${esc(o.code)}</h2>
       <p style="margin:0 0 16px;color:#555">${esc(o.customer_name)} · ${esc(o.customer_phone)} · ${money(o.total_cents)} paid online</p>
       <table style="border-collapse:collapse;font-size:16px">${items}</table>
       ${o.notes ? `<p style="background:#fdf3dd;border-left:4px solid #E4A72E;padding:8px 12px;font-size:15px"><b>Note:</b> ${esc(o.notes)}</p>` : ""}
