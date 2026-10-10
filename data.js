@@ -37,7 +37,8 @@ window.LILYS = {
   directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=2+5th+Ave+STE+C+Indialantic+FL+32903",
   // Google Ads purchase conversion label from Kareem's account. null = off.
   googleAdsConversion: null,
-  reviewsUrl: "https://www.google.com/maps/search/?api=1&query=Lily%27s+Mediterranean+Fresh+Grill+2+5th+Ave+Indialantic+FL+32903",
+  // our own redirect to the Google "write a review" box; counts taps (review_click)
+  reviewsUrl: "review.html?src=confirm",
   delivery: {
     partners: [
       ["Uber Eats", "https://www.ubereats.com/store/lilys-mediterranean-fresh-grill/752UXD00Qw-XS5lr6NQu6g"],

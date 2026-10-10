@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Review Lily's Mediterranean</title>
+<!-- Our own short link to the Google "write a review" box (2026-10-10). Emails
+     link here rather than to Google directly (spam filters distrust links to
+     another domain), and each tap is counted as review_click. -->
+<meta http-equiv="refresh" content="2;url=https://search.google.com/local/writereview?placeid=ChIJT1l7gdcR3ogRopGkkbf4BCc">
+<style>
+  :root { --bg: #F4F1E8; --ink: #1A1E1C; --link: #B4472B; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141816; --ink: #F4F1E8; --link: #E4A72E; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink);
+    font: 17px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; text-align: center; padding: 16px; box-sizing: border-box; }
+  a { color: var(--link); font-weight: 700; }
+</style>
+</head>
+<body>
+<p>Taking you to Google…<br><a id="go" href="https://search.google.com/local/writereview?placeid=ChIJT1l7gdcR3ogRopGkkbf4BCc">Tap here if nothing happens</a></p>
+<script src="data.js"></script>
+<script>
+  (() => {
+    const to = document.getElementById("go").href;
+    try {
+      const L = window.LILYS, src = new URLSearchParams(location.search).get("src") || "direct";
+      if (L && L.ORDERING && !navigator.webdriver) {
+        fetch(`${L.ORDERING.supabaseUrl}/rest/v1/rpc/track_event`, {
+          method: "POST", keepalive: true,
+          headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ p_event: "review_click", p_item: "", p_source: src.toLowerCase() }),
+        }).catch(() => {});
+      }
+    } catch { /* counting must never block the redirect */ }
+    setTimeout(() => location.replace(to), 150);
+  })();
+</script>
+</body>
+</html>

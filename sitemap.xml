@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Every indexable page (no noindex). seo_test.ts fails if a page is added or noindexed without updating this. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://lilysmediterraneanfresh.com/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://lilysmediterraneanfresh.com/menu.html</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://lilysmediterraneanfresh.com/order.html</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://lilysmediterraneanfresh.com/catering.html</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://lilysmediterraneanfresh.com/club.html</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://lilysmediterraneanfresh.com/privacy.html</loc><lastmod>2026-10-10</lastmod></url>
+</urlset>

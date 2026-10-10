@@ -1,5 +1,5 @@
 // Daily sales digest — emails the owner yesterday's numbers each morning.
-// Scheduled via pg_cron (08:30 ET). Dormant until app_config.resend_api_key
+// Scheduled via pg_cron (08:30 ET). Dormant until the RESEND_API_KEY secret
 // + notify_email are set. Skips quietly when there were no real orders.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -17,7 +17,9 @@ Deno.serve(async (req) => {
   const { data: config, error: cfgErr } = await db.from("app_config").select("key,value");
   if (cfgErr) return json({ error: "config read failed" }, 503);
   const cfg = Object.fromEntries((config ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
-  if (!cfg.resend_api_key || !cfg.notify_email) return json({ ok: true, note: "email channel not configured" });
+  // the key lives in the function secrets (RESEND_API_KEY); app_config is the old fallback
+  const apiKey = Deno.env.get("RESEND_API_KEY") || cfg.resend_api_key || "";
+  if (!apiKey || !cfg.notify_email) return json({ ok: true, note: "email channel not configured" });
 
   const yesterday = flDate(new Date(Date.now() - 24 * 3600 * 1000));
   const { data: rows, error } = await db
@@ -51,7 +53,7 @@ Deno.serve(async (req) => {
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${cfg.resend_api_key}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: cfg.notify_from || "Lily's Orders <onboarding@resend.dev>",
       to: [cfg.notify_email],
