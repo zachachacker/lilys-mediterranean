@@ -153,6 +153,7 @@
   let orders = [];
   let events = [];
   let feedback = [];
+  let stickers = []; // sticker A/B/C test, per design (owner-stats totals)
   let range = (() => { try { return localStorage.getItem("lilys-dash-range") || "30"; } catch { return "30"; } })();
   let updatedAt = null;
 
@@ -251,6 +252,7 @@
       orders = j.orders || [];
       events = j.events || [];
       feedback = j.feedback || [];
+      stickers = j.stickers || [];
       updatedAt = new Date();
       render();
     } catch (e) {
@@ -517,6 +519,24 @@
           el("td", { class: "r", text: String(added.get(id) || 0) }), el("td", { class: "r", text: String(ordered.get(id) || 0) }))))))
         : el("p", { class: "empty", text: "Nothing added to carts in this period yet." }));
 
+    // sticker A/B/C test: all-time per design, not the date filter. With a
+    // handful of stickers out, differences mean little until ~10 scans each.
+    const DESIGN = { a: "A · Brand coupon", b: "B · Food photo", c: "C · Same food, less money" };
+    const designName = (b) => DESIGN[(b.match(/-([abc])$/) || [])[1]] || b;
+    const stickerCard = el("div", { class: "card" }, el("h2", { text: "Sticker test (Uber Eats bags)" }),
+      el("p", { class: "cap", text: "All time, per design · each sticker works once, first online order only" }),
+      stickers.length ? el("div", { class: "table-wrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, ...["Design", "Printed", "Scanned", "Orders", "Food sales"].map((h, i) => el("th", { class: i ? "r" : "", text: h })))),
+        el("tbody", {}, ...stickers.map((b) => el("tr", {},
+          el("td", { text: designName(b.batch) }),
+          el("td", { class: "r", text: String(b.printed) }),
+          el("td", { class: "r", text: `${b.scanned}${b.printed ? ` (${Math.round((b.scanned / b.printed) * 100)}%)` : ""}` }),
+          el("td", { class: "r", text: String(b.orders) }),
+          el("td", { class: "r", text: money(b.food_cents) })))))) : el("p", { class: "empty", text: "No stickers printed yet." }),
+      el("p", { class: "cap", style: "margin:10px 0 0", text: stickers.reduce((s, b) => s + b.scanned, 0) < 30
+        ? "Too early to call a winner: wait for about 10 scans per design."
+        : "Compare the Scanned % column: it adjusts for how many of each were printed." }));
+
     app.replaceChildren(
       el("header", {},
         el("h1", { text: "Lily's Dashboard" }),
@@ -527,6 +547,7 @@
       el("div", { class: "grid two", style: "margin-top:14px" }, sourceCard, timingCard),
       el("div", { class: "grid two", style: "margin-top:14px" }, funnelCard, interestCard),
       el("div", { class: "grid two", style: "margin-top:14px" }, custCard, rateCard),
+      el("div", { class: "grid", style: "margin-top:14px" }, stickerCard),
       el("div", { class: "grid", style: "margin-top:14px" }, recentCard));
 
     columnChart(salesChart, byDay.map((d) => ({

@@ -365,6 +365,12 @@ Deno.serve(async (req) => {
     if (!t || (t.kind === "referral" && (c.referral_enabled ?? "").trim() !== "true")) {
       return json({ error: "That discount link isn't valid." }, 400);
     }
+    // sticker A/B/C test: count the scan (the page asks once per landing, then
+    // drops the token from the address bar, so a refresh doesn't count again)
+    if (t.kind === "sticker") {
+      const { error: scanErr } = await db0.rpc("note_scan", { p_token: token });
+      if (scanErr) console.error("note_scan failed:", scanErr.message);
+    }
     if (t.kind === "sticker" && t.order_id) {
       const { data: o } = await db0.from("orders").select("status").eq("id", t.order_id).maybeSingle();
       if (o && o.status !== "canceled") return json({ error: "This sticker has already been used." }, 409);

@@ -24,6 +24,31 @@ function timingSafeEqual(a: string, b: string): boolean {
   return out === 0;
 }
 
+// deno-lint-ignore no-explicit-any
+async function stickerStats(db: any) {
+  const { data: toks, error } = await db.from("promo_tokens")
+    .select("token,batch,scan_count,order_id").eq("kind", "sticker");
+  if (error) { console.error("sticker stats failed:", error.message); return []; }
+  const used = (toks ?? []).filter((t: { order_id: string | null }) => t.order_id).map((t: { order_id: string }) => t.order_id);
+  const paid = new Map<string, number>();
+  if (used.length) {
+    const { data: os } = await db.from("orders").select("id,status,subtotal_cents,discount_cents,code")
+      .in("id", used).in("status", ["paid", "making", "ready", "done"]).not("code", "like", "TEST-%");
+    (os ?? []).forEach((o: { id: string; subtotal_cents: number; discount_cents: number }) =>
+      paid.set(o.id, o.subtotal_cents - (o.discount_cents ?? 0)));
+  }
+  const by = new Map<string, { batch: string; printed: number; scanned: number; scans: number; orders: number; food_cents: number }>();
+  for (const t of toks ?? []) {
+    const b = by.get(t.batch) ?? { batch: t.batch, printed: 0, scanned: 0, scans: 0, orders: 0, food_cents: 0 };
+    b.printed++;
+    if (t.scan_count > 0) b.scanned++;
+    b.scans += t.scan_count;
+    if (t.order_id && paid.has(t.order_id)) { b.orders++; b.food_cents += paid.get(t.order_id)!; }
+    by.set(t.batch, b);
+  }
+  return [...by.values()].sort((a, b) => a.batch.localeCompare(b.batch));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -74,5 +99,8 @@ Deno.serve(async (req) => {
     db.from("feedback").select("code,rating,comment,created_at").not("code", "like", "TEST-%").gte("created_at", since).order("created_at", { ascending: false }),
   ]);
   if (evErr || fbErr) console.error("owner-stats extras failed:", evErr?.message, fbErr?.message);
-  return json({ orders, events: events ?? [], feedback: fb ?? [], now: new Date().toISOString() });
+  // sticker A/B/C test, per design (batch): how many printed, scanned, and the
+  // paid orders they brought. Totals only; the tokens never leave this function.
+  const stickers = await stickerStats(db);
+  return json({ orders, events: events ?? [], feedback: fb ?? [], stickers, now: new Date().toISOString() });
 });
