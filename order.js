@@ -68,6 +68,7 @@
              Questions? <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`
           : `<div class="co-steps">${steps}</div>
              <p class="confirm-sub">Ready in about <strong>${esc(O.prepMinutes)} minutes</strong> at 2 5th Ave STE C, Indialantic.
+             We'll email you the moment it's ready.
              <a class="ink" href="${L.directionsUrl}" target="_blank" rel="noopener">Directions</a> · <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`}
         ${o.status === "done" ? rateHTML(o) : ""}
         ${o.referral ? shareHTML(o.referral) : ""}

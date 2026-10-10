@@ -51,8 +51,14 @@ Deno.serve(async (req) => {
 
   // moves a pending order to `to`; returns "ok" | "retry" (5xx → Stripe redelivers)
   const transition = async (to: "paid" | "canceled"): Promise<"ok" | "retry"> => {
+    // Stripe asks every customer for an email at payment; keep it so the
+    // "your order is ready" email (notify-ready) has somewhere to go
+    const email = String(session.customer_details?.email ?? "").trim().toLowerCase();
     const patch = to === "paid"
-      ? { status: "paid", stripe_payment_intent: session.payment_intent ?? null }
+      ? {
+        status: "paid", stripe_payment_intent: session.payment_intent ?? null,
+        customer_email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : null,
+      }
       : { status: "canceled" };
     // match by session id, with metadata.order_id as belt-and-braces fallback
     let q = db.from("orders").update(patch).eq("status", "pending");
