@@ -61,7 +61,8 @@
   // one visit per page per browser session, so refreshing doesn't inflate it
   const page = /order-confirmed/.test(location.pathname) ? ""
     : /order/.test(location.pathname) ? "visit_order"
-    : /menu/.test(location.pathname) ? "visit_menu" : "visit_home";
+    : /menu/.test(location.pathname) ? "visit_menu"
+    : /catering/.test(location.pathname) ? "visit_catering" : "visit_home";
   if (page) {
     let seen = false;
     try { seen = sessionStorage.getItem("lilys-seen-" + page) === "1"; sessionStorage.setItem("lilys-seen-" + page, "1"); } catch { /* fine */ }

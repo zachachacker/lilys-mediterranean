@@ -484,7 +484,7 @@
     // orders placed before tracking against visits counted after it
     const TRACK_START = "2026-10-09";
     const funnelPaid = ok.filter((o) => parts(o.created_at).day >= TRACK_START).length;
-    const visits = evSum("visit_home") + evSum("visit_menu") + evSum("visit_order");
+    const visits = evSum("visit_home") + evSum("visit_menu") + evSum("visit_order") + evSum("visit_catering");
     const fSteps = [
       ["Page visits (any page)", visits],
       ["Visits to the order page", evSum("visit_order")],
