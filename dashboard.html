@@ -537,6 +537,20 @@
         ? "Too early to call a winner: wait for about 10 scans per design."
         : "Compare the Scanned % column: it adjusts for how many of each were printed." }));
 
+    // Google review asks (started 2026-10-10): all time, not the date filter.
+    // The Google total itself isn't fetched (that needs a paid Places key), so
+    // the starting count is shown to compare against the live listing.
+    const asked = orders.filter((o) => o.review_asked_at && !o.review_asked_at.startsWith("1970")).length;
+    const taps = (src) => events.filter((e) => e.event === "review_click" && (!src || e.source === src)).reduce((s, e) => s + e.count, 0);
+    const reviewTile = (value, label) => el("div", { class: "tile" }, el("div", { class: "value", text: String(value) }), el("div", { class: "delta", text: label }));
+    const reviewCard = el("div", { class: "card" }, el("h2", { text: "Google reviews" }),
+      el("p", { class: "cap", text: "Each online customer is emailed once, about 2 hours after pickup" }),
+      el("div", { class: "grid two" },
+        reviewTile(asked, `review email${asked === 1 ? "" : "s"} sent`),
+        reviewTile(taps(), `tapped "Leave a review" · ${taps("review-email")} from email, ${taps("confirm")} from order page`)),
+      el("p", { class: "cap", style: "margin:10px 0 0" }, document.createTextNode("Started 10 Oct at 704 reviews, 4.6 stars. "),
+        el("a", { href: "https://maps.google.com/?cid=2811645534692217250", target: "_blank", rel: "noopener", text: "See the count now" })));
+
     app.replaceChildren(
       el("header", {},
         el("h1", { text: "Lily's Dashboard" }),
@@ -547,7 +561,7 @@
       el("div", { class: "grid two", style: "margin-top:14px" }, sourceCard, timingCard),
       el("div", { class: "grid two", style: "margin-top:14px" }, funnelCard, interestCard),
       el("div", { class: "grid two", style: "margin-top:14px" }, custCard, rateCard),
-      el("div", { class: "grid", style: "margin-top:14px" }, stickerCard),
+      el("div", { class: "grid two", style: "margin-top:14px" }, stickerCard, reviewCard),
       el("div", { class: "grid", style: "margin-top:14px" }, recentCard));
 
     columnChart(salesChart, byDay.map((d) => ({

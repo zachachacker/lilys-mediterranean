@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
   const since = new Date(Date.now() - 400 * 86400 * 1000).toISOString();
   const { data, error } = await db
     .from("orders")
-    .select("code,status,fulfilment,created_at,updated_at,items,subtotal_cents,discount_cents,tax_cents,delivery_fee_cents,tip_cents,total_cents,stripe_payment_intent,paid_at,started_at,ready_at,done_at,source,source_detail,customer_hash")
+    .select("code,status,fulfilment,created_at,updated_at,items,subtotal_cents,discount_cents,tax_cents,delivery_fee_cents,tip_cents,total_cents,stripe_payment_intent,paid_at,started_at,ready_at,done_at,source,source_detail,customer_hash,review_asked_at")
     .eq("demo", false)
     .not("code", "like", "TEST-%")
     .gte("created_at", since)

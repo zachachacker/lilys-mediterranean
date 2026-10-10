@@ -34,3 +34,15 @@ Deno.test("seo: sitemap lists exactly the indexable pages", async () => {
   const listed = [...sitemap.matchAll(/<loc>https:\/\/lilysmediterraneanfresh\.com\/([^<]*)<\/loc>/g)].map((m) => m[1]);
   assertEquals(listed.sort(), pages.sort());
 });
+
+Deno.test("seo: menu.html JSON-LD is current with data.js (run node scripts/menu-jsonld.mjs)", async () => {
+  const { menuJsonLd, START, END } = await import("../../../scripts/menu-jsonld-lib.mjs");
+  const html = await read("menu.html");
+  const block = html.slice(html.indexOf(START), html.indexOf(END));
+  const inPage = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(block)![1];
+  assertEquals(inPage, menuJsonLd(await read("data.js")));
+  // every dish is in it with its online price
+  const ld = JSON.parse(inPage);
+  const items = ld.hasMenuSection.flatMap((s: { hasMenuItem: unknown[] }) => s.hasMenuItem);
+  assertEquals(items.length > 50, true);
+});
