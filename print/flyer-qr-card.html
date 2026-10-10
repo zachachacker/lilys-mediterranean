@@ -2,48 +2,59 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!-- Source for flyer-qr-card.png (1200 x 1500 px = 4 x 5 in at 300 dpi).
+<!-- Source for flyer-qr-card.png: 1200 x 1500 px = 4 x 5 in at 300 dpi (2026-10-10 redesign).
      Render: Chrome headless --window-size=1200,1500 --screenshot=flyer-qr-card.png
-     The QR itself is flyer-qr.svg (https://lilysmediterraneanfresh.com/order.html?src=flyer). -->
+     The QR is flyer-qr.svg (https://lilysmediterraneanfresh.com/order.html?src=flyer), so
+     every scan shows up as "Flyer" on the owner dashboard. -->
 <title>Lily's flyer QR card</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..900,0..100,0..1;1,9..144,400..900,0..100,0..1&family=Public+Sans:wght@500;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --green: #14532b; --char: #1A1E1C; --foam: #F4F1E8; --lemon: #E4A72E; --teal: #2E7D82;
-    --serif: "Fraunces", Georgia, serif; --mono: "Space Mono", Menlo, monospace;
-  }
+  :root { --green: #14532b; --char: #1A1E1C; --foam: #F4F1E8; --lemon: #E4A72E; --ember: #B4472B; }
   * { margin: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 1500px; overflow: hidden; }
-  body { background: var(--foam); color: var(--char); font-family: var(--serif); display: flex; flex-direction: column; }
-  .band {
-    background: var(--green); color: var(--foam); text-align: center;
-    padding: 84px 60px 70px;
-  }
-  .name { font-size: 132px; font-weight: 600; line-height: 1; letter-spacing: -0.01em; font-variation-settings: "opsz" 144, "SOFT" 30; }
-  .name em { font-style: italic; color: var(--lemon); font-variation-settings: "opsz" 144, "SOFT" 40, "WONK" 1; }
-  .sub { margin-top: 18px; font-size: 50px; font-weight: 400; letter-spacing: -0.005em; font-variation-settings: "opsz" 72, "SOFT" 20; }
-  .tiles {
-    height: 22px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='22' viewBox='0 0 56 14'%3E%3Cg fill='none' stroke='%232E7D82' stroke-width='1' opacity='0.7'%3E%3Cpath d='M7 0 L14 7 L7 14 L0 7 Z'/%3E%3Cpath d='M21 0 L28 7 L21 14 L14 7 Z'/%3E%3Cpath d='M35 0 L42 7 L35 14 L28 7 Z'/%3E%3Cpath d='M49 0 L56 7 L49 14 L42 7 Z'/%3E%3C/g%3E%3Cg fill='%23E4A72E' opacity='0.8'%3E%3Ccircle cx='14' cy='7' r='1.4'/%3E%3Ccircle cx='28' cy='7' r='1.4'/%3E%3Ccircle cx='42' cy='7' r='1.4'/%3E%3Ccircle cx='0' cy='7' r='1.4'/%3E%3Ccircle cx='56' cy='7' r='1.4'/%3E%3C/g%3E%3C/svg%3E") repeat-x center;
-  }
-  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 40px 60px 60px; }
-  .qr { background: #fff; padding: 0; border-radius: 10px; box-shadow: 0 0 0 3px var(--green); line-height: 0; }
-  /* 45 modules x 14 px = 630 px: whole-pixel modules, no anti-aliased edges */
-  .qr img { width: 630px; height: 630px; image-rendering: pixelated; display: block; }
-  .cta { margin-top: 48px; font-size: 62px; font-weight: 500; text-align: center; line-height: 1.1; color: var(--green); font-variation-settings: "opsz" 100, "SOFT" 10; }
-  .url { margin-top: 22px; font-family: var(--mono); font-size: 34px; letter-spacing: 0.04em; color: var(--char); }
+  body { background: var(--foam); color: var(--char); font-family: "Public Sans", sans-serif; position: relative; }
+  .photo { position: absolute; inset: 0 0 auto 0; height: 760px; background: url(flyer-photo.webp) center 58% / cover; }
+  .photo::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,30,20,0.55) 0%, rgba(10,30,20,0) 28%, rgba(10,30,20,0) 52%, rgba(20,83,43,0.96) 100%); }
+  .brand { position: absolute; top: 56px; left: 0; right: 0; text-align: center; color: var(--foam); z-index: 1;
+    font: 700 92px/1 "Fraunces", serif; font-variation-settings: "opsz" 144, "SOFT" 30; text-shadow: 0 4px 30px rgba(0,0,0,0.45); }
+  .brand em { color: var(--lemon); font-style: italic; margin-left: -2px; font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 1; }
+  .brand span { display: block; font: 700 22px "Space Mono", monospace; letter-spacing: 0.32em; text-transform: uppercase; margin-top: 14px; color: #F4F1E8; opacity: 0.92; }
+  .head { position: absolute; top: 560px; left: 70px; right: 70px; z-index: 1; color: var(--foam);
+    font: 800 100px/0.98 "Fraunces", serif; font-variation-settings: "opsz" 144, "SOFT" 20; letter-spacing: -0.01em; }
+  .head em { color: var(--lemon); font-style: italic; }
+  .band { position: absolute; top: 760px; left: 0; right: 0; height: 22px;
+    background: var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='22' viewBox='0 0 56 14'%3E%3Cg fill='none' stroke='%23E4A72E' stroke-width='1.2' opacity='0.9'%3E%3Cpath d='M7 0 L14 7 L7 14 L0 7 Z'/%3E%3Cpath d='M21 0 L28 7 L21 14 L14 7 Z'/%3E%3Cpath d='M35 0 L42 7 L35 14 L28 7 Z'/%3E%3Cpath d='M49 0 L56 7 L49 14 L42 7 Z'/%3E%3C/g%3E%3C/svg%3E") repeat-x center; }
+  .low { position: absolute; top: 830px; left: 70px; right: 70px; display: grid; grid-template-columns: 470px 1fr; gap: 56px; align-items: center; }
+  .qr { background: #fff; border-radius: 26px; padding: 26px; box-shadow: 0 0 0 5px var(--green), 0 30px 60px -30px rgba(0,0,0,0.5); }
+  .qr img { width: 100%; height: auto; display: block; image-rendering: pixelated; }
+  .scan { font: 700 22px "Space Mono", monospace; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ember); margin-bottom: 18px; }
+  .why { font: 800 58px/1.02 "Fraunces", serif; color: var(--green); font-variation-settings: "opsz" 144; margin-bottom: 28px; }
+  ul { list-style: none; padding: 0; display: grid; gap: 16px; }
+  li { font: 700 30px/1.25 "Public Sans", sans-serif; padding-left: 44px; position: relative; }
+  li::before { content: ""; position: absolute; left: 6px; top: 12px; width: 18px; height: 18px; background: var(--lemon); transform: rotate(45deg); }
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: var(--green); color: var(--foam);
+    display: flex; align-items: center; justify-content: center; gap: 34px; font: 700 28px "Public Sans", sans-serif; }
+  .foot i { font-style: normal; color: var(--lemon); }
 </style>
 </head>
 <body>
-  <header class="band">
-    <div class="name">Lily<em>'s</em></div>
-    <div class="sub">Mediterranean Fresh Grill</div>
-  </header>
-  <div class="tiles" aria-hidden="true"></div>
-  <main>
+  <div class="photo"></div>
+  <div class="brand">Lily<em>’s</em><span>Mediterranean Fresh Grill</span></div>
+  <div class="head">Hungry? <em>Order ahead.</em></div>
+  <div class="band"></div>
+  <div class="low">
     <div class="qr"><img src="flyer-qr.svg" alt="QR code to order online"></div>
-    <p class="cta">Scan to order online for pickup</p>
-    <p class="url">lilysmediterraneanfresh.com</p>
-  </main>
+    <div>
+      <div class="scan">Scan to order</div>
+      <div class="why">Skip the wait, not the flavor.</div>
+      <ul>
+        <li>Ready in about 30 minutes</li>
+        <li>Pay online, pick up and go</li>
+        <li>Fresh, halal &amp; kosher</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>lilysmediterraneanfresh.com</span><i>·</i><span>(321) 312-4444</span><i>·</i><span>2 5th Ave, Indialantic</span></div>
 </body>
 </html>
