@@ -554,12 +554,38 @@
   let promosNow = 0;
 
   function promoDesc(p) {
+    let what;
     if (p.kind === "bogo") {
-      return p.buy_qty === 1 && p.free_qty === 1
+      what = p.buy_qty === 1 && p.free_qty === 1
         ? "Buy one, get one free"
         : `Buy ${p.buy_qty}, get ${p.free_qty} free`;
+    } else if (p.kind === "percent_items") {
+      const parts = [...(p.categories || []), ...((p.item_ids || []).length ? [`${p.item_ids.length} dish${p.item_ids.length > 1 ? "es" : ""}`] : [])];
+      what = `${p.percent}% off ${parts.join(", ")}`;
+    } else {
+      what = `${p.percent}% off orders over ${money(p.min_subtotal_cents)}`;
     }
-    return `${p.percent}% off orders over ${money(p.min_subtotal_cents)}`;
+    const when = promoSchedule(p);
+    return when ? `${what} · ${when}` : what;
+  }
+
+  // "Mon, Tue, Fri · 11am to 3pm"; empty when it runs every day, all day
+  const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const hm = (m) => { const h = Math.floor(m / 60), mi = m % 60; return `${h % 12 || 12}${mi ? ":" + String(mi).padStart(2, "0") : ""}${h < 12 || h === 24 ? "am" : "pm"}`; };
+  function promoSchedule(p) {
+    const days = (p.days || []).length && p.days.length < 7 ? p.days.map((d) => DAY[d]).join(", ") : "";
+    const time = p.start_min != null && p.end_min != null ? `${hm(p.start_min)} to ${hm(p.end_min)}` : "";
+    return [days, time].filter(Boolean).join(" · ");
+  }
+  // = create-checkout promoRunsAt, on the Florida clock
+  function promoRunsNow(p) {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false }).formatToParts(new Date(promosNow));
+    const get = (t) => parts.find((x) => x.type === t)?.value ?? "";
+    const day = DAY.indexOf(get("weekday"));
+    const minute = (parseInt(get("hour"), 10) % 24) * 60 + parseInt(get("minute"), 10);
+    if ((p.days || []).length && !p.days.includes(day)) return false;
+    if (p.start_min == null || p.end_min == null) return true;
+    return minute >= p.start_min && minute < p.end_min;
   }
 
   // An offer switched on outside its own dates is the one genuinely confusing
@@ -570,6 +596,7 @@
     const to = p.ends_at ? Date.parse(p.ends_at) : NaN;
     if (!Number.isNaN(to) && to <= promosNow) return "finished";
     if (!Number.isNaN(from) && from > promosNow) return "not started yet";
+    if (!promoRunsNow(p)) return "outside its days or hours right now";
     return null;
   }
 

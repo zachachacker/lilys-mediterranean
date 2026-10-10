@@ -754,10 +754,16 @@
     let rows = [];
     try {
       const r = await fetch(
-        `${L.ORDERING.supabaseUrl}/rest/v1/promotions?select=label&active=eq.true`,
+        `${L.ORDERING.supabaseUrl}/rest/v1/promotions?select=label,days,start_min,end_min,starts_at,ends_at&active=eq.true`,
         { headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` } });
       const j = r.ok ? await r.json() : [];
-      if (Array.isArray(j)) rows = j;
+      // only what's running right now, on the Florida clock (= create-checkout promoRunsAt)
+      const { day, hour } = L.nowInTz();
+      const minute = Math.floor(hour * 60), now = Date.now();
+      if (Array.isArray(j)) rows = j.filter((p) =>
+        !(p.starts_at && Date.parse(p.starts_at) > now) && !(p.ends_at && Date.parse(p.ends_at) < now) &&
+        !((p.days || []).length && !p.days.includes(day)) &&
+        (p.start_min == null || p.end_min == null || (minute >= p.start_min && minute < p.end_min)));
     } catch { /* no offers shown; nothing is lost */ }
     const code = promoCode
       ? `<div class="offer">${promoCode.kind === "sticker"

@@ -230,8 +230,29 @@ export type Promo = {
   id: string; kind: string; label: string;
   item_id?: string | null; buy_qty?: number | null; free_qty?: number | null;
   percent?: number | null; min_subtotal_cents?: number | null;
+  item_ids?: string[] | null; categories?: string[] | null;
+  days?: number[] | null; start_min?: number | null; end_min?: number | null;
 };
-export type PLine = { id: string; qty: number; unit_cents: number; base_cents?: number };
+export type PLine = { id: string; qty: number; unit_cents: number; base_cents?: number; category?: string };
+
+// whether a promotion's weekly schedule covers this moment (Florida day 0=Sun,
+// minutes after midnight). No days = every day; no window = all day.
+export function promoRunsAt(p: Promo, day: number, minute: number): boolean {
+  if (Array.isArray(p.days) && p.days.length && !p.days.includes(day)) return false;
+  if (p.start_min == null || p.end_min == null) return true;
+  return minute >= p.start_min && minute < p.end_min;
+}
+
+export function floridaNow(): { day: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return {
+    day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(get("weekday")),
+    minute: (parseInt(get("hour"), 10) % 24) * 60 + parseInt(get("minute"), 10),
+  };
+}
 
 export function applyPromotions(lines: PLine[], promos: Promo[]) {
   const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
@@ -242,12 +263,27 @@ export function applyPromotions(lines: PLine[], promos: Promo[]) {
     const buy = Math.floor(Number(p.buy_qty ?? 0));
     const free = Math.floor(Number(p.free_qty ?? 0));
     if (!p.item_id || buy <= 0 || free <= 0 || free > buy) continue;
+    // one dish can sit on several lines (different add-ons): count them
+    // together, and the free one is the dish alone at its cheapest, never
+    // its add-ons
     const its = lines.filter((l) => l.id === p.item_id);
     if (!its.length) continue;
     const qty = its.reduce((s, l) => s + l.qty, 0);
     const unit = Math.min(...its.map((l) => l.base_cents ?? l.unit_cents));
     const sets = Math.floor(qty / buy);
     const cents = sets * free * unit;
+    if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
+  }
+
+  for (const p of promos.filter((x) => x.kind === "percent_items")) {
+    const pct = Number(p.percent ?? 0);
+    if (!(pct > 0 && pct <= 100)) continue;
+    const ids = p.item_ids ?? [];
+    const cats = p.categories ?? [];
+    const base = lines
+      .filter((l) => ids.includes(l.id) || (l.category !== undefined && cats.includes(l.category)))
+      .reduce((s, l) => s + (l.base_cents ?? l.unit_cents) * l.qty, 0);
+    const cents = Math.round((base * pct) / 100);
     if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
   }
 
@@ -388,4 +424,80 @@ export const PAID_STATUSES = ["paid", "making", "ready", "done"];
 export function codeDiscountCents(afterPromos: number, percent: number): number {
   if (!Number.isFinite(percent) || percent <= 0 || percent > 50 || afterPromos <= 0) return 0;
   return Math.round((afterPromos * percent) / 100);
+}
+
+/* ── manage-api/index.ts — offer validation (2026-10-10) ─────────────── */
+export type PromoRow = {
+  kind: string; label: string; active?: boolean;
+  item_id: string | null; buy_qty: number | null; free_qty: number | null;
+  percent: number | null; min_subtotal_cents: number | null;
+  item_ids: string[] | null; categories: string[] | null;
+  days: number[] | null; start_min: number | null; end_min: number | null;
+  starts_at: string | null; ends_at: string | null;
+};
+
+export const isInt = (v: unknown, lo: number, hi: number) => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
+
+// Turns whatever the page sent into a clean row, or a message Kareem can act on.
+export function validatePromo(
+  p: Record<string, unknown>, itemIds: Set<string>, categories: Set<string>,
+): { ok: true; row: PromoRow } | { ok: false; error: string } {
+  const kind = String(p.kind ?? "");
+  if (!["percent_items", "bogo", "percent_over"].includes(kind)) return { ok: false, error: "Pick a type of offer." };
+  const label = String(p.label ?? "").replace(/\s+/g, " ").trim();
+  if (label.length < 3 || label.length > 60) return { ok: false, error: "Give the offer a name of 3 to 60 characters." };
+
+  const row: PromoRow = {
+    kind, label, item_id: null, buy_qty: null, free_qty: null, percent: null, min_subtotal_cents: null,
+    item_ids: null, categories: null, days: null, start_min: null, end_min: null, starts_at: null, ends_at: null,
+  };
+
+  if (kind === "percent_items" || kind === "percent_over") {
+    if (!isInt(p.percent, 1, 50)) return { ok: false, error: "The discount must be a whole number from 1% to 50%." };
+    row.percent = p.percent as number;
+  }
+  if (kind === "percent_items") {
+    const ids = Array.isArray(p.item_ids) ? [...new Set(p.item_ids.map(String))] : [];
+    const cats = Array.isArray(p.categories) ? [...new Set(p.categories.map(String))] : [];
+    if (ids.some((i) => !itemIds.has(i))) return { ok: false, error: "One of the chosen dishes isn't on the menu any more." };
+    if (cats.some((c) => !categories.has(c))) return { ok: false, error: "One of the chosen menu sections doesn't exist any more." };
+    if (!ids.length && !cats.length) return { ok: false, error: "Choose at least one dish or menu section." };
+    row.item_ids = ids.length ? ids : null;
+    row.categories = cats.length ? cats : null;
+  }
+  if (kind === "bogo") {
+    const id = String(p.item_id ?? "");
+    if (!itemIds.has(id)) return { ok: false, error: "Choose the dish for this offer." };
+    if (!isInt(p.buy_qty, 1, 10)) return { ok: false, error: "\"Buy\" must be a number from 1 to 10." };
+    if (!isInt(p.free_qty, 1, p.buy_qty as number)) return { ok: false, error: "\"Free\" can't be more than \"buy\"." };
+    row.item_id = id; row.buy_qty = p.buy_qty as number; row.free_qty = p.free_qty as number;
+  }
+  if (kind === "percent_over") {
+    if (!isInt(p.min_subtotal_cents, 0, 100000)) return { ok: false, error: "Enter the minimum order in dollars." };
+    row.min_subtotal_cents = p.min_subtotal_cents as number;
+  }
+
+  if (p.days != null) {
+    if (!Array.isArray(p.days) || p.days.some((d) => !isInt(d, 0, 6))) return { ok: false, error: "Those days don't look right." };
+    const days = [...new Set(p.days as number[])].sort();
+    row.days = days.length && days.length < 7 ? days : null; // every day = no restriction
+  }
+  const hasStart = p.start_min != null, hasEnd = p.end_min != null;
+  if (hasStart || hasEnd) {
+    if (!isInt(p.start_min, 0, 1440) || !isInt(p.end_min, 0, 1440) || (p.start_min as number) >= (p.end_min as number)) {
+      return { ok: false, error: "The start time must be before the end time." };
+    }
+    row.start_min = p.start_min as number; row.end_min = p.end_min as number;
+  }
+  for (const k of ["starts_at", "ends_at"] as const) {
+    if (p[k] == null || p[k] === "") continue;
+    const t = Date.parse(String(p[k]));
+    if (!Number.isFinite(t)) return { ok: false, error: "That date doesn't look right." };
+    row[k] = new Date(t).toISOString();
+  }
+  if (row.starts_at && row.ends_at && Date.parse(row.starts_at) >= Date.parse(row.ends_at)) {
+    return { ok: false, error: "The first day must be before the last day." };
+  }
+  if (typeof p.active === "boolean") row.active = p.active;
+  return { ok: true, row };
 }

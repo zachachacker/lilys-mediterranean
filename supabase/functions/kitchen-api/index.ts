@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
   if (body.action === "promos") {
     const { data, error } = await db
       .from("promotions")
-      .select("id,kind,label,active,item_id,buy_qty,free_qty,percent,min_subtotal_cents,starts_at,ends_at")
+      .select("id,kind,label,active,item_id,buy_qty,free_qty,percent,min_subtotal_cents,starts_at,ends_at,item_ids,categories,days,start_min,end_min")
       .order("kind")
       .order("label");
     if (error) {

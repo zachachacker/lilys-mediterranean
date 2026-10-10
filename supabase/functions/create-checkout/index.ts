@@ -101,8 +101,13 @@ function priceAddons(
    for — a general rules engine is not in scope and would be a bigger surface
    to get wrong on the money path.
 
-     bogo          buy `buy_qty` of one item, the cheapest `free_qty` are free
-     percent_over  `percent` off once the subtotal reaches `min_subtotal_cents`
+     bogo           buy `buy_qty` of one item, the cheapest `free_qty` are free
+     percent_items  `percent` off chosen dishes/categories (lunch specials;
+                    the dish price only, never its add-ons)
+     percent_over   `percent` off once the subtotal reaches `min_subtotal_cents`
+
+   Kareem makes these himself on manage.html (2026-10-10), so each can also run
+   on chosen days and between chosen times, Florida clock (promoRunsAt).
 
    Order matters: item-level (bogo) applies first and reduces the subtotal that
    percent_over is then measured against, so "10% off over $70" is judged on
@@ -111,8 +116,29 @@ type Promo = {
   id: string; kind: string; label: string;
   item_id?: string | null; buy_qty?: number | null; free_qty?: number | null;
   percent?: number | null; min_subtotal_cents?: number | null;
+  item_ids?: string[] | null; categories?: string[] | null;
+  days?: number[] | null; start_min?: number | null; end_min?: number | null;
 };
-type PLine = { id: string; qty: number; unit_cents: number; base_cents?: number };
+type PLine = { id: string; qty: number; unit_cents: number; base_cents?: number; category?: string };
+
+// whether a promotion's weekly schedule covers this moment (Florida day 0=Sun,
+// minutes after midnight). No days = every day; no window = all day.
+function promoRunsAt(p: Promo, day: number, minute: number): boolean {
+  if (Array.isArray(p.days) && p.days.length && !p.days.includes(day)) return false;
+  if (p.start_min == null || p.end_min == null) return true;
+  return minute >= p.start_min && minute < p.end_min;
+}
+
+function floridaNow(): { day: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return {
+    day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(get("weekday")),
+    minute: (parseInt(get("hour"), 10) % 24) * 60 + parseInt(get("minute"), 10),
+  };
+}
 
 function applyPromotions(lines: PLine[], promos: Promo[]) {
   const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
@@ -132,6 +158,18 @@ function applyPromotions(lines: PLine[], promos: Promo[]) {
     const unit = Math.min(...its.map((l) => l.base_cents ?? l.unit_cents));
     const sets = Math.floor(qty / buy);
     const cents = sets * free * unit;
+    if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
+  }
+
+  for (const p of promos.filter((x) => x.kind === "percent_items")) {
+    const pct = Number(p.percent ?? 0);
+    if (!(pct > 0 && pct <= 100)) continue;
+    const ids = p.item_ids ?? [];
+    const cats = p.categories ?? [];
+    const base = lines
+      .filter((l) => ids.includes(l.id) || (l.category !== undefined && cats.includes(l.category)))
+      .reduce((s, l) => s + (l.base_cents ?? l.unit_cents) * l.qty, 0);
+    const cents = Math.round((base * pct) / 100);
     if (cents > 0) { discount += cents; applied.push({ id: p.id, label: p.label, cents }); }
   }
 
@@ -449,11 +487,11 @@ Deno.serve(async (req) => {
 
   const { data: menu, error: menuErr } = await db
     .from("menu_items")
-    .select("id,name,price_cents,orderable,addon_groups,out_until,hidden")
+    .select("id,name,category,price_cents,orderable,addon_groups,out_until,hidden")
     .in("id", ids);
   if (menuErr) return json({ error: "Menu lookup failed." }, 500);
   type MenuRow = {
-    id: string; name: string; price_cents: number; orderable: boolean; addon_groups: string[] | null;
+    id: string; name: string; category: string; price_cents: number; orderable: boolean; addon_groups: string[] | null;
     out_until: string | null; hidden: boolean;
   };
   const nowMs = Date.now();
@@ -498,7 +536,7 @@ Deno.serve(async (req) => {
     const nowIso = new Date().toISOString();
     const { data, error } = await db
       .from("promotions")
-      .select("id,kind,label,item_id,buy_qty,free_qty,percent,min_subtotal_cents")
+      .select("id,kind,label,item_id,buy_qty,free_qty,percent,min_subtotal_cents,item_ids,categories,days,start_min,end_min")
       .eq("active", true)
       .or(`starts_at.is.null,starts_at.lte.${nowIso}`)
       .or(`ends_at.is.null,ends_at.gte.${nowIso}`);
@@ -506,10 +544,13 @@ Deno.serve(async (req) => {
       console.error("promotions read failed:", error.message);
       return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
     }
-    promos = (data ?? []) as Promo[];
+    const fl = floridaNow();
+    promos = ((data ?? []) as Promo[]).filter((p) => promoRunsAt(p, fl.day, fl.minute));
   }
 
-  const promo = applyPromotions(lines, promos);
+  // promotions see each dish's category (for "15% off all bowls"); the stored
+  // order lines don't need it
+  const promo = applyPromotions(lines.map((l) => ({ ...l, category: byId.get(l.id)?.category })), promos);
   const { subtotal, applied } = promo;
   let discount = promo.discount;
   const custHash = await customerHash(cfg.customer_hash_salt ?? "", phone);
