@@ -5,7 +5,7 @@
 // Three designs for an A/B/C test (Zachary, 2026-10-10). Each design is its own
 // batch in promo_tokens (e.g. ubereats-1-a), so the dashboard can compare scans
 // and orders per design; reprint more of whichever wins.
-//   a  brand coupon: Lily's wordmark, gold "5% OFF" seal, "Skip the app fees."
+//   a  brand: green, Lily's wordmark, ONE big gold "5% off", "Skip the app fees."
 //   b  food photo:  "Loved it? Skip the app next time." (the favourite going in)
 //   c  money first: "Same food. Less money."
 //
@@ -63,10 +63,11 @@ const offer = (svg, sub) => `
 const CELL = {
   a: (svg) => `
   <div class="st a">
-    <div class="brand">Lily<em>'s</em></div><div class="tiles"></div>
+    <div class="brand">Lily<em>’s</em><span>Mediterranean</span></div>
+    <div class="rule"></div>
     <div class="qrw">${svg}</div>
-    <div class="seal"><div><b>${percent}%</b><span>OFF</span></div></div>
-    <div class="side">your first order direct</div>
+    <div class="txt"><div class="big"><b>${percent}%</b><span>off</span></div>
+      <div class="sub">your first order direct</div></div>
     <div class="foot">Skip the app fees. <i>Scan to order.</i></div>
   </div>`,
   b: (svg) => `
@@ -84,18 +85,17 @@ const CELL = {
 const CSS = {
   a: `
   .a { background: #14532b; color: #F4F1E8; box-shadow: 0 0 0 0.04in #14532b; }
-  .a .brand { position: absolute; top: 0.09in; left: 0; right: 0; text-align: center; font-family: "Fraunces", serif; font-weight: 700; font-size: 15pt; line-height: 1; font-variation-settings: "opsz" 72, "SOFT" 30; }
-  .a .brand em { color: #E4A72E; font-style: italic; font-variation-settings: "opsz" 72, "SOFT" 50, "WONK" 1; }
-  .a .tiles { position: absolute; top: 0.36in; left: -0.04in; right: -0.04in; height: 6pt;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='7' viewBox='0 0 56 14'%3E%3Cg fill='none' stroke='%23E4A72E' stroke-width='1.6' opacity='0.8'%3E%3Cpath d='M7 0 L14 7 L7 14 L0 7 Z'/%3E%3Cpath d='M21 0 L28 7 L21 14 L14 7 Z'/%3E%3Cpath d='M35 0 L42 7 L35 14 L28 7 Z'/%3E%3Cpath d='M49 0 L56 7 L49 14 L42 7 Z'/%3E%3C/g%3E%3C/svg%3E") repeat-x center; }
-  .a .qrw { position: absolute; left: 0.13in; top: 0.52in; width: 0.98in; height: 0.98in; background: #fff; border-radius: 0.06in; padding: 0.03in; }
+  .a .brand { position: absolute; top: 0.1in; left: 0; right: 0; text-align: center; font-family: "Fraunces", serif; font-weight: 700;
+    font-size: 17pt; line-height: 1; font-variation-settings: "opsz" 72, "SOFT" 30; }
+  .a .brand em { color: #E4A72E; font-style: italic; margin-left: -0.5pt; font-variation-settings: "opsz" 72, "SOFT" 50, "WONK" 1; }
+  .a .brand span { display: block; font: 700 5.2pt "Space Mono", monospace; letter-spacing: 0.22em; text-transform: uppercase; color: #AFB59A; margin-top: 2.5pt; }
+  .a .rule { position: absolute; top: 0.51in; left: 0.1in; right: 0.1in; height: 0; border-top: 1pt solid #E4A72E; }
+  .a .qrw { position: absolute; left: 0.1in; top: 0.6in; width: 0.98in; height: 0.98in; background: #fff; border-radius: 0.05in; padding: 0.03in; }
   .a .qrw svg { width: 100%; height: 100%; display: block; }
-  .a .seal { position: absolute; right: 0.08in; top: 0.5in; width: 0.78in; height: 0.78in; border-radius: 50%; background: #E4A72E; color: #14532b;
-    display: grid; place-items: center; text-align: center; transform: rotate(8deg); box-shadow: 0 0 0 2.5pt #14532b, 0 0 0 3.5pt #E4A72E; }
-  .a .seal b { display: block; font-family: "Fraunces", serif; font-weight: 900; font-size: 22pt; line-height: 0.85; font-variation-settings: "opsz" 72; }
-  .a .seal span { display: block; font: 800 7.5pt "Public Sans", sans-serif; letter-spacing: 0.08em; }
-  .a .side { position: absolute; right: 0.06in; top: 1.34in; width: 0.84in; text-align: center; font: 600 6.6pt/1.25 "Public Sans", sans-serif; }
-  .a .foot { position: absolute; bottom: 0.1in; left: 0; right: 0; text-align: center; font: 700 7.6pt "Public Sans", sans-serif; }
+  .a .txt { top: 0.58in; bottom: 0.38in; left: 1.16in; }
+  .a .big { color: #E4A72E; }
+  .a .sub { color: #F4F1E8; }
+  .a .foot { position: absolute; bottom: 0.11in; left: 0; right: 0; text-align: center; font: 700 7.6pt "Public Sans", sans-serif; }
   .a .foot i { font-style: normal; color: #E4A72E; }`,
   b: `
   .b .ph { position: absolute; left: -0.04in; right: -0.04in; top: -0.04in; height: 0.96in; background: url(sticker-photo.jpg) center 55% / cover; }
