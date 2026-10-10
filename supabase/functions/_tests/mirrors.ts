@@ -529,7 +529,9 @@ export function whenText(p: { days: number[] | null; start_min: number | null; e
 }
 
 export function offerEmail(p: Record<string, unknown>, token: string) {
-  const unsub = `${FN}/deals?u=${token}`;
+  // body link on our own domain; the header's one-click address must accept a POST
+  const unsub = `${SITE}/club.html#u=${token}`;
+  const oneClick = `${FN}/deals?u=${token}`;
   const order = `${SITE}/order.html?src=email&utm_campaign=${encodeURIComponent(String(p.id))}`;
   const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1A1E1C">
     <div style="background:#14532b;color:#F4F1E8;padding:18px 22px;border-radius:10px 10px 0 0">
@@ -548,7 +550,7 @@ Order: ${order}
 
 Unsubscribe: ${unsub}
 Lily's Mediterranean Fresh Grill, 2 5th Ave STE C, Indialantic, FL 32903`;
-  return { html, text, unsub };
+  return { html, text, unsub, oneClick };
 }
 
 // database row -> what the page shows (bogo: paid count, not group size)

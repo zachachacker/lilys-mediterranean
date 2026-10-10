@@ -9,7 +9,9 @@ const read = (f: string) => Deno.readTextFile(new URL(f, root));
 
 Deno.test("offer emails: unsubscribe + address in every email, members only, 3-day gap", async () => {
   const g = await read("manage-api/index.ts");
-  assertStringIncludes(g, 'headers: { "List-Unsubscribe": `<${m.unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },');
+  assertStringIncludes(g, 'headers: { "List-Unsubscribe": `<${m.oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },');
+  // links inside the email stay on lilysmediterraneanfresh.com (spam filters)
+  assertStringIncludes(g, "const unsub = `${SITE}/club.html#u=${token}`;");
   assertStringIncludes(g, "2 5th Ave STE C, Indialantic, FL 32903");
   assertStringIncludes(g, '.not("confirmed_at", "is", null).is("unsubscribed_at", null);');
   assertStringIncludes(g, "const SEND_GAP_DAYS = 3;");
@@ -22,6 +24,7 @@ Deno.test("welcome: one gift per address ever, unsubscribe in the email, consent
   assertStringIncludes(d, "if (!sub.welcome_token) {");
   assertStringIncludes(d, '"List-Unsubscribe-Post": "List-Unsubscribe=One-Click"');
   assertStringIncludes(d, "2 5th Ave STE C, Indialantic, FL 32903");
+  assertStringIncludes(d, "const unsub = `${SITE}/club.html#u=${sub.token}`;");
   // a GET (link scanners) never unsubscribes by itself
   assertStringIncludes(d, 'if (req.method === "GET") return Response.redirect(`${SITE}/club.html#u=${encodeURIComponent(u)}`, 302);');
   const w = await read("stripe-webhook/index.ts");

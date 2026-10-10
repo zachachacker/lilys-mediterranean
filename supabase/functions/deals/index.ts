@@ -41,7 +41,11 @@ async function sendWelcome(db: DB, sub: { email: string; token: string }, percen
   const apiKey = Deno.env.get("RESEND_API_KEY") || k?.value || "";
   if (!apiKey) return false;
   const claim = `${SITE}/club.html#c=${sub.token}`;
-  const unsub = `${FN}/deals?u=${sub.token}`;
+  // links in the email stay on our own domain (spam filters distrust a link to
+  // another domain); only the List-Unsubscribe header uses the function, since
+  // one-click unsubscribe needs an address that accepts a POST
+  const unsub = `${SITE}/club.html#u=${sub.token}`;
+  const oneClick = `${FN}/deals?u=${sub.token}`;
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -49,7 +53,7 @@ async function sendWelcome(db: DB, sub: { email: string; token: string }, percen
       from: "Lily's Club <club@lilysmediterraneanfresh.com>",
       to: [sub.email],
       subject: `Welcome to Lily's Club: ${percent}% off is waiting`,
-      headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      headers: { "List-Unsubscribe": `<${oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
       html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1A1E1C">
         <div style="background:#14532b;color:#F4F1E8;padding:20px 22px;border-radius:10px 10px 0 0">
           <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E4A72E;font-weight:700">Members only</div>
