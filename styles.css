@@ -236,6 +236,7 @@ p { text-wrap: pretty; }
   text-transform: uppercase; opacity: 0.85; white-space: nowrap;
 }
 .nav-actions { display: flex; align-items: center; gap: 1rem; }
+.nav-actions > .btn { white-space: nowrap; }
 .nav-phone {
   font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.06em;
   display: inline-flex; align-items: center; gap: 0.5em; white-space: nowrap;
@@ -483,30 +484,30 @@ p { text-wrap: pretty; }
     mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
   }
   .menu-tabs::-webkit-scrollbar { display: none; }
-  .menu-tabs button {
+  .menu-tabs button, .menu-tabs a {
     white-space: nowrap; flex: none;
     min-height: 44px; padding: 0.9em 1.3em;
     display: inline-flex; align-items: center;
   }
 }
-.menu-tabs button {
+.menu-tabs button, .menu-tabs a {
   font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
   padding: 0.6em 1em; border-radius: 100px;
   border: 1px solid color-mix(in srgb, var(--foam) 22%, transparent);
   color: color-mix(in srgb, var(--foam) 78%, transparent);
   transition: background-color var(--dur-fast) var(--ease-2), border-color var(--dur-fast) var(--ease-2), color var(--dur-fast) var(--ease-2);
 }
-.menu-tabs button:hover { border-color: var(--lemon); color: var(--lemon); }
+.menu-tabs button:hover, .menu-tabs a:hover { border-color: var(--lemon); color: var(--lemon); }
 .menu-tabs button.active { background: var(--lemon); border-color: var(--lemon); color: var(--char); }
 
 .menu-cat { margin-bottom: clamp(2.5rem, 5vw, 4rem); scroll-margin-top: 6rem; }
-.menu-cat > h3 {
+.menu-cat > h3, .menu-cat > .cat-h {
   font-size: var(--step-2); margin-bottom: 1.6rem;
   display: flex; align-items: center; gap: 1rem;
   font-variation-settings: "opsz" 100, "SOFT" 10;
 }
-.menu-cat > h3 .leaf { color: var(--olive-bright); flex: none; }
-.menu-cat > h3::after { content: ""; flex: 1; height: 1px; background: color-mix(in srgb, var(--foam) 16%, transparent); }
+.menu-cat > h3 .leaf, .menu-cat > .cat-h .leaf { color: var(--olive-bright); flex: none; }
+.menu-cat > h3::after, .menu-cat > .cat-h::after { content: ""; flex: 1; height: 1px; background: color-mix(in srgb, var(--foam) 16%, transparent); }
 .menu-list { columns: 2; column-gap: 3rem; }
 .menu-item {
   display: grid; grid-template-columns: auto 1fr auto; gap: 0.3rem 1rem;
@@ -524,6 +525,52 @@ p { text-wrap: pretty; }
 .menu-item .mi-desc { grid-column: 2 / -1; font-size: 0.85rem; color: color-mix(in srgb, var(--foam) 62%, transparent); line-height: 1.5; max-width: 54ch; }
 .menu-item .tag { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--olive-bright); margin-left: 0.5em; }
 .menu-note { margin-top: 2rem; font-size: 0.85rem; color: color-mix(in srgb, var(--foam) 55%, transparent); font-style: italic; max-width: var(--measure); }
+
+/* --------------------------------------------------------------- catering
+   catering.html reuses the menu-page shell (solid nav, dark band, sticky pills,
+   .menu-item rows) and adds: serving sizes, half/full price pairs, sub-groups. */
+.menu-page.catering-page .menu-hero::before {
+  background-image:
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 50%, transparent) 0%, color-mix(in srgb, var(--ink) 68%, transparent) 45%, var(--char) 100%),
+    url("assets/photos/family-mixed-grill.webp");
+  background-position: center 40%;
+}
+.catering-page .menu-hero .section-head { max-width: 52ch; }
+.catering-page .menu-hero .section-head p a { color: var(--foam); }
+.cat-hero-cta { display: flex; flex-wrap: wrap; gap: 0.8rem 1rem; margin-top: 1.8rem; }
+.catering-page .menu-item h3.mi-name { line-height: 1.3; letter-spacing: 0; }
+.catering-page .menu-item .tag { display: inline-block; }
+.menu-item .mi-serves {
+  grid-column: 2 / -1; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: color-mix(in srgb, var(--foam) 80%, transparent);
+}
+.menu-item .mi-add { grid-column: 2 / -1; font-size: 0.85rem; color: var(--lemon); line-height: 1.5; }
+.menu-item .mi-price.dual { display: grid; gap: 0.15rem; justify-items: end; align-self: start; }
+.menu-item .mi-price small {
+  font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--foam) 62%, transparent); margin-right: 0.35em;
+}
+.menu-item.plain { grid-template-columns: 1fr auto; padding-block: 0.75rem; }
+.menu-item.plain .mi-serves, .menu-item.plain .mi-desc { grid-column: 1 / -1; }
+.cat-note { margin: -0.8rem 0 1.2rem; font-size: 0.9rem; font-style: italic; color: color-mix(in srgb, var(--foam) 72%, transparent); }
+.menu-list.single { columns: 1; }
+.cat-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem 3rem; }
+.cat-sub {
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 400; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--lemon); margin-bottom: 0.2rem;
+}
+.cat-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 3rem; }
+.cat-notes { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 4vw, 3.5rem); }
+.cat-notes article { border-top: 1px solid color-mix(in srgb, var(--char) 20%, transparent); padding-top: 1.6rem; }
+.cat-notes h3 { font-size: var(--step-1); margin-bottom: 0.7rem; font-variation-settings: "opsz" 60, "SOFT" 20; }
+.cat-notes p { color: color-mix(in srgb, var(--char) 78%, transparent); max-width: var(--measure); }
+.order-card .cat-email { font-family: var(--serif); font-size: clamp(0.95rem, 0.5rem + 2.4vw, 1.5rem); color: var(--char); overflow-wrap: anywhere; }
+.oc-actions { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 1.4rem; }
+.order-card .oc-actions .btn { margin-top: 0; }
+.oc-link { font-family: var(--mono); font-size: var(--step--1); letter-spacing: 0.12em; text-transform: uppercase; color: var(--teal-ink); }
+@media (max-width: 900px) {
+  .cat-groups, .cat-pair, .cat-notes { grid-template-columns: 1fr; }
+}
 
 /* --------------------------------------------------------- story collage */
 .story-media { position: relative; }
@@ -781,10 +828,11 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
   .story-grid { gap: 2.5rem; }
   .menu-list { columns: 1; }
 }
-@media (max-width: 720px) {
+/* five nav links + phone + Order don't fit below ~1140px: the hamburger and
+   full-screen menu take over the links from here down (Order stays in the
+   nav until 720px, where the sticky bottom bar takes it). */
+@media (max-width: 1140px) {
   .nav-links { display: none; }
-  .nav-phone { display: none; }
-  .nav-actions > .btn { display: none; } /* the sticky bottom bar carries Order on mobile */
   .nav-toggle {
     display: inline-flex; flex-direction: column; gap: 4px;
     padding: 1rem 0.9rem; margin: -0.6rem -0.5rem;
@@ -804,6 +852,10 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
   .mobile-menu.open { transform: none; visibility: visible; transition: transform var(--dur) var(--ease); }
   .mobile-menu a { font-family: var(--serif); font-size: var(--step-2); color: var(--foam); }
   .mobile-menu .mm-meta { margin-top: 1rem; font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; color: var(--lemon); }
+}
+@media (max-width: 720px) {
+  .nav-phone { display: none; }
+  .nav-actions > .btn { display: none; } /* the sticky bottom bar carries Order on mobile */
   .order-bar { display: flex; }
   body { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
   .hero-meta { gap: 1rem 1.5rem; }

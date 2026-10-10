@@ -90,7 +90,7 @@
 
     if (has(q, ["cater", "party", "event", "office", "big order", "large order", "platter for"])) {
       return {
-        html: `Yes — we cater! Family platters and party spreads are our thing. Call ${callLink()} or email ${link("mailto:" + L.email, L.email)} with your date, guest count and any dietary needs, and we'll sort the rest. A full catering menu is coming soon.`,
+        html: `Yes, we cater! Family platters and party spreads are our thing. Call ${callLink()} or email ${link("mailto:" + L.email, L.email)} with your date, guest count and any dietary needs, and we'll sort the rest. ${link("catering.html", "See the catering menu")}.`,
         chips: ["Family Specials", "What's gluten free?"],
       };
     }
