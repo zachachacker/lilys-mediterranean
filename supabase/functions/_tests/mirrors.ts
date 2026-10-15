@@ -417,6 +417,16 @@ export function stockPatch(state: StockState, now: Date): { out_until: string | 
   return { out_until: null, hidden: false };
 }
 
+/* ── kitchen-api/index.ts — pause online ordering (2026-10-15) ──────────── */
+export type PauseMode = "20" | "60" | "today" | "on" | "resume";
+
+export function pauseUntil(mode: PauseMode, now: Date): string {
+  if (mode === "resume") return "";
+  if (mode === "on") return OUT_FOREVER;
+  if (mode === "today") return nextFloridaMorning(now);
+  return new Date(now.getTime() + Number(mode) * 60_000).toISOString();
+}
+
 /* ── create-checkout/index.ts — discount links (2026-10-10) ───────────── */
 export const TOKEN_RE = /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{10}$/;
 export const PAID_STATUSES = ["paid", "making", "ready", "done"];

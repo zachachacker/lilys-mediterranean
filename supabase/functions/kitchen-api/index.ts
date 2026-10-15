@@ -74,6 +74,21 @@ function stockPatch(state: StockState, now: Date): { out_until: string | null; h
   return { out_until: null, hidden: false };
 }
 
+/* Pausing online ordering (2026-10-15, Kareem: "if for whatever reason we
+   want to close the online order, or pause it for a short time"). Stored as
+   app_config orders_paused_until; create-checkout refuses while it is in the
+   future and the order page says so. "today" ends at the next 4am like Out
+   today; "on" lasts until someone taps Resume. */
+type PauseMode = "20" | "60" | "today" | "on" | "resume";
+const PAUSE_MODES = ["20", "60", "today", "on", "resume"];
+
+function pauseUntil(mode: PauseMode, now: Date): string {
+  if (mode === "resume") return "";
+  if (mode === "on") return OUT_FOREVER;
+  if (mode === "today") return nextFloridaMorning(now);
+  return new Date(now.getTime() + Number(mode) * 60_000).toISOString();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -107,7 +122,7 @@ Deno.serve(async (req) => {
   }
   if (prevOk) console.log("kitchen-api: request on the previous key (rotation grace period)");
 
-  let body: { action?: string; id?: string; to?: string; available?: boolean; active?: boolean; kind?: string; state?: string };
+  let body: { action?: string; id?: string; to?: string; available?: boolean; active?: boolean; kind?: string; state?: string; mode?: string };
   try {
     body = await req.json();
   } catch {
@@ -216,7 +231,23 @@ Deno.serve(async (req) => {
       .or(`status.in.(paid,making,ready),and(status.in.(done,canceled),created_at.gte.${twelveHoursAgo},code.not.like.TEST-*)`)
       .order("created_at", { ascending: true });
     if (error) return json({ error: "List failed" }, 500);
-    return json({ orders: data, now: new Date().toISOString() });
+    // every poll carries the pause, so a pause set on one device shows on all
+    const { data: p } = await db.from("app_config").select("value").eq("key", "orders_paused_until").maybeSingle();
+    const until = Date.parse(p?.value ?? "");
+    return json({ orders: data, now: new Date().toISOString(), paused_until: until > Date.now() ? p!.value : null });
+  }
+
+  if (body.action === "pause") {
+    const mode = String(body.mode ?? "");
+    if (!PAUSE_MODES.includes(mode)) return json({ error: "Bad request" }, 400);
+    const until = pauseUntil(mode as PauseMode, new Date());
+    const { error } = await db.from("app_config").upsert({ key: "orders_paused_until", value: until });
+    if (error) {
+      console.error("pause failed:", error.message);
+      return json({ error: "Temporarily unavailable" }, 503);
+    }
+    console.log(`online ordering ${until ? `paused until ${until}` : "resumed"}`);
+    return json({ ok: true, paused_until: until || null });
   }
 
   if (body.action === "advance") {

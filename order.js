@@ -87,7 +87,7 @@
     const shareUrl = (r) => `${location.origin}/order.html?src=referral#r=${r.token}`;
     function shareHTML(r) {
       return `<div class="co-share">
-        <p class="co-rate-t">Give a friend ${r.percent}% off their first order, and get ${r.percent}% off your next one.</p>
+        <p class="co-rate-t">Give a friend ${r.percent}% off their first order${r.thanked ? "." : `, and get ${r.percent}% off your next one.`}</p>
         <div class="co-rate-b"><button type="button" data-share="${esc(r.token)}" data-pct="${r.percent}">Share your link</button></div>
         <p class="co-share-u" id="coShareU" hidden></p>
       </div>`;
@@ -212,6 +212,21 @@
   const today = L.HOURS[day];
   const open = today && hour >= today[0] && hour < today[1];
   if (!open && $("closedNote")) $("closedNote").hidden = false;
+
+  // paused from the kitchen screen (busy night); the server refuses checkout too
+  if (open && $("closedNote")) {
+    fetch(`${O.supabaseUrl}/rest/v1/rpc/ordering_paused_until`, {
+      method: "POST", headers: { apikey: O.anonKey, Authorization: `Bearer ${O.anonKey}`, "Content-Type": "application/json" }, body: "{}",
+    }).then((r) => r.ok ? r.json() : null).then((until) => {
+      if (!until) return;
+      const t = new Date(until);
+      const soon = t - Date.now() < 3 * 3600 * 1000;
+      const when = soon ? ` until ${t.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" })}` : "";
+      const note = $("closedNote");
+      note.textContent = `Online ordering is paused${when}. You can build a cart, or call us on (321) 312-4444 to order.`;
+      note.hidden = false;
+    }).catch(() => {});
+  }
 
   /* menu model: only fixed-price items are orderable online */
   const ITEMS = [];

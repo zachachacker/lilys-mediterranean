@@ -52,6 +52,7 @@
   if (hashKey) { try { localStorage.setItem(KEY_STORE, hashKey); } catch { /* fine */ } }
   let key = hashKey || localStorage.getItem(KEY_STORE) || "";
   let orders = [];
+  let pausedUntil = null; // ISO, from every list poll; null = taking online orders
   let knownIds = new Set(); // orders seen at least once (arrival chime + flash)
   let firstLoad = true;
   let recalled = new Set(); // ids recalled this session — red RECALLED chip
@@ -186,7 +187,9 @@
     if (!key) return;
     try {
       await replayPending();
-      const { orders: list } = await call({ action: "list" });
+      const res = await call({ action: "list" });
+      const list = res.orders;
+      pausedUntil = res.paused_until || null;
       // a list snapshot can be older than a tap we just made — local wins
       list.forEach((o) => {
         const override = inFlight.get(o.id) ?? pending.find((p) => p.id === o.id)?.to;
@@ -401,6 +404,7 @@
           <span><i class="k-dot${failCount > 0 ? " err" : ""}"></i></span>
           ${wakeLock && !wakeLock.released ? "" : '<span title="Screen may sleep">☾</span>'}
           <button class="k-tool" id="kSound" title="Test sound">${soundReady() ? "♪" : "🔕"}</button>
+          <button class="k-tool${pausedUntil ? " paused" : ""}" id="kPause" title="Pause online orders">⏸</button>
           <button class="k-tool" id="kStock" title="Mark items out of stock">86</button>
           <button class="k-tool" id="kPromo" title="Switch offers on and off">%</button>
           <button class="k-tool" id="kHelp" title="How to use this screen">?</button>
@@ -410,6 +414,7 @@
       </div>
       ${soundReady() ? "" : '<div class="k-banner sound" id="kSoundBanner">🔕 Tap anywhere to enable the new-order sound</div>'}
       ${batteryLow() ? `<div class="k-banner offline">🔋 Tablet battery at ${Math.round(battery.level * 100)}% and not charging — plug it in or the board goes dark</div>` : ""}
+      ${pausedUntil ? `<div class="k-banner paused">⏸ ONLINE ORDERS PAUSED ${pauseLabel(pausedUntil)} <button id="kResume">Resume</button></div>` : ""}
       ${offlineNow() ? `<div class="k-banner offline">OFFLINE — showing orders as of ${clock(new Date(lastOkAt))}. Taps are saved and will sync.</div>` : ""}
       ${!kitchenOpen() && !orders.some((o) => ["paid", "making", "ready"].includes(o.status)) ? '<div class="k-banner closed">Kitchen closed — board is resting, checking once a minute. New orders still ring through.</div>' : ""}`;
   }
@@ -438,9 +443,64 @@
     document.getElementById("kSoundBanner")?.addEventListener("click", () => ensureAudio());
     document.getElementById("kStock")?.addEventListener("click", openStock);
     document.getElementById("kPromo")?.addEventListener("click", openOffers);
+    document.getElementById("kPause")?.addEventListener("click", openPause);
+    document.getElementById("kResume")?.addEventListener("click", () => setPause("resume"));
     document.getElementById("kHelp")?.addEventListener("click", () => startTour());
     document.getElementById("kFull")?.addEventListener("click", () => document.documentElement.requestFullscreen?.().catch(() => {}));
     document.getElementById("kUndoBtn")?.addEventListener("click", doUndo);
+  }
+
+  /* ---- pause online orders (2026-10-15) ---------------------------------
+     Kareem asked how to stop online orders for a while. The server holds the
+     pause (kitchen-api "pause", app_config orders_paused_until) and
+     create-checkout refuses while it runs; this is only the switch. Orders
+     already placed still ring and show as normal. */
+  const FOREVER = Date.parse("2900-01-01T00:00:00Z");
+  function pauseLabel(iso) {
+    const t = Date.parse(iso);
+    if (t >= FOREVER) return "UNTIL YOU RESUME";
+    if (t - Date.now() > 3 * 3600 * 1000) return "FOR THE REST OF TODAY";
+    return `UNTIL ${clock(new Date(t)).toUpperCase()}`;
+  }
+
+  function openPause() {
+    let wrap = document.getElementById("kPauseWrap");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.id = "kPauseWrap";
+      document.body.appendChild(wrap);
+    }
+    wrap.innerHTML = `<div class="k-sheet"><div class="k-sheet-head">
+        <h2>Pause online orders</h2><button class="k-sheet-x" id="kPauseX">Close</button>
+      </div>
+      <div class="k-sheet-body">
+        <p class="k-sheet-note">${pausedUntil
+          ? `Online orders are paused ${pauseLabel(pausedUntil).toLowerCase()}.`
+          : "The website stops taking orders straight away. Orders already placed still show here as normal."}</p>
+        <div class="k-pause-opts">
+          ${pausedUntil ? '<button class="resume" data-pause="resume">Resume online orders</button>' : ""}
+          <button data-pause="20">20 minutes</button>
+          <button data-pause="60">1 hour</button>
+          <button data-pause="today">Rest of today</button>
+          <button data-pause="on">Until I resume</button>
+        </div>
+        <p class="k-sheet-note" id="kPauseErr" hidden></p>
+      </div></div>`;
+    document.getElementById("kPauseX").addEventListener("click", () => wrap.remove());
+    wrap.querySelectorAll("[data-pause]").forEach((b) => b.addEventListener("click", () => setPause(b.dataset.pause)));
+  }
+
+  async function setPause(mode) {
+    try {
+      const r = await call({ action: "pause", mode });
+      pausedUntil = r.paused_until || null;
+      document.getElementById("kPauseWrap")?.remove();
+      renderBoard();
+    } catch (e) {
+      if (e.auth) { document.getElementById("kPauseWrap")?.remove(); logout(e.message); return; }
+      const err = document.getElementById("kPauseErr");
+      if (err) { err.hidden = false; err.textContent = "Couldn't change it. Check the connection and try again."; }
+    }
   }
 
   let lastSnapshot = "";
@@ -747,6 +807,8 @@
       text: "Every order has a ··· button: go back a step, call the customer, or cancel. Cancelling does NOT refund the customer. Refunds are done in Stripe." },
     { id: "stock", title: "Run out of something?",
       text: "Tap 86 at the top, then tap the dish. It disappears from the website straight away. Tap it again when it's back." },
+    { id: "pause", title: "Too busy?",
+      text: "Tap ⏸ at the top to pause online orders for 20 minutes, an hour, the rest of today, or until you resume. Tap Resume to start taking them again." },
     { id: "daily", title: "Every day",
       text: "Keep the iPad plugged in and open on this screen while you're open. After opening, tap the screen once so the sound works. Tap ? at the top any time to see this again." },
   ];

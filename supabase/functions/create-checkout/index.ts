@@ -495,6 +495,12 @@ Deno.serve(async (req) => {
     return json({ error: "We're closed right now — online ordering opens with the kitchen." }, 409);
   }
 
+  // paused from the kitchen screen (kitchen-api "pause"); same exemptions as closed
+  const pausedUntil = Date.parse(cfg.orders_paused_until ?? "");
+  if (!demo && !testOrder && pausedUntil > Date.now()) {
+    return json({ error: "Online ordering is paused for a little while. Please call us on (321) 312-4444 to order." }, 409);
+  }
+
   const { data: menu, error: menuErr } = await db
     .from("menu_items")
     .select("id,name,category,price_cents,orderable,addon_groups,out_until,hidden")
@@ -614,7 +620,10 @@ Deno.serve(async (req) => {
         if (oe) throw new Error(oe.message);
         (os ?? []).forEach((o) => st.set(o.id, o.status));
       }
-      const usable = (rw ?? []).find((r) =>
+      // Kareem (2026-10-15): the thank-you is once per customer, however many
+      // friends they send. A friend's discount is already once (first order only).
+      const spent = (rw ?? []).some((r) => r.used_order_id && PAID_STATUSES.includes(st.get(r.used_order_id) ?? ""));
+      const usable = spent ? undefined : (rw ?? []).find((r) =>
         PAID_STATUSES.includes(st.get(r.from_order_id) ?? "") && (!r.used_order_id || st.get(r.used_order_id) === "canceled"));
       if (usable) {
         const cents = Math.min(codeDiscountCents(subtotal - discount, usable.percent), subtotal - discount);

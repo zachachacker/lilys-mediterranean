@@ -20,24 +20,33 @@ async function referralFor(
   // deno-lint-ignore no-explicit-any
   db: any,
   o: { status: string; demo: boolean; customer_hash: string | null; code: string },
-): Promise<{ token: string; percent: number } | null> {
+): Promise<{ token: string; percent: number; thanked: boolean } | null> {
   if (o.demo || !o.customer_hash || o.code.startsWith("TEST-") || !["paid", "making", "ready", "done"].includes(o.status)) return null;
   const { data: cfg } = await db.from("app_config").select("key,value").in("key", ["referral_enabled", "referral_percent"]);
   const c = Object.fromEntries((cfg ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   if ((c.referral_enabled ?? "").trim() !== "true") return null;
   const percent = Number(c.referral_percent ?? "10");
+  // the referrer's thank-you is once per customer (create-checkout); once it's
+  // spent, the share box still offers the friend their discount, nothing more
+  const { data: used } = await db.from("referral_rewards").select("used_order_id")
+    .eq("customer_hash", o.customer_hash).not("used_order_id", "is", null);
+  const usedIds = (used ?? []).map((r: { used_order_id: string }) => r.used_order_id);
+  const { count } = usedIds.length
+    ? await db.from("orders").select("id", { count: "exact", head: true }).in("id", usedIds).in("status", ["paid", "making", "ready", "done"])
+    : { count: 0 };
+  const thanked = (count ?? 0) > 0;
   const { data: have } = await db.from("promo_tokens").select("token")
     .eq("kind", "referral").eq("referrer_hash", o.customer_hash).maybeSingle();
-  if (have) return { token: have.token, percent };
+  if (have) return { token: have.token, percent, thanked };
   const token = newToken();
   const { error } = await db.from("promo_tokens").insert({ token, kind: "referral", percent, referrer_hash: o.customer_hash });
   if (error) {
     // a parallel poll created it first (one per customer, by unique index)
     const { data: again } = await db.from("promo_tokens").select("token")
       .eq("kind", "referral").eq("referrer_hash", o.customer_hash).maybeSingle();
-    return again ? { token: again.token, percent } : null;
+    return again ? { token: again.token, percent, thanked } : null;
   }
-  return { token, percent };
+  return { token, percent, thanked };
 }
 
 Deno.serve(async (req) => {

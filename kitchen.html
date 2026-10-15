@@ -63,6 +63,15 @@
   .k-banner.sound { background: var(--lemon); color: #241a05; cursor: pointer; }
   .k-banner.offline { background: var(--red); color: #fff; }
   .k-banner.closed { background: rgba(244,241,232,0.08); color: rgba(244,241,232,0.6); font-weight: 400; }
+  .k-banner.paused { background: #b7791f; color: #1b1203; }
+  .k-banner.paused button { background: #1b1203; color: #fff; border: 0; border-radius: 8px; min-height: 44px;
+    padding: 0 1.1rem; font: inherit; letter-spacing: 0.06em; cursor: pointer; }
+  .k-tool.paused { background: #b7791f; color: #1b1203; }
+  /* pause sheet: four big choices, then Resume when paused */
+  .k-pause-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .k-pause-opts button { min-height: 72px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.14);
+    background: #1d2320; color: #f4f1ea; font-size: 1.05rem; font-weight: 700; cursor: pointer; }
+  .k-pause-opts button.resume { grid-column: 1 / -1; background: #2a9d5c; color: #08130c; border: 0; }
 
   /* ------------------------------------------------------------ board */
   .k-main { display: grid; grid-template-columns: 1fr 320px; gap: 0; min-height: calc(100dvh - 56px); align-items: start; }
@@ -244,7 +253,7 @@
   /* ---- 86 sheet ---------------------------------------------------------
      Overlay, not a view swap — the board stays put underneath. Rows are big
      because this gets tapped by someone holding a pan. */
-  #kStockWrap, #kPromoWrap { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.62); display:flex; }
+  #kStockWrap, #kPromoWrap, #kPauseWrap { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.62); display:flex; }
   .k-sheet { margin:auto; width:min(760px, 94vw); max-height:88vh; background:#161a18;
     border:1px solid rgba(255,255,255,0.14); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; }
   .k-sheet-head { display:flex; align-items:center; justify-content:space-between;
