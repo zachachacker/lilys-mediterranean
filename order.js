@@ -303,8 +303,11 @@
   // key (dish + its add-ons) -> { id, opts, qty }. The same dish with different
   // add-ons is a separate line, exactly as the server counts it.
   let cart = new Map();
+  // a dynamic group's options (lunch sodas) only arrive with loadAvailability,
+  // so a saved cart keeps them on trust; the server checks every add-on anyway
+  const isDynamicOpt = (o) => typeof o === "string" && Object.entries(GROUPS).some(([g, grp]) => grp.dynamic && o.startsWith(g + "-"));
   const validOpts = (it, opts) => Array.isArray(opts) &&
-    opts.every((o) => OPT.has(o) && it.groups.includes(OPT.get(o).group));
+    opts.every((o) => (OPT.has(o) && it.groups.includes(OPT.get(o).group)) || isDynamicOpt(o));
   function loadCart() {
     const next = new Map();
     // saved as [id, qty, opts]; carts from before add-ons are [id, qty]
@@ -340,11 +343,17 @@
         if (it.inStock !== inStock || it.hidden !== !!row.hidden) { it.inStock = inStock; it.hidden = !!row.hidden; changed = true; }
       });
       try {
-        const ra = await fetch(`${L.ORDERING.supabaseUrl}/rest/v1/addon_options?select=id,out_until,hidden`, {
+        const ra = await fetch(`${L.ORDERING.supabaseUrl}/rest/v1/addon_options?select=id,group_id,name,price_cents,sort,out_until,hidden&order=sort`, {
           headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` },
         });
         const opts = ra.ok ? await ra.json() : [];
         if (Array.isArray(opts)) opts.forEach((row) => {
+          // dynamic groups (lunch sodas) are defined by these rows alone
+          const dg = GROUPS[row.group_id];
+          if (dg && dg.dynamic && !OPT.has(row.id)) {
+            OPT.set(row.id, { id: row.id, group: row.group_id, name: row.name, cents: row.price_cents, available: true, hidden: false });
+            dg.options.push([row.id, row.name, ""]);
+          }
           const o = OPT.get(row.id);
           if (o) { o.hidden = !!row.hidden; o.available = !o.hidden && !isOut(row); }
         });

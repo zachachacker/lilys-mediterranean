@@ -144,6 +144,9 @@ window.LILYS = {
         ["lunch-chicken", "Chicken", "$0.00"],
         ["lunch-gyro", "Gyro", "$0.00"],
       ]},
+      // the sodas Kareem stocks: kept in the database, not here. He ticks them on
+      // sodas.html; the order page reads them live. Required once he has set any.
+      "lunch-soda": { label: "Your soda", min: 1, max: 1, dynamic: true, options: [] },
       "lunch-extra": { label: "Make it your way", max: 10, options: [
         ["lunch-x-gyro", "Extra Lamb & Beef Gyro Meat", "$3.99"],
         ["lunch-x-skewer", "Extra Chicken Kabab Skewer", "$5.99"],
@@ -167,9 +170,9 @@ window.LILYS = {
       "Family Specials": ["family"],
     },
     byItem: {
-      "Lunch Falafel Wrap": ["lunch-side", "lunch-extra"],
-      "Lunch Gyro Wrap": ["lunch-side", "lunch-extra"],
-      "Lunch Chicken Shawarma Wrap": ["lunch-side", "lunch-extra"],
+      "Lunch Falafel Wrap": ["lunch-side", "lunch-soda", "lunch-extra"],
+      "Lunch Gyro Wrap": ["lunch-side", "lunch-soda", "lunch-extra"],
+      "Lunch Chicken Shawarma Wrap": ["lunch-side", "lunch-soda", "lunch-extra"],
       "Lunch Chicken Bowl": ["lunch-extra"],
       "Lunch Falafel Bowl": ["lunch-extra"],
       "Lunch Protein Salad": ["lunch-salad", "lunch-protein", "lunch-extra"],

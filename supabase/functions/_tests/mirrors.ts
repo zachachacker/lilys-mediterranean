@@ -430,6 +430,26 @@ export function lunchRunsAt(day: number, minute: number): boolean {
   return day >= 1 && day <= 5 && minute >= 11 * 60 && minute < 15 * 60;
 }
 
+/* ── sodas/index.ts — lunch soda list (2026-10-16) ─────────────────────── */
+const GROUP = "lunch-soda";
+// names as typed or ticked -> a clean, de-duplicated list with stable ids
+export function cleanSodas(raw: unknown): { id: string; name: string }[] | null {
+  if (!Array.isArray(raw) || raw.length > 15) return null;
+  const out: { id: string; name: string }[] = [];
+  const seen = new Set<string>();
+  for (const r of raw) {
+    if (typeof r !== "string") return null;
+    const name = r.replace(/[<>"]/g, "").replace(/\s+/g, " ").trim();
+    if (!name) continue;
+    if (name.length > 40) return null;
+    const slug = name.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push({ id: `${GROUP}-${slug}`.slice(0, 60), name });
+  }
+  return out;
+}
+
 /* ── kitchen-api/index.ts — pause online ordering (2026-10-15) ──────────── */
 export type PauseMode = "20" | "60" | "today" | "on" | "resume";
 

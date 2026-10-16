@@ -68,7 +68,7 @@ const optRows = [];
 const optSeen = new Set();
 Object.entries(window.LILYS.ADDONS.groups).forEach(([gid, g], gi) => {
   if (!/^[a-z0-9-]+$/.test(gid)) throw new Error(`bad group id ${gid}`);
-  groupRows.push(`('${gid}', '${esc(g.label)}', ${g.max}, ${g.min || 0}, ${gi})`);
+  groupRows.push(`('${gid}', '${esc(g.label)}', ${g.max}, ${g.dynamic ? 0 : g.min || 0}, ${gi})`); // dynamic: required only once it has options
   g.options.forEach(([oid, label, price], oi) => {
     if (!/^[a-z0-9-]+$/.test(oid) || optSeen.has(oid)) throw new Error(`bad or duplicate add-on id ${oid}`);
     optSeen.add(oid);
@@ -78,11 +78,16 @@ Object.entries(window.LILYS.ADDONS.groups).forEach(([gid, g], gi) => {
     optRows.push(`('${oid}', '${gid}', '${esc(label)}', ${cents}, ${oi})`);
   });
 });
+// dynamic groups (lunch-soda) keep their options and min_select in the
+// database: the sodas form owns them, so a re-sync must never wipe them
+const dynamic = Object.entries(window.LILYS.ADDONS.groups).filter(([, g]) => g.dynamic).map(([gid]) => `'${gid}'`);
+const dyn = dynamic.length ? dynamic.join(", ") : "''";
 console.log(`
 insert into public.addon_groups (id, label, max_select, min_select, sort)
 values
 ${groupRows.join(",\n")}
-on conflict (id) do update set label = excluded.label, max_select = excluded.max_select, min_select = excluded.min_select, sort = excluded.sort;
+on conflict (id) do update set label = excluded.label, max_select = excluded.max_select,
+  min_select = case when addon_groups.id in (${dyn}) then addon_groups.min_select else excluded.min_select end, sort = excluded.sort;
 
 insert into public.addon_options (id, group_id, name, price_cents, sort)
 values
@@ -90,5 +95,5 @@ ${optRows.join(",\n")}
 on conflict (id) do update set group_id = excluded.group_id, name = excluded.name,
   price_cents = excluded.price_cents, sort = excluded.sort;
 
-delete from public.addon_options where id not in (${[...optSeen].map((s) => `'${s}'`).join(", ")});
+delete from public.addon_options where id not in (${[...optSeen].map((s) => `'${s}'`).join(", ")}) and group_id not in (${dyn});
 delete from public.addon_groups where id not in (${Object.keys(window.LILYS.ADDONS.groups).map((s) => `'${s}'`).join(", ")});`);
