@@ -23,7 +23,7 @@ Deno.test("drift: discount-link rules in create-checkout", async () => {
   // referral stays off unless app_config says exactly "true"
   assertStringIncludes(s, 'const referralOn = (cfg.referral_enabled ?? "").trim() === "true";');
   // the code discount is measured after menu promotions and never exceeds what's left
-  assertStringIncludes(s, "const cents = Math.min(codeDiscountCents(subtotal - discount, pct), subtotal - discount);");
+  assertStringIncludes(s, "const cents = Math.min(codeDiscountCents(offerable(), pct), offerable());");
 });
 
 Deno.test("drift: order.js never sends a token from a query string", async () => {

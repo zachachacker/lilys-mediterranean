@@ -56,10 +56,14 @@ window.LILYS = {
     deliveryMinutes: "40",
     // shows/hides the Delivery option. The server has its own switch
     // (app_config.delivery_enabled) and refuses delivery while that is off.
-    deliveryEnabled: false,
+    deliveryEnabled: true, // on 2026-10-16 (Kareem: free within 2 miles, $10 up to 5)
     // Lily's Club welcome gift, shown at checkout. The server's own figure is
     // app_config.club_welcome_percent: keep the two the same.
     clubPercent: 5,
+    // Lunch Specials (Kareem's flyer, 2026-10-16): weekdays 11am to 3pm Florida,
+    // pickup or dine-in only, never combined with other offers. create-checkout
+    // has its own copy (LUNCH_CATEGORY, lunchRunsAt) and is the one that enforces it.
+    lunch: { category: "Lunch Specials", days: [1, 2, 3, 4, 5], from: 11, to: 15 },
   },
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
   // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,
@@ -123,6 +127,35 @@ window.LILYS = {
       spice: { label: "Spice level", max: 1, options: [
         ["spice-hot", "Make it spicy", "$0.75"],
       ]},
+      // lunch specials: `min: 1` makes a group a required pick-one choice
+      "lunch-side": { label: "Fries or rice", min: 1, max: 1, options: [
+        ["lunch-fries", "Fries", "$0.00"],
+        ["lunch-rice", "Rice", "$0.00"],
+      ]},
+      "lunch-sauce": { label: "Your 2oz sauce", min: 1, max: 1, options: [
+        ["lunch-garlic", "Garlic sauce", "$0.00"],
+        ["lunch-tzatziki", "Tzatziki sauce", "$0.00"],
+      ]},
+      "lunch-salad": { label: "Salad", min: 1, max: 1, options: [
+        ["lunch-greek", "Greek salad", "$0.00"],
+        ["lunch-house", "House salad", "$0.00"],
+      ]},
+      "lunch-protein": { label: "Protein", min: 1, max: 1, options: [
+        ["lunch-chicken", "Chicken", "$0.00"],
+        ["lunch-gyro", "Gyro", "$0.00"],
+      ]},
+      "lunch-extra": { label: "Make it your way", max: 10, options: [
+        ["lunch-x-gyro", "Extra Lamb & Beef Gyro Meat", "$3.99"],
+        ["lunch-x-skewer", "Extra Chicken Kabab Skewer", "$5.99"],
+        ["lunch-x-pita", "Pita bread", "$0.99"],
+        ["lunch-x-hummus", "Extra 2oz hummus", "$0.99"],
+        ["lunch-x-garlic", "Extra 2oz garlic sauce", "$0.99"],
+        ["lunch-x-tzatziki", "Extra 2oz tzatziki sauce", "$0.99"],
+        ["lunch-x-fries", "Seasoned fries", "$3.99"],
+        ["lunch-x-soda", "Canned soda", "$1.99"],
+        ["lunch-x-baklava", "Baklava", "$3.99"],
+        ["lunch-x-coffee", "Turkish coffee", "$3.99"],
+      ]},
     },
     // whole categories first, then single dishes; a dish gets both
     byCategory: {
@@ -134,6 +167,15 @@ window.LILYS = {
       "Family Specials": ["family"],
     },
     byItem: {
+      "Lunch Falafel Wrap": ["lunch-side", "lunch-extra"],
+      "Lunch Gyro Wrap": ["lunch-side", "lunch-extra"],
+      "Lunch Chicken Shawarma Wrap": ["lunch-side", "lunch-extra"],
+      "Lunch Chicken Bowl": ["lunch-extra"],
+      "Lunch Falafel Bowl": ["lunch-extra"],
+      "Lunch Protein Salad": ["lunch-salad", "lunch-protein", "lunch-extra"],
+      "Gyro Lunch Plate": ["lunch-side", "lunch-sauce", "lunch-extra"],
+      "Chicken Shawarma Lunch Plate": ["lunch-side", "lunch-sauce", "lunch-extra"],
+      "Chicken Kabab Lunch Plate": ["lunch-side", "lunch-sauce", "lunch-extra"],
       "Greek Salad": ["protein"],
       "Fattoush Salad": ["protein"],
       "Caesar Salad": ["protein"],
@@ -150,6 +192,17 @@ window.LILYS = {
     return [...new Set([...(A.byCategory[category] || []), ...(A.byItem[name] || [])])];
   },
   MENU: [
+    { c: "Lunch Specials", items: [
+      ["Lunch Falafel Wrap", "Fresh vegetables and tahini. With fries or rice and a canned soda.", "$9.99", "Vegan"],
+      ["Lunch Gyro Wrap", "Lamb & beef gyro with tzatziki. With fries or rice and a canned soda.", "$11.99", ""],
+      ["Lunch Chicken Shawarma Wrap", "Fresh vegetables and garlic sauce. With fries or rice and a canned soda.", "$11.99", ""],
+      ["Lunch Chicken Bowl", "Grilled chicken, rice, hummus and salad.", "$13.99", ""],
+      ["Lunch Falafel Bowl", "Falafel, rice and fresh toppings.", "$12.99", ""],
+      ["Lunch Protein Salad", "Greek or house salad, topped with chicken or gyro.", "$12.99", ""],
+      ["Gyro Lunch Plate", "Lamb & beef gyro with tzatziki. With rice or fries, a house salad and a 2oz garlic or tzatziki sauce.", "$13.99", ""],
+      ["Chicken Shawarma Lunch Plate", "Chicken shawarma with garlic sauce. With rice or fries, a house salad and a 2oz garlic or tzatziki sauce.", "$13.99", ""],
+      ["Chicken Kabab Lunch Plate", "One grilled chicken kabab skewer with garlic sauce. With rice or fries, a house salad and a 2oz garlic or tzatziki sauce.", "$14.99", ""],
+    ]},
     { c: "Mezze & Starters", items: [
       ["Lily's Ultimate Hummus", "Creamy hummus topped with feta, olives and tomatoes, served with warm pita.", "$13.49", "Veg"],
       ["Hummus", "Our classic creamy hummus with tahini, lemon and olive oil, served with warm pita.", "$9.49", "Vegan"],
@@ -239,6 +292,9 @@ window.LILYS = {
       ["Garlic Rice", "Fragrant garlic rice.", "$5.99", "Vegan"],
       ["Chicken Wings (6 pc)", "Choice of Buffalo sauce, BBQ or Garlic Parmesan.", "$12.99", ""],
       ["Chicken Wings (12 pc)", "Choice of Buffalo sauce, BBQ or Garlic Parmesan.", "$20.99", ""],
+      // sold on their own from 2026-10-16 (Kareem's BOGO offers); same prices as the family add-ons
+      ["Garlic Sauce (6oz)", "Our house garlic sauce, extra to take home.", "$7.99", ""],
+      ["Tzatziki Sauce (8oz)", "Our house tzatziki, extra to take home.", "$9.99", ""],
     ]},
     { c: "Kids", items: [
       ["Chicken Tenders", "Three tenders, served with fries.", "$10.99", ""],

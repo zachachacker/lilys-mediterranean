@@ -68,7 +68,7 @@ const optRows = [];
 const optSeen = new Set();
 Object.entries(window.LILYS.ADDONS.groups).forEach(([gid, g], gi) => {
   if (!/^[a-z0-9-]+$/.test(gid)) throw new Error(`bad group id ${gid}`);
-  groupRows.push(`('${gid}', '${esc(g.label)}', ${g.max}, ${gi})`);
+  groupRows.push(`('${gid}', '${esc(g.label)}', ${g.max}, ${g.min || 0}, ${gi})`);
   g.options.forEach(([oid, label, price], oi) => {
     if (!/^[a-z0-9-]+$/.test(oid) || optSeen.has(oid)) throw new Error(`bad or duplicate add-on id ${oid}`);
     optSeen.add(oid);
@@ -79,10 +79,10 @@ Object.entries(window.LILYS.ADDONS.groups).forEach(([gid, g], gi) => {
   });
 });
 console.log(`
-insert into public.addon_groups (id, label, max_select, sort)
+insert into public.addon_groups (id, label, max_select, min_select, sort)
 values
 ${groupRows.join(",\n")}
-on conflict (id) do update set label = excluded.label, max_select = excluded.max_select, sort = excluded.sort;
+on conflict (id) do update set label = excluded.label, max_select = excluded.max_select, min_select = excluded.min_select, sort = excluded.sort;
 
 insert into public.addon_options (id, group_id, name, price_cents, sort)
 values

@@ -303,7 +303,7 @@ export function applyPromotions(lines: PLine[], promos: Promo[]) {
 /* ── create-checkout/index.ts — delivery helpers (2026-10-07, repriced 10-10) */
 export const LILYS_LAT = 28.09175;
 export const LILYS_LON = -80.56608;
-export const DELIVERY_MAX_MILES = 7;
+export const DELIVERY_MAX_MILES = 5;
 export const DELIVERY_MIN_CENTS = 1500;
 export const TIP_MAX_CENTS = 10000;
 
@@ -318,7 +318,7 @@ export function milesBetween(lat1: number, lon1: number, lat2: number, lon2: num
 export function deliveryFeeCents(miles: number): number | null {
   if (!Number.isFinite(miles) || miles < 0 || miles > DELIVERY_MAX_MILES) return null;
   if (miles <= 2) return 0;
-  return 1500;
+  return 1000;
 }
 
 export function parseTipCents(raw: unknown): number | null {
@@ -348,7 +348,7 @@ export async function customerHash(salt: string, phone: string): Promise<string 
 
 /* ── create-checkout/index.ts — add-ons (2026-10-10) ──────────────────── */
 export type AddonOpt = { id: string; group_id: string; name: string; price_cents: number; sort: number; available: boolean };
-export type AddonGroup = { id: string; max_select: number; sort: number };
+export type AddonGroup = { id: string; max_select: number; sort: number; min_select?: number; label?: string };
 export type AddonPick = { id: string; name: string; cents: number };
 
 export function lineKey(id: string, opts: string[]): string {
@@ -370,6 +370,13 @@ export function priceAddons(
     if (!o.available) return { ok: false, error: `Sorry, ${o.name} is sold out today. Please remove it and try again.` };
     perGroup.set(o.group_id, n);
     picked.push(o);
+  }
+  // required choices (lunch specials: fries or rice, which sauce): min_select
+  for (const gid of itemGroups) {
+    const g = groups.get(gid);
+    if (g && (g.min_select ?? 0) > (perGroup.get(gid) ?? 0)) {
+      return { ok: false, error: `Please choose: ${g.label ?? "an option"}.` };
+    }
   }
   // kitchen reading order: group order, then the option's place in its group
   picked.sort((a, b) => (groups.get(a.group_id)!.sort - groups.get(b.group_id)!.sort) || (a.sort - b.sort));
@@ -417,6 +424,12 @@ export function stockPatch(state: StockState, now: Date): { out_until: string | 
   return { out_until: null, hidden: false };
 }
 
+/* ── create-checkout/index.ts — lunch specials (2026-10-16) ───────────── */
+export const LUNCH_CATEGORY = "Lunch Specials";
+export function lunchRunsAt(day: number, minute: number): boolean {
+  return day >= 1 && day <= 5 && minute >= 11 * 60 && minute < 15 * 60;
+}
+
 /* ── kitchen-api/index.ts — pause online ordering (2026-10-15) ──────────── */
 export type PauseMode = "20" | "60" | "today" | "on" | "resume";
 
@@ -435,6 +448,82 @@ export function codeDiscountCents(afterPromos: number, percent: number): number 
   if (!Number.isFinite(percent) || percent <= 0 || percent > 50 || afterPromos <= 0) return 0;
   return Math.round((afterPromos * percent) / 100);
 }
+
+/* ── apply/index.ts: job applications from careers.html (2026-10-16).
+      The block between the markers is byte-identical to the source;
+      apply_test.ts asserts it. ───────────────────────────────────────── */
+// --- validateApplication: mirrored byte-for-byte in _tests/mirrors.ts ---
+export const POSITIONS = ["Line Cook", "Prep Cook", "Cashier / Server"];
+// no Wednesday: the restaurant is closed that day
+export const AVAILABILITY = ["Mon", "Tue", "Thu", "Fri", "Sat", "Sun", "Lunch (11-3)", "Evenings"];
+export const LIMITS = { name: 80, email: 254, experience: 1500, notes: 1000 };
+export type Application = {
+  name: string; phone: string; email: string | null; positions: string[]; availability: string[];
+  start_date: string | null; experience: string | null; notes: string | null; over_16: boolean;
+};
+export type Checked = { ok: true; row: Application; test: boolean } | { ok: false; error: string; bot?: true };
+
+// today is the Florida date as YYYY-MM-DD. Errors are shown to the applicant as-is.
+export function validateApplication(b: Record<string, unknown>, today: string): Checked {
+  // people never see the honeypot field; bots fill in everything
+  if (String(b.website ?? "").trim() !== "") return { ok: false, error: "bot", bot: true };
+  const str = (v: unknown) => (typeof v === "string" ? v : "").trim();
+
+  const name = str(b.name).replace(/\s+/g, " ");
+  if (name.length < 2) return { ok: false, error: "Please tell us your full name." };
+  if (name.length > LIMITS.name) return { ok: false, error: `Please keep your name to ${LIMITS.name} characters or fewer.` };
+
+  let digits = str(b.phone).replace(/\D/g, "");
+  if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
+  if (!/^[2-9]\d{2}[2-9]\d{6}$/.test(digits)) return { ok: false, error: "Please enter a 10-digit US phone number." };
+  const phone = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+
+  const email = str(b.email).toLowerCase();
+  if (email && (email.length > LIMITS.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return { ok: false, error: "That email address doesn't look right. You can also leave it blank." };
+  }
+
+  // only values from the list, deduplicated, in the list's order
+  const pick = (v: unknown, allowed: string[]) =>
+    Array.isArray(v) && v.length <= allowed.length * 2 && v.every((x) => allowed.includes(x as string))
+      ? allowed.filter((a) => v.includes(a)) : null;
+  const positions = pick(b.positions, POSITIONS);
+  if (!positions) return { ok: false, error: "Please choose a job from the list." };
+  if (!positions.length) return { ok: false, error: "Please choose at least one job." };
+  const availability = pick(b.availability, AVAILABILITY);
+  if (!availability) return { ok: false, error: "Please choose your availability from the list." };
+  if (!availability.length) return { ok: false, error: "Please tell us at least one day or time you can work." };
+
+  const sd = str(b.start_date);
+  const day = (offset: number) => new Date(Date.parse(`${today}T12:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+  if (sd) {
+    const t = Date.parse(`${sd}T12:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sd) || !Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== sd) {
+      return { ok: false, error: "That start date doesn't look right." };
+    }
+    if (sd < day(-1) || sd > day(366)) return { ok: false, error: "Please pick a start date within the next year." };
+  }
+
+  const experience = str(b.experience);
+  if (experience.length > LIMITS.experience) {
+    return { ok: false, error: `Please keep your experience to ${LIMITS.experience} characters or fewer.` };
+  }
+  const notes = str(b.notes);
+  if (notes.length > LIMITS.notes) return { ok: false, error: `Please keep "anything else" to ${LIMITS.notes} characters or fewer.` };
+
+  if (typeof b.over_16 !== "boolean") return { ok: false, error: "Please tell us if you're 16 or older." };
+
+  return {
+    ok: true,
+    test: b.test === true && name.startsWith("TEST "),
+    row: {
+      name, phone, email: email || null, positions, availability, start_date: sd || null,
+      experience: experience || null, notes: notes || null, over_16: b.over_16,
+    },
+  };
+}
+// --- end validateApplication ---
+
 
 /* ── manage-api/index.ts — offer validation + offer emails (2026-10-10) ─ */
 export type PromoRow = {

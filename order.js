@@ -238,11 +238,19 @@
       // in stock until told otherwise so a slow network never hides the menu.
       ITEMS.push({
         id: slug(name), name, desc, price, cents, tag, cat: cat.c, orderable: cents !== null, inStock: true,
+        lunch: !!O.lunch && cat.c === O.lunch.category,
         groups: L.addonGroupsFor ? L.addonGroupsFor(cat.c, name) : [],
       });
     })
   );
   const byId = new Map(ITEMS.map((it) => [it.id, it]));
+  // lunch specials: weekdays 11 to 3 on Florida's clock (create-checkout enforces it)
+  const lunchNow = () => {
+    if (!O.lunch) return false;
+    const { day, hour } = L.nowInTz();
+    return O.lunch.days.includes(day) && hour >= O.lunch.from && hour < O.lunch.to;
+  };
+  const LUNCH_NOTE = "Weekdays 11am to 3pm · pickup or dine-in only · lunch-size portions, no substitutions, can't be combined with other offers";
 
   /* add-ons: same prices the server's addon_options table holds (sync-menu.mjs
      generates both from data.js); the server re-prices them anyway */
@@ -378,6 +386,10 @@
 
   /* ------------------------------------------------------ render menu ---- */
   const cats = [...new Set(ITEMS.map((it) => it.cat))];
+  if (O.lunch && !lunchNow() && cats.includes(O.lunch.category)) {
+    cats.splice(cats.indexOf(O.lunch.category), 1);
+    cats.push(O.lunch.category); // outside lunch hours it waits at the end
+  }
   const catId = (c) => "oc-" + c.toLowerCase().replace(/[^a-z]+/g, "-");
 
   /* v2 layout (order-v2.html, 2026-10-10): food first. A "Most loved" row of
@@ -433,7 +445,7 @@
           ${it.desc ? `<span class="mi-desc">${esc(it.desc)}</span>` : ""}
           <span class="oi-slot">${actionHTML(it)}</span>
         </div>`).join("");
-      sec.innerHTML = `<h3>${c}</h3>
+      sec.innerHTML = `<h3>${c}</h3>${O.lunch && c === O.lunch.category ? `<p class="cat-note">${LUNCH_NOTE}</p>` : ""}
         ${withPh.length ? `<div class="od-grid">${withPh.map((it) => dishCard(it, PHOTOS[it.name.toLowerCase()])).join("")}</div>` : ""}
         ${rest.length ? `<div class="menu-list order-list od-rows">${restRows}</div>` : ""}`;
       body.appendChild(sec);
@@ -459,7 +471,7 @@
         </div>`;
       })
       .join("");
-    sec.innerHTML = `<h3>${c}</h3><div class="menu-list order-list">${rows}</div>`;
+    sec.innerHTML = `<h3>${c}</h3>${O.lunch && c === O.lunch.category ? `<p class="cat-note">${LUNCH_NOTE}</p>` : ""}<div class="menu-list order-list">${rows}</div>`;
     body.appendChild(sec);
   });
 
@@ -490,6 +502,7 @@
   // dishes with add-ons open the picker instead; the badge counts every
   // version of the dish in the cart
   const menuAction = (it) => {
+    if (it.lunch && !lunchNow()) return `<span class="oi-later">11am to 3pm</span>`;
     if (!it.groups.length) return stepper(it.id, it.name);
     const n = qtyOf(it.id);
     return `<button class="oi-add" data-custom="${it.id}" aria-label="Add ${esc(it.name)}, choose add-ons">Add${n ? ` <span class="oi-n">${n}</span>` : ""}</button>`;
@@ -603,7 +616,7 @@
   let sheet = null;
   function openAddons(id) {
     const it = byId.get(id);
-    if (!it || !it.inStock) return;
+    if (!it || !it.inStock || (it.lunch && !lunchNow())) return;
     if (!sheet) {
       sheet = document.createElement("dialog");
       sheet.className = "ao-sheet";
@@ -617,12 +630,14 @@
       if (!grp) return "";
       const opts = grp.options.map(([oid]) => OPT.get(oid)).filter((o) => o && o.cents !== null && !o.hidden);
       if (!opts.length) return "";
-      return `<fieldset class="ao-group" data-g="${g}" data-max="${grp.max}">
-        <legend>${esc(grp.label)}<span>${grp.max === 1 ? "Optional" : `Optional · up to ${grp.max}`}</span></legend>
+      // min 1 = a required pick-one choice (lunch: fries or rice, which sauce)
+      const req = (grp.min || 0) > 0;
+      return `<fieldset class="ao-group${req ? " req" : ""}" data-g="${g}" data-max="${grp.max}" data-min="${grp.min || 0}">
+        <legend>${esc(grp.label)}<span>${req ? "Required · choose 1" : grp.max === 1 ? "Optional" : `Optional · up to ${grp.max}`}</span></legend>
         ${opts.map((o) => `<label class="ao-opt${o.available ? "" : " off"}">
-          <input type="checkbox" value="${o.id}"${o.available ? "" : " disabled"}>
+          <input type="${req ? "radio" : "checkbox"}"${req ? ` name="ao-${g}"` : ""} value="${o.id}"${o.available ? "" : " disabled"}>
           <span class="ao-n">${esc(o.name)}</span>
-          <span class="ao-p">${o.available ? `+${money(o.cents)}` : "Sold out"}</span>
+          <span class="ao-p">${o.available ? (o.cents ? `+${money(o.cents)}` : "") : "Sold out"}</span>
         </label>`).join("")}
       </fieldset>`;
     }).join("");
@@ -648,7 +663,7 @@
     const picked = () => [...sheet.querySelectorAll("input:checked")].map((i) => i.value);
     const refresh = () => {
       // a full group greys out the rest of it, so the limit is visible, not an error
-      sheet.querySelectorAll(".ao-group").forEach((fs) => {
+      sheet.querySelectorAll(".ao-group:not(.req)").forEach((fs) => {
         const n = fs.querySelectorAll("input:checked").length;
         const full = n >= Number(fs.dataset.max);
         fs.querySelectorAll("input:not(:checked)").forEach((i) => {
@@ -656,7 +671,11 @@
         });
       });
       $("aoQty").textContent = qty;
-      $("aoAdd").textContent = `Add ${qty > 1 ? qty + " " : ""}· ${money((it.cents + optsCents(picked())) * qty)}`;
+      const missing = [...sheet.querySelectorAll(".ao-group.req")].find((fs) => !fs.querySelector("input:checked"));
+      $("aoAdd").disabled = !!missing;
+      $("aoAdd").textContent = missing
+        ? `Choose ${missing.querySelector("legend").firstChild.textContent.toLowerCase()}`
+        : `Add ${qty > 1 ? qty + " " : ""}· ${money((it.cents + optsCents(picked())) * qty)}`;
     };
     sheet.querySelector(".ao-x").addEventListener("click", () => sheet.close());
     sheet.querySelector(".ao-body").addEventListener("change", refresh);
@@ -668,6 +687,7 @@
     });
     sheet.querySelector("form").addEventListener("submit", (e) => {
       e.preventDefault();
+      if ($("aoAdd").disabled) return;
       if (addLine(it.id, picked(), qty)) { sheet.close(); renderCart(); }
       else sheet.close();
     });

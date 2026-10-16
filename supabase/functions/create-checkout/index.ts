@@ -65,7 +65,7 @@ function stockState(outUntil: string | null | undefined, hidden: boolean | null 
   if (!Number.isFinite(t) || t <= now) return "on";
   return t >= Date.parse("2900-01-01T00:00:00Z") ? "off" : "today";
 }
-type AddonGroup = { id: string; max_select: number; sort: number };
+type AddonGroup = { id: string; max_select: number; sort: number; min_select?: number; label?: string };
 type AddonPick = { id: string; name: string; cents: number };
 
 function lineKey(id: string, opts: string[]): string {
@@ -88,10 +88,25 @@ function priceAddons(
     perGroup.set(o.group_id, n);
     picked.push(o);
   }
+  // required choices (lunch specials: fries or rice, which sauce): min_select
+  for (const gid of itemGroups) {
+    const g = groups.get(gid);
+    if (g && (g.min_select ?? 0) > (perGroup.get(gid) ?? 0)) {
+      return { ok: false, error: `Please choose: ${g.label ?? "an option"}.` };
+    }
+  }
   // kitchen reading order: group order, then the option's place in its group
   picked.sort((a, b) => (groups.get(a.group_id)!.sort - groups.get(b.group_id)!.sort) || (a.sort - b.sort));
   const addons = picked.map((o) => ({ id: o.id, name: o.name, cents: o.price_cents }));
   return { ok: true, addons, cents: addons.reduce((s, a) => s + a.cents, 0) };
+}
+
+/* Lunch specials (2026-10-16, Kareem's flyer): weekdays 11am to 3pm Florida,
+   dine-in or pickup only, and "cannot be combined with other offers", so no
+   promotion or discount link ever touches a lunch line. */
+const LUNCH_CATEGORY = "Lunch Specials";
+function lunchRunsAt(day: number, minute: number): boolean {
+  return day >= 1 && day <= 5 && minute >= 11 * 60 && minute < 15 * 60;
 }
 
 /* ── promotions ──────────────────────────────────────────────────────────
@@ -237,7 +252,7 @@ async function customerHash(salt: string, phone: string): Promise<string | null>
    quote mode below reports, and whatever fee it sends is ignored. */
 const LILYS_LAT = 28.09175;
 const LILYS_LON = -80.56608;
-const DELIVERY_MAX_MILES = 7;
+const DELIVERY_MAX_MILES = 5;
 const DELIVERY_MIN_CENTS = 1500;
 const TIP_MAX_CENTS = 10000;
 
@@ -252,7 +267,7 @@ function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number): n
 function deliveryFeeCents(miles: number): number | null {
   if (!Number.isFinite(miles) || miles < 0 || miles > DELIVERY_MAX_MILES) return null;
   if (miles <= 2) return 0;
-  return 1500;
+  return 1000;
 }
 
 function parseTipCents(raw: unknown): number | null {
@@ -516,10 +531,10 @@ Deno.serve(async (req) => {
   // add-on catalogue, only when the cart has any
   const addonOpts = new Map<string, AddonOpt>();
   const addonGroups = new Map<string, AddonGroup>();
-  if (items.some((l) => optsOf(l).length)) {
+  if (items.some((l) => optsOf(l).length) || (menu ?? []).some((m: MenuRow) => (m.addon_groups ?? []).length)) {
     const [o, g] = await Promise.all([
       db.from("addon_options").select("id,group_id,name,price_cents,sort,out_until,hidden"),
-      db.from("addon_groups").select("id,max_select,sort"),
+      db.from("addon_groups").select("id,max_select,min_select,sort,label"),
     ]);
     if (o.error || g.error) {
       console.error("add-on lookup failed:", o.error?.message ?? g.error?.message);
@@ -545,6 +560,18 @@ Deno.serve(async (req) => {
     });
   }
 
+  const isLunch = (id: string) => byId.get(id)?.category === LUNCH_CATEGORY;
+  const lunchCents = lines.filter((l) => isLunch(l.id)).reduce((s, l) => s + l.unit_cents * l.qty, 0);
+  if (lunchCents > 0) {
+    if (fulfilment === "delivery") {
+      return json({ error: "Lunch specials are pickup only. Choose pickup, or remove them to have the rest delivered." }, 400);
+    }
+    const fl = floridaNow();
+    if (!demo && !testOrder && !lunchRunsAt(fl.day, fl.minute)) {
+      return json({ error: "Lunch specials are served weekdays 11am to 3pm. Please remove them to order now." }, 409);
+    }
+  }
+
   // active promotions, read server-side. A failed read must not silently drop
   // a discount the customer was shown, so it is a hard error rather than [].
   let promos: Promo[] = [];
@@ -566,9 +593,13 @@ Deno.serve(async (req) => {
 
   // promotions see each dish's category (for "15% off all bowls"); the stored
   // order lines don't need it
-  const promo = applyPromotions(lines.map((l) => ({ ...l, category: byId.get(l.id)?.category })), promos);
-  const { subtotal, applied } = promo;
+  // lunch lines sit outside every offer, so promotions only ever see the rest
+  const promo = applyPromotions(lines.filter((l) => !isLunch(l.id)).map((l) => ({ ...l, category: byId.get(l.id)?.category })), promos);
+  const { applied } = promo;
+  const subtotal = promo.subtotal + lunchCents;
   let discount = promo.discount;
+  // what a discount link may take a percentage of: everything but lunch, after promotions
+  const offerable = () => Math.max(0, subtotal - lunchCents - discount);
   const custHash = await customerHash(cfg.customer_hash_salt ?? "", phone);
 
   // sticker / referral link, or a referral reward this customer has earned
@@ -601,7 +632,7 @@ Deno.serve(async (req) => {
       }
       tokenRow = t;
       const pct = t.kind === "referral" ? referralPct : t.percent;
-      const cents = Math.min(codeDiscountCents(subtotal - discount, pct), subtotal - discount);
+      const cents = Math.min(codeDiscountCents(offerable(), pct), offerable());
       if (cents > 0) {
         discount += cents;
         const label = t.kind === "sticker" ? `${pct}% off your first online order`
@@ -626,7 +657,7 @@ Deno.serve(async (req) => {
       const usable = spent ? undefined : (rw ?? []).find((r) =>
         PAID_STATUSES.includes(st.get(r.from_order_id) ?? "") && (!r.used_order_id || st.get(r.used_order_id) === "canceled"));
       if (usable) {
-        const cents = Math.min(codeDiscountCents(subtotal - discount, usable.percent), subtotal - discount);
+        const cents = Math.min(codeDiscountCents(offerable(), usable.percent), offerable());
         if (cents > 0) {
           rewardId = usable.id;
           discount += cents;

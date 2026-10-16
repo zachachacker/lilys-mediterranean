@@ -91,7 +91,10 @@
         const sid = n.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); // = sync-menu slug
         rows += `<div class="menu-item${ph ? " has-thumb" : ""}" data-item="${sid}">${thumb}<span class="mi-name">${n}${tag ? `<span class="tag">${tag}</span>` : ""}</span><span class="mi-price">${window.LILYS ? window.LILYS.onlinePrice(p) : p}</span><span class="mi-desc">${d}</span></div>`;
       });
-      sec.innerHTML = `<h3>${leaf}${cat.c}</h3><div class="menu-list">${rows}</div>`;
+      // lunch specials carry their rules right under the heading (Kareem's flyer)
+      const note = window.LILYS.ORDERING?.lunch?.category === cat.c
+        ? `<p class="cat-note">Weekdays 11am to 3pm · dine-in or pickup · lunch-size portions, no substitutions, can't be combined with other offers</p>` : "";
+      sec.innerHTML = `<h3>${leaf}${cat.c}</h3>${note}<div class="menu-list">${rows}</div>`;
       body.appendChild(sec);
     });
     // the kitchen's stock switches: hidden dishes leave the menu, sold-out ones

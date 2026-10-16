@@ -1267,6 +1267,15 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .ao-qty button { color: var(--ember); }
 .ao-qty b { color: var(--char); }
 .ao-add { flex: 1; justify-content: center; min-height: 48px; }
+.ao-add:disabled { opacity: 0.55; cursor: not-allowed; }
+.ao-group.req legend span { color: #a8322a; }
+/* lunch specials outside 11 to 3, and the section's rules line */
+.oi-later {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+  color: var(--muted, #5d625f); border: 1px solid currentColor; border-radius: 999px; padding: 0.28rem 0.6rem;
+}
+.cat-note { margin: -0.4rem 0 1rem; font-size: 0.9rem; color: var(--muted, #5d625f); line-height: 1.45; }
 @media (max-width: 600px) {
   .ao-sheet { margin: auto 0 0; width: 100%; max-width: 100%; max-height: 90dvh; border-radius: 14px 14px 0 0; }
 }
@@ -1383,3 +1392,80 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .cs-item img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; }
 .cs-item b { font-family: var(--mono); color: var(--ember); font-size: 0.8rem; }
 .ao-sheet.has-photo .ao-foot { position: sticky; bottom: 0; z-index: 2; }
+
+/* --------------------------------------------------------------- careers
+   careers.html (2026-10-16): the menu-page shell (solid nav, photo band on a
+   dark field) with three job cards in the band, then the application form on
+   the light ground. Inputs stay 16px so iOS Safari doesn't zoom on focus. */
+.menu-page.careers-page .menu-hero::before {
+  background-image:
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 50%, transparent) 0%, color-mix(in srgb, var(--ink) 70%, transparent) 45%, var(--char) 100%),
+    url("assets/photos/interior-dining-room.webp");
+  background-position: center 45%;
+}
+.careers-page .menu-hero .section-head { max-width: 52ch; }
+.job-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2.5vw, 1.6rem); }
+.job-card {
+  display: flex; flex-direction: column; gap: 0.6rem; padding: clamp(1.3rem, 2.5vw, 1.8rem);
+  border: 1px solid color-mix(in srgb, var(--foam) 16%, transparent); border-radius: 6px;
+  background: color-mix(in srgb, var(--foam) 5%, transparent);
+}
+.job-kicker { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--olive-bright); }
+.job-card h2 { font-size: var(--step-2); margin: 0; font-variation-settings: "opsz" 100; }
+.job-card p { margin: 0; line-height: 1.5; color: color-mix(in srgb, var(--foam) 78%, transparent); }
+.job-apply {
+  margin-top: auto; padding-top: 0.8rem; align-self: flex-start; text-decoration: none;
+  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lemon);
+}
+.job-apply:hover .arw { transform: translateX(3px); }
+.job-apply .arw { display: inline-block; transition: transform var(--dur-fast) var(--ease-2); }
+@media (max-width: 900px) { .job-grid { grid-template-columns: 1fr; } }
+
+.apply-section { scroll-margin-top: 4rem; }
+.apply-form { max-width: 640px; display: grid; gap: 1.5rem; }
+.af-field { display: grid; gap: 0.45rem; min-width: 0; }
+fieldset.af-field { border: 0; padding: 0; margin: 0; }
+.af-l, .apply-form legend {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink);
+}
+.apply-form legend { padding: 0; margin-bottom: 0.45rem; }
+.af-opt { text-transform: none; letter-spacing: 0; opacity: 0.75; }
+.af-sub { font-size: 0.82rem; font-weight: 600; margin-top: 0.2rem; }
+.apply-form input[type="text"], .apply-form input[type="tel"], .apply-form input[type="email"],
+.apply-form input[type="date"], .apply-form textarea {
+  font: inherit; font-family: var(--sans); font-size: 16px; width: 100%; min-width: 0; min-height: 48px;
+  padding: 0.7em 0.9em; border: 1px solid color-mix(in srgb, var(--char) 22%, transparent); border-radius: 6px;
+  background: #fff; color: var(--char);
+}
+.apply-form input[type="date"] { display: block; -webkit-appearance: none; appearance: none; }
+.apply-form textarea { resize: vertical; line-height: 1.5; }
+.apply-form input:focus, .apply-form textarea:focus { outline: 2px solid var(--teal); outline-offset: 1px; }
+.apply-form [aria-invalid="true"]:not(fieldset) { border-color: var(--ember); box-shadow: inset 0 0 0 1px var(--ember); }
+fieldset.af-field[aria-invalid="true"] .af-chip { border-color: var(--ember); }
+.af-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.af-chip {
+  display: inline-flex; align-items: center; gap: 0.55rem; min-height: 44px; padding: 0.5em 1.05em;
+  border: 1px solid color-mix(in srgb, var(--char) 22%, transparent); border-radius: 99px; background: #fff;
+  font-size: 0.95rem; cursor: pointer; user-select: none;
+}
+.af-chip input { width: 18px; height: 18px; margin: 0; accent-color: var(--teal); }
+.af-chip:has(input:checked) { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); background: color-mix(in srgb, var(--teal) 9%, #fff); }
+.af-chip:has(input:focus-visible) { outline: 2px solid var(--deep); outline-offset: 2px; }
+.af-hint { font-size: 0.82rem; color: color-mix(in srgb, var(--char) 62%, transparent); }
+.af-count { justify-self: end; font-family: var(--mono); font-size: 0.68rem; color: color-mix(in srgb, var(--char) 55%, transparent); }
+.af-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.af-error { margin: 0; padding: 0.75rem 0.95rem; border-radius: 6px; font-weight: 500; color: var(--ember);
+  background: color-mix(in srgb, var(--ember) 8%, #fff); border: 1px solid color-mix(in srgb, var(--ember) 35%, transparent); }
+.af-error[hidden] { display: none; }
+.af-submit { justify-self: start; }
+.af-submit:disabled { opacity: 0.65; cursor: wait; }
+.af-fine { margin: -0.6rem 0 0; font-size: 0.82rem; color: color-mix(in srgb, var(--char) 62%, transparent); }
+.apply-done {
+  max-width: 640px; padding: clamp(1.5rem, 4vw, 2.5rem); border-radius: 6px; background: #fff;
+  border: 1px solid var(--mist); box-shadow: 0 24px 50px -32px color-mix(in srgb, var(--deep) 35%, transparent);
+}
+.apply-done:focus { outline: none; }
+.apply-done h2 { font-size: var(--step-3); margin: 0.5rem 0 0.8rem; }
+.apply-done p { line-height: 1.6; margin: 0 0 0.6rem; max-width: var(--measure); }
+.apply-done a[href^="tel"], .apply-section .section-head a[href^="tel"] { white-space: nowrap; }
+@media (max-width: 520px) { .af-submit { justify-self: stretch; justify-content: center; } }
