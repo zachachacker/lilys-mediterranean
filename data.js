@@ -36,7 +36,7 @@ window.LILYS = {
   instagram: "https://www.instagram.com/lilysmediterranean/",
   directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=2+5th+Ave+STE+C+Indialantic+FL+32903",
   // Google Ads purchase conversion label from Kareem's account. null = off.
-  googleAdsConversion: null,
+  googleAdsConversion: "AW-18438934153/wtchCM6E0fYcEImdr9hE", // Purchase action 7764984398, on 2026-10-17
   // our own redirect to the Google "write a review" box; counts taps (review_click)
   reviewsUrl: "review.html?src=confirm",
   delivery: {
