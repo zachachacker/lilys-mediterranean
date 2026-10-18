@@ -72,6 +72,9 @@
   const soundReady = () => audioCtx?.state === "running";
   const ensureAudio = () => {
     if (!audioCtx) {
+      // iPad: Safari plays web audio as "ambient", which silent mode mutes.
+      // "playback" rings through it, like a music app (Safari 16.4+).
+      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { /* older Safari */ }
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioCtx.onstatechange = () => updateShell(); // sound banner follows ctx state
@@ -79,30 +82,38 @@
     }
     if (audioCtx?.state === "suspended") audioCtx.resume();
   };
-  const chime = (gain = 0.4) => {
+  // Kareem, 2026-10-18: staff barely heard the old soft sine chime over the
+  // grill. Square waves carry over kitchen noise; the compressor lets it run
+  // near full scale without clipping. `rounds` = how many ding-dongs.
+  const chime = (gain = 0.7, rounds = 3) => {
     if (!soundReady()) return;
+    const out = audioCtx.createDynamicsCompressor();
+    out.connect(audioCtx.destination);
     const t0 = audioCtx.currentTime;
-    [[880, 0], [1174.66, 0.18]].forEach(([f, dt]) => {
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.frequency.value = f;
-      o.type = "sine";
-      g.gain.setValueAtTime(0.0001, t0 + dt);
-      g.gain.exponentialRampToValueAtTime(gain, t0 + dt + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.6);
-      o.connect(g).connect(audioCtx.destination);
-      o.start(t0 + dt);
-      o.stop(t0 + dt + 0.7);
-    });
+    for (let r = 0; r < rounds; r++) {
+      [[880, 0], [1174.66, 0.16]].forEach(([f, dt]) => {
+        const at = t0 + r * 0.6 + dt;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.frequency.value = f;
+        o.type = "square";
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(gain, at + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.42);
+        o.connect(g).connect(out);
+        o.start(at);
+        o.stop(at + 0.45);
+      });
+    }
   };
-  // soft reminder while anything sits un-started (louder once a ticket is
+  // reminder while anything sits un-started (full alarm once a ticket is
   // overdue-red) — no modal ack anywhere
   const syncReminder = () => {
     const anyNew = orders.some((o) => o.status === "paid");
     if (anyNew && !remindTimer) {
       remindTimer = setInterval(() => {
         const anyLate = orders.some((o) => o.status === "paid" && ageClass(o) === "age-late");
-        chime(anyLate ? 0.45 : 0.22);
+        chime(anyLate ? 0.7 : 0.5, anyLate ? 3 : 2);
       }, REMIND_EVERY_MS);
     }
     if (!anyNew && remindTimer) { clearInterval(remindTimer); remindTimer = 0; }
@@ -791,7 +802,7 @@
     { id: "welcome", title: "Welcome to Lily's Kitchen",
       text: "This screen shows every online order the moment it's paid. This 2-minute walkthrough uses a practice order, so nothing you tap here reaches a customer." },
     { id: "sound", title: "First, sound",
-      text: "Tap the ♪ button at the top to hear the new-order chime. If you ever see a yellow \"Tap anywhere\" bar, tap the screen once so the sound can play." },
+      text: "Tap the ♪ button at the top to hear the new-order chime. Too quiet? Press the iPad's volume-up button until it's loud. If you ever see a yellow \"Tap anywhere\" bar, tap the screen once so the sound can play." },
     { id: "arrive", title: "A new order just came in",
       text: "New orders appear on the left in yellow, with a chime. The timer shows how long ago it arrived. This one says PRACTICE, so it's pretend.",
       enter: () => { addPractice(); try { chime(); } catch { /* sound not ready yet */ } } },

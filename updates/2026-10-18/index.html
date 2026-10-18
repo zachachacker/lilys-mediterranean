@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Kitchen screen guide · Lily's</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..800;1,9..144,600&family=Public+Sans:wght@400;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root { --green: #14532b; --foam: #F4F1E8; --char: #1A1E1C; --ember: #B4472B; --lemon: #E4A72E; --muted: #5d625f; --card: #fff; --line: #e3ded2; }
+  @media (prefers-color-scheme: dark) {
+    :root { --foam: #141816; --char: #F4F1E8; --muted: #a9afab; --card: #1d2220; --line: #2c322f; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--foam); color: var(--char); font: 16px/1.5 "Public Sans", -apple-system, sans-serif; -webkit-text-size-adjust: 100%; }
+  header { background: var(--green); color: #F4F1E8; padding: 28px 20px 26px; }
+  header .k { font: 700 11px "Space Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--lemon); }
+  header h1 { font: 700 34px/1.05 "Fraunces", Georgia, serif; margin: 6px 0 10px; }
+  header h1 em { color: var(--lemon); font-style: italic; }
+  header p { max-width: 34em; opacity: 0.92; }
+  main { max-width: 640px; margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 16px; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .item .t { padding: 16px 16px 12px; }
+  .n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ember); color: #fff; font: 700 14px "Space Mono", monospace; margin-right: 8px; vertical-align: 2px; }
+  h2 { display: inline; font: 700 21px/1.2 "Fraunces", Georgia, serif; }
+  .item p { margin-top: 8px; color: var(--muted); }
+  .item p b, .keys b, .steps b { color: var(--char); }
+  .shot { display: block; width: 100%; height: auto; background: #121514; border-top: 1px solid var(--line); }
+  .keys { list-style: none; padding: 4px 16px 14px; display: grid; gap: 10px; }
+  .keys li { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: start; color: var(--muted); }
+  .ic { display: grid; place-items: center; height: 40px; border-radius: 8px; background: #2a2f2c; color: #F4F1E8; font: 700 17px "Space Mono", monospace; }
+  .ic.dot::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #7FBE93; }
+  .ic.y { background: #E4A72E; color: #241a05; }
+  .ic.r { background: #D93B2B; color: #fff; }
+  .ic.o { background: #B4472B; color: #fff; font-size: 11px; }
+  .ic.g { background: #7FBE93; color: #10241a; font-size: 11px; }
+  .steps { padding: 4px 16px 16px 36px; display: grid; gap: 8px; color: var(--muted); }
+  .note { margin: 0 16px 16px; padding: 10px 12px; border-left: 4px solid var(--lemon); background: rgba(228,167,46,0.14); border-radius: 0 8px 8px 0; color: var(--char); font-size: 15px; }
+  footer { text-align: center; color: var(--muted); padding: 10px 16px 40px; }
+  footer b { color: var(--char); }
+</style>
+</head>
+<body>
+<header>
+  <div class="k">Lily's Mediterranean · 18 October</div>
+  <h1>Your kitchen screen, <em>button by button</em></h1>
+  <p>Everything on the kitchen screen in one page. Save it, or keep it open on your phone next to the iPad.</p>
+</header>
+<main>
+
+  <section class="item">
+    <div class="t"><span class="n">1</span><h2>The sound is louder now</h2>
+      <p>Your team said they barely hear new orders. The chime is now <b>much louder and rings three times</b>. It also rings even when the iPad is on silent. To get the new sound, <b>close the kitchen screen app and open it again</b> once.</p></div>
+    <ol class="steps">
+      <li>Press the iPad's <b>volume up</b> button until the bar is full.</li>
+      <li>Tap the screen once after you open it in the morning. If you see a <b>yellow bar</b> "Tap anywhere to enable the new-order sound", tap it.</li>
+      <li>Tap <b>♪</b> at the top. You should hear the chime. If not, go back to step 1.</li>
+      <li>Keep the kitchen screen <b>open in front</b>. If someone opens another app on the iPad, the screen can't ring.</li>
+      <li>Still hard to hear by the grill? Connect a small <b>Bluetooth speaker</b> to the iPad. The chime plays through it.</li>
+    </ol>
+    <p class="note">While an order waits and nobody has tapped it, the screen rings again <b>every 30 seconds</b> until someone does.</p>
+  </section>
+
+  <section class="item">
+    <div class="t"><span class="n">2</span><h2>The buttons at the top</h2></div>
+    <img class="shot" src="img/kds-buttons.webp" alt="The buttons at the top of the kitchen screen" loading="lazy">
+    <ul class="keys" style="padding-top:14px">
+      <li><span class="ic dot"></span><span><b>Green dot</b> = connected. <b>Red</b> = no internet. Orders are not lost: taps are saved and sent when the internet is back.</span></li>
+      <li><span class="ic">♪</span><span><b>Test the sound.</b> If it shows 🔕, the sound is off. Tap anywhere on the screen once.</span></li>
+      <li><span class="ic">⏸</span><span><b>Pause online orders</b> when you're too busy: 20 minutes, 1 hour, the rest of today, or until you resume. The website stops taking orders straight away. An orange bar shows while paused. Tap <b>Resume</b> to take orders again.</span></li>
+      <li><span class="ic">86</span><span><b>Ran out of something.</b> Find the dish or add-on and tap: <b>Available</b>, <b>Out today</b> (comes back by itself at 4am), <b>Out</b> (until you switch it back), or <b>Hidden</b> (off the menu). The website changes straight away.</span></li>
+      <li><span class="ic">%</span><span><b>Offers.</b> Tap an offer to switch it on or off. New offers are made on your offers page (number 4 below).</span></li>
+      <li><span class="ic">?</span><span><b>Practice.</b> Plays the 2-minute walkthrough with a pretend order. Nothing reaches a customer.</span></li>
+      <li><span class="ic">⛶</span><span><b>Full screen.</b> Hides the browser bars.</span></li>
+      <li><span class="ic">☾</span><span>Only shows if the iPad might go to sleep. <b>Plug the iPad in.</b></span></li>
+    </ul>
+    <p class="note">Next to the buttons: <b>"today 4 orders · $151.70"</b> is today's online orders and sales.</p>
+  </section>
+
+  <section class="item">
+    <div class="t"><span class="n">3</span><h2>An order, start to finish</h2>
+      <p>Left side = orders to cook. Right side = ready, waiting for the customer.</p></div>
+    <img class="shot" src="img/kds-board.webp" alt="The kitchen screen with a new order, an order being made, and one ready for pickup" loading="lazy">
+    <ul class="keys" style="padding-top:14px">
+      <li><span class="ic y">New</span><span><b>New order</b> arrives with the chime. <b>Tap the order anywhere</b> to say "we've started". The ringing stops.</span></li>
+      <li><span class="ic o">READY</span><span>Tap <b>READY</b> when the food is bagged. The order moves to the right.</span></li>
+      <li><span class="ic g">PICKED UP</span><span>Tap <b>PICKED UP</b> when the customer takes it. For delivery the button says <b>OUT FOR DELIVERY</b>, with the address, miles and the driver's tip.</span></li>
+      <li><span class="ic">1:02</span><span><b>Timer</b> = how long the order has waited. The top of the order turns <b>yellow</b> when it's getting late and <b>red</b> when it's late.</span></li>
+      <li><span class="ic">+</span><span><b>Yellow "+" lines</b> are the customer's add-ons (extra skewer, sauce). The <b>yellow box</b> is the customer's note. Read both.</span></li>
+      <li><span class="ic">···</span><span><b>Cancel</b> an order, or open the payment to <b>refund</b> it. Cancelling does <b>not</b> give the money back. The refund is done in Stripe.</span></li>
+    </ul>
+    <p class="note"><b>Tapped the wrong thing?</b> An <b>UNDO</b> button shows at the bottom for 5 seconds. A picked-up order also waits under <b>"Earlier today"</b> with a <b>Recall</b> button for one hour.</p>
+  </section>
+
+  <section class="item">
+    <div class="t"><span class="n">4</span><h2>Your offers page (the "dashboard")</h2>
+      <p>This is where you <b>make and change offers</b>: buy one get one, % off, lunch deals, with the days and hours they run.</p>
+      <p>The link is private, so it is <b>in your email, not here</b>. Search your email for <b>"Your private Lily's links"</b> and tap <b>"1. Your offers page"</b>. Then tap Share, then <b>"Add to Home Screen"</b>, so it opens like an app every time. The kitchen screen link is in the same email.</p>
+      <p>Can't find the email? Tell Zachary and he will send it again.</p></div>
+  </section>
+
+  <section class="item">
+    <div class="t"><span class="n">5</span><h2>Add-ons</h2>
+      <p>Customers already see add-ons when they tap <b>Add</b> on a dish. On <b>every platter and bowl</b>:</p></div>
+    <ul class="steps" style="list-style:disc">
+      <li>1 Chicken Kabob Skewer <b>$7.99</b>, 1 Kafta Skewer <b>$7.99</b></li>
+      <li>1 Beef Tenderloin Skewer <b>$8.99</b>, 1 Shrimp Skewer <b>$8.49</b></li>
+      <li>1 Lamb Kabob Skewer <b>$9.99</b>, Extra Gyro Meat <b>$4.99</b></li>
+      <li>Sautéed Veggies, Extra Rice, Gluten-Free Bread, and extra sauces</li>
+    </ul>
+    <div class="t" style="padding-top:0"><p>Wraps, burgers and quesadillas have sides (and sauces). Salads have protein. Family Specials have extra skewers, hummus, sauces and pita. These are your in-store prices; online is 3% more, like the rest of the menu.</p>
+      <p><b>Not yet:</b> Starters, From the Kitchen, Sides &amp; Wings, Kids, Desserts and Drinks. Send the add-ons and prices you want for those on WhatsApp and they will be added.</p></div>
+  </section>
+
+</main>
+<footer><b>Anything not clear?</b><br>Reply on WhatsApp. Thank you!</footer>
+</body>
+</html>
