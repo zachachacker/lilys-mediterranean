@@ -64,10 +64,10 @@
     <div class="section-head">
       <span class="eyebrow">Parties · offices · events</span>
       <h1>Catering.</h1>
-      <p>Lebanese &amp; Mediterranean spreads for parties, offices and events, with generous portions. Call <a class="ink" href="tel:+13213124444">(321) 312-4444</a> to order, or email us.</p>
+      <p>Lebanese &amp; Mediterranean spreads for parties, offices and events, with generous portions. Tell us about your event and we'll call you, or call <a class="ink" href="tel:+13213124444">(321) 312-4444</a>.</p>
       <div class="cat-hero-cta">
-        <a class="btn" href="tel:+13213124444">Call (321) 312-4444 <span class="arw">→</span></a>
-        <a class="btn ghost" href="mailto:info@lilysmediterranean.com?subject=Catering%20enquiry">Email us</a>
+        <a class="btn" href="#quote">Get a quote <span class="arw">→</span></a>
+        <a class="btn ghost" href="tel:+13213124444">Call (321) 312-4444</a>
       </div>
     </div>
 
@@ -369,6 +369,77 @@
   </div>
 </section>
 
+<!-- QUOTE FORM (2026-10-19): goes to catering-enquiry, which emails Kareem -->
+<section class="section apply-section" id="quote">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Get a quote</span>
+      <h2>Tell us about your event.</h2>
+      <p>Takes a minute. Kareem calls you back to plan the menu and confirm the price. In a hurry? Call <a class="ink" href="tel:+13213124444">(321) 312-4444</a>.</p>
+    </div>
+
+    <div id="quoteBox">
+    <form class="apply-form" id="quoteForm" novalidate>
+      <div class="af-field">
+        <label class="af-l" for="qfName">Your name</label>
+        <input id="qfName" name="name" type="text" autocomplete="name" maxlength="80" required>
+      </div>
+
+      <div class="af-field">
+        <label class="af-l" for="qfPhone">Phone</label>
+        <input id="qfPhone" name="phone" type="tel" autocomplete="tel-national" inputmode="tel" maxlength="20" placeholder="(321) 555-0123" required>
+      </div>
+
+      <div class="af-field">
+        <label class="af-l" for="qfEmail">Email <span class="af-opt">optional</span></label>
+        <input id="qfEmail" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@email.com">
+      </div>
+
+      <div class="af-field">
+        <label class="af-l" for="qfCompany">Company <span class="af-opt">optional</span></label>
+        <input id="qfCompany" name="company" type="text" autocomplete="organization" maxlength="100">
+      </div>
+
+      <div class="af-field">
+        <label class="af-l" for="qfDate">Date of your event</label>
+        <input id="qfDate" name="event_date" type="date" required>
+        <span class="af-hint">We're closed on Wednesdays.</span>
+      </div>
+
+      <div class="af-field">
+        <label class="af-l" for="qfGuests">How many people?</label>
+        <input id="qfGuests" name="guests" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="25" required>
+      </div>
+
+      <fieldset class="af-field" id="qfFulfil">
+        <legend>Pickup or delivery?</legend>
+        <div class="af-chips">
+          <label class="af-chip"><input type="radio" name="fulfilment" value="Pickup">Pickup</label>
+          <label class="af-chip"><input type="radio" name="fulfilment" value="Delivery">Delivery</label>
+          <label class="af-chip"><input type="radio" name="fulfilment" value="Not sure yet">Not sure yet</label>
+        </div>
+      </fieldset>
+
+      <div class="af-field">
+        <label class="af-l" for="qfNotes">What would you like? <span class="af-opt">optional</span></label>
+        <textarea id="qfNotes" name="notes" rows="4" maxlength="1500" placeholder="Dishes you liked on the menu, dietary needs (vegetarian, vegan, gluten-free), budget, time." aria-describedby="qfNotesCount"></textarea>
+        <span class="af-count" id="qfNotesCount" aria-live="polite">0 / 1500</span>
+      </div>
+
+      <!-- honeypot: hidden from people, bots fill it in -->
+      <div class="af-hp" aria-hidden="true">
+        <label for="qfWebsite">Leave this empty</label>
+        <input id="qfWebsite" name="website" type="text" tabindex="-1" autocomplete="off">
+      </div>
+
+      <p class="af-error" id="qfError" role="alert" hidden></p>
+      <button class="btn af-submit" type="submit">Send my enquiry <span class="arw">→</span></button>
+      <p class="af-fine">We'll only use this to plan your catering. <a class="ink" href="privacy.html">Privacy</a></p>
+    </form>
+    </div>
+  </div>
+</section>
+
 <!-- CALL TO ACTION -->
 <section class="section" id="order">
   <div class="wrap">
@@ -434,12 +505,100 @@
 
 <div class="order-bar">
   <a class="btn dark" href="tel:+13213124444">Call</a>
-  <a class="btn" href="mailto:info@lilysmediterranean.com?subject=Catering%20enquiry">Email</a>
+  <a class="btn" href="#quote">Get a quote</a>
 </div>
 
 <script src="data.js"></script>
 <script src="track.js"></script>
 <script src="main.js"></script>
 <script src="chat.js"></script>
+<script>
+/* Catering quote form. catering-enquiry re-checks everything; these checks
+   only give quick, friendly messages. Same shape as the careers form. */
+(() => {
+  "use strict";
+  const L = window.LILYS, O = L && L.ORDERING;
+  if (!O) return;
+  const FN = `${O.supabaseUrl}/functions/v1/catering-enquiry`;
+  const PHONE = (L && L.phone) || "(321) 312-4444";
+  const $ = (id) => document.getElementById(id);
+  const form = $("quoteForm"), errBox = $("qfError");
+  if (!form) return;
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const d = new Date();
+  $("qfDate").min = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  $("qfNotes").addEventListener("input", () => { $("qfNotesCount").textContent = `${$("qfNotes").value.length} / 1500`; });
+
+  const submitBtn = form.querySelector("button[type=submit]");
+  const fail = (msg, focusEl) => {
+    errBox.textContent = msg; errBox.hidden = false;
+    form.querySelectorAll("[aria-invalid]").forEach((n) => n.removeAttribute("aria-invalid"));
+    if (focusEl) focusEl.closest(".af-field").appendChild(errBox);
+    else form.insertBefore(errBox, submitBtn);
+    if (focusEl) {
+      focusEl.setAttribute("aria-invalid", "true");
+      const target = focusEl.matches("fieldset") ? focusEl.querySelector("input") : focusEl;
+      target.focus({ preventScroll: true });
+      focusEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+  form.addEventListener("change", (e) => {
+    const f = e.target.closest(".af-field");
+    if (f && f.contains(errBox)) errBox.hidden = true;
+    if (f) [f, ...f.querySelectorAll("[aria-invalid]")].forEach((n) => n.removeAttribute("aria-invalid"));
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errBox.hidden = true;
+    const name = $("qfName").value.replace(/\s+/g, " ").trim();
+    const phoneDigits = $("qfPhone").value.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+    const email = $("qfEmail").value.trim();
+    const date = $("qfDate").value;
+    const guests = Number($("qfGuests").value.trim());
+    const fulfilment = form.querySelector('input[name="fulfilment"]:checked')?.value;
+
+    if (name.length < 2) return fail("Please tell us your name.", $("qfName"));
+    if (!/^[2-9]\d{2}[2-9]\d{6}$/.test(phoneDigits)) return fail("Please enter a 10-digit US phone number, like (321) 555-0123.", $("qfPhone"));
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That email address doesn't look right. You can also leave it blank.", $("qfEmail"));
+    if (!date) return fail("Please pick the date of your event.", $("qfDate"));
+    if (!Number.isInteger(guests) || guests < 5 || guests > 2000) return fail("Please enter how many people, from 5 to 2000.", $("qfGuests"));
+    if (!fulfilment) return fail("Please choose pickup or delivery.", $("qfFulfil"));
+
+    submitBtn.disabled = true;
+    submitBtn.firstChild.textContent = "Sending... ";
+    try {
+      const r = await fetch(FN, {
+        method: "POST",
+        headers: { apikey: O.anonKey, Authorization: `Bearer ${O.anonKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name, phone: $("qfPhone").value, email, company: $("qfCompany").value, event_date: date, guests, fulfilment,
+          notes: $("qfNotes").value, website: $("qfWebsite").value,
+          source: window.LILYS_TRACK?.source() || "direct",
+          // the server only honours this for names starting "TEST " (no emails sent)
+          test: name.startsWith("TEST "),
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || `Something went wrong on our side. Please try again, or call us on ${PHONE}.`);
+      $("quoteBox").innerHTML = `<div class="apply-done" tabindex="-1" id="quoteDone">
+        <span class="eyebrow">Enquiry sent</span>
+        <h2>Thanks, ${esc(name.split(" ")[0])}!</h2>
+        <p>Kareem will call you to plan the menu and confirm the price.${email ? ` We've also emailed <strong>${esc(email)}</strong>.` : ""}</p>
+        <p>In a hurry? Call us on <a class="ink" href="tel:+13213124444">${esc(PHONE)}</a>.</p>
+      </div>`;
+      const done = $("quoteDone");
+      done.focus({ preventScroll: true });
+      done.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (err) {
+      const offline = err instanceof TypeError;
+      fail(offline ? `We couldn't reach our system. Check your connection and try again, or call us on ${PHONE}.` : err.message);
+      submitBtn.disabled = false;
+      submitBtn.firstChild.textContent = "Send my enquiry ";
+    }
+  });
+})();
+</script>
 </body>
 </html>

@@ -545,6 +545,70 @@ export function validateApplication(b: Record<string, unknown>, today: string): 
 // --- end validateApplication ---
 
 
+/* ── catering-enquiry/index.ts:28-89: validateCatering, verbatim ── */
+// --- validateCatering: mirrored byte-for-byte in _tests/mirrors.ts ---
+export const FULFILMENT = ["Pickup", "Delivery", "Not sure yet"];
+export const CATERING_LIMITS = { name: 80, email: 254, company: 100, notes: 1500, guestsMin: 5, guestsMax: 2000 };
+export type Enquiry = {
+  name: string; phone: string; email: string | null; company: string | null; event_date: string;
+  guests: number; fulfilment: string; notes: string | null; source: string | null;
+};
+export type CateringChecked = { ok: true; row: Enquiry; test: boolean } | { ok: false; error: string; bot?: true };
+
+// today is the Florida date as YYYY-MM-DD. Errors are shown to the customer as-is.
+export function validateCatering(b: Record<string, unknown>, today: string): CateringChecked {
+  if (String(b.website ?? "").trim() !== "") return { ok: false, error: "bot", bot: true };
+  const str = (v: unknown) => (typeof v === "string" ? v : "").trim();
+  const L = CATERING_LIMITS;
+
+  const name = str(b.name).replace(/\s+/g, " ");
+  if (name.length < 2) return { ok: false, error: "Please tell us your name." };
+  if (name.length > L.name) return { ok: false, error: `Please keep your name to ${L.name} characters or fewer.` };
+
+  let digits = str(b.phone).replace(/\D/g, "");
+  if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
+  if (!/^[2-9]\d{2}[2-9]\d{6}$/.test(digits)) return { ok: false, error: "Please enter a 10-digit US phone number." };
+  const phone = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+
+  const email = str(b.email).toLowerCase();
+  if (email && (email.length > L.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return { ok: false, error: "That email address doesn't look right. You can also leave it blank." };
+  }
+  const company = str(b.company);
+  if (company.length > L.company) return { ok: false, error: `Please keep the company name to ${L.company} characters or fewer.` };
+
+  const ed = str(b.event_date);
+  const t = Date.parse(`${ed}T12:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ed) || !Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== ed) {
+    return { ok: false, error: "Please pick the date of your event." };
+  }
+  const day = (offset: number) => new Date(Date.parse(`${today}T12:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+  if (ed < today || ed > day(366)) return { ok: false, error: "Please pick a date from today to a year ahead." };
+
+  const guests = typeof b.guests === "number" ? b.guests : Number(str(b.guests));
+  if (!Number.isInteger(guests) || guests < L.guestsMin || guests > L.guestsMax) {
+    return { ok: false, error: `Please enter how many people, from ${L.guestsMin} to ${L.guestsMax}.` };
+  }
+
+  const fulfilment = str(b.fulfilment);
+  if (!FULFILMENT.includes(fulfilment)) return { ok: false, error: "Please choose pickup or delivery." };
+
+  const notes = str(b.notes);
+  if (notes.length > L.notes) return { ok: false, error: `Please keep your message to ${L.notes} characters or fewer.` };
+
+  const source = str(b.source).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
+
+  return {
+    ok: true,
+    test: b.test === true && name.startsWith("TEST "),
+    row: {
+      name, phone, email: email || null, company: company || null, event_date: ed, guests, fulfilment,
+      notes: notes || null, source: source || null,
+    },
+  };
+}
+// --- end validateCatering ---
+
 /* ── weekly-report/index.ts:24-104: the whole pure block, verbatim ── */
 /* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */
 export const COUNTED = ["paid", "making", "ready", "done"];
