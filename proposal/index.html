@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>More orders, less cost · Lily's</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..800;1,9..144,600&family=Public+Sans:wght@400;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<!-- Zachary's offer to Kareem (2026-10-18). Every number on this page comes
+     from the PLAN block in the script at the bottom: change it there and the
+     whole page, calculator included, follows. -->
+<style>
+  :root { --green: #14532b; --foam: #F4F1E8; --char: #1A1E1C; --ember: #B4472B; --lemon: #E4A72E; --muted: #5d625f; --card: #fff; --line: #e3ded2; --good: #1f7a45; }
+  @media (prefers-color-scheme: dark) {
+    :root { --foam: #141816; --char: #F4F1E8; --muted: #a9afab; --card: #1d2220; --line: #2c322f; --good: #6cc48f; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--foam); color: var(--char); font: 16px/1.5 "Public Sans", -apple-system, sans-serif; -webkit-text-size-adjust: 100%; }
+  header { background: var(--green); color: #F4F1E8; padding: 30px 20px 28px; }
+  header .k { font: 700 11px "Space Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--lemon); }
+  header h1 { font: 700 36px/1.05 "Fraunces", Georgia, serif; margin: 6px 0 12px; }
+  header h1 em { color: var(--lemon); font-style: italic; }
+  header p { max-width: 34em; opacity: 0.92; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .pills span { background: rgba(244,241,232,0.12); border: 1px solid rgba(244,241,232,0.25); border-radius: 99px; padding: 5px 12px; font-weight: 700; font-size: 14px; }
+  main { max-width: 640px; margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 16px; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .t { padding: 16px 16px 14px; }
+  h2 { font: 700 22px/1.2 "Fraunces", Georgia, serif; }
+  .t p { margin-top: 8px; color: var(--muted); }
+  .t p b, li b, td b { color: var(--char); }
+  .eyebrow { font: 700 10px "Space Mono", monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ember); margin-bottom: 4px; }
+  ul.ticks { list-style: none; padding: 0 16px 16px; display: grid; gap: 8px; }
+  ul.ticks li { padding-left: 26px; position: relative; color: var(--muted); }
+  ul.ticks li::before { content: "✓"; position: absolute; left: 2px; color: var(--good); font-weight: 700; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+  .stat { background: var(--card); padding: 14px 16px; }
+  .stat b { display: block; font: 700 26px/1.1 "Fraunces", Georgia, serif; color: var(--char); }
+  .stat span { font-size: 13px; color: var(--muted); }
+  .price { display: grid; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+  .price div { background: var(--card); display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px; color: var(--muted); }
+  .price div b { color: var(--char); white-space: nowrap; }
+  .price .total { background: color-mix(in srgb, var(--lemon) 16%, var(--card)); }
+  .price .total span, .price .total b { color: var(--char); font-weight: 700; }
+  .calc { padding: 4px 16px 16px; }
+  .calc label { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
+  .calc input[type=range] { width: 100%; accent-color: var(--ember); height: 32px; }
+  .out { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .out div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .out b { display: block; font: 700 22px/1.15 "Fraunces", Georgia, serif; }
+  .out span { font-size: 13px; color: var(--muted); }
+  .out .win { grid-column: 1 / -1; background: color-mix(in srgb, var(--good) 12%, var(--card)); border-color: color-mix(in srgb, var(--good) 40%, var(--line)); }
+  .out .win b { color: var(--good); }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th:first-child, td:first-child { width: 28%; }
+  th, td { text-align: left; padding: 9px 8px; overflow-wrap: anywhere; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--muted); }
+  th { font: 700 10px "Space Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--char); }
+  td.us, th.us { background: color-mix(in srgb, var(--good) 10%, var(--card)); color: var(--char); }
+  tr:last-child td { border-bottom: 0; }
+  ol.weeks { list-style: none; padding: 0 16px 16px; display: grid; gap: 12px; counter-reset: w; }
+  ol.weeks li { display: grid; grid-template-columns: 70px 1fr; gap: 10px; color: var(--muted); }
+  ol.weeks li span { font: 700 11px "Space Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ember); padding-top: 3px; }
+  .note { margin: 0 16px 16px; padding: 10px 12px; border-left: 4px solid var(--lemon); background: rgba(228,167,46,0.14); border-radius: 0 8px 8px 0; color: var(--char); font-size: 15px; }
+  .cta { text-align: center; padding: 22px 16px; }
+  .cta h2 { margin-bottom: 6px; }
+  .cta p { color: var(--muted); }
+  .btn { display: inline-block; margin-top: 14px; background: var(--ember); color: #fff; text-decoration: none; font-weight: 700; padding: 13px 22px; border-radius: 99px; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 4px 16px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="k">For Karim · Lily's Mediterranean Fresh Grill</div>
+  <h1>More orders. <em>Less cost.</em> Zero effort.</h1>
+  <p>You asked me to handle your SEO, ordering and marketing. Here's how I'll do it, so we both earn more and you don't lift a finger.</p>
+  <div class="pills"><span>Cheaper than Sauce</span><span>3% at your goal, not 15–30%</span><span>You own everything</span></div>
+</header>
+<main>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">Where we are</div><h2>The website works. Now we fill it.</h2>
+      <p>In the first 11 days, <b>everyone who started paying finished their order</b>. The average order is <b data-v="avg"></b>. What's missing is people: your customers are still ordering through Sauce and the apps. DoorDash alone shows <b>2,000+ reviews</b> for Lily's.</p></div>
+    <div class="stats">
+      <div class="stat"><b>100%</b><span>of checkouts paid</span></div>
+      <div class="stat"><b data-v="avg"></b><span>average order</span></div>
+      <div class="stat"><b>15–30%</b><span>what the apps take from every order</span></div>
+      <div class="stat"><b>0%</b><span>what your website takes</span></div>
+    </div>
+  </section>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">What I do</div><h2>All of it. Every month.</h2></div>
+    <ul class="ticks">
+      <li><b>Google:</b> your listing, the "Order online" button, hours, photos and posts</li>
+      <li><b>SEO:</b> your website first when people search for Lily's or Mediterranean food nearby</li>
+      <li><b>Google Ads:</b> set up, watched and improved, so every dollar brings orders</li>
+      <li><b>Yelp, Facebook, Instagram, Apple Maps:</b> correct, and all pointing to your website</li>
+      <li><b>Moving customers</b> from Sauce and the apps to your website: bag stickers, QR flyers, the Club</li>
+      <li><b>Offers and reviews:</b> deals that bring people back, and more Google reviews</li>
+      <li><b>Your ordering system:</b> kitchen screen, menu, stock and fixes</li>
+    </ul>
+    <p class="note"><b>What you do:</b> read a short report every week. That's it.</p>
+  </section>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">Every week, on your phone</div><h2>You only see the numbers</h2>
+      <p>Orders, sales, <b>new customers</b>, <b>returning customers</b>, where they came from, and your best sellers. The numbers come straight from your own order system.</p></div>
+  </section>
+
+  <section class="item" id="price">
+    <div class="t"><div class="eyebrow">The price</div><h2>Low fixed price. I earn more only when you do.</h2></div>
+    <div class="price">
+      <div><span>Your ordering system (already agreed)</span><b data-v="system"></b></div>
+      <div><span>All marketing, SEO and Google</span><b data-v="marketing"></b></div>
+      <div class="total"><span>Fixed monthly</span><b data-v="fixed"></b></div>
+      <div><span>Bonus: per website order above <span data-v="baseline"></span> a month</span><b data-v="bonus"></b></div>
+      <div data-cap><span>Never more than</span><b data-v="cap"></b></div>
+    </div>
+    <div class="t" style="padding-top:12px"><p>Today you get about <span data-v="baseline"></span> website orders a month, so today you pay <b data-v="fixed"></b>. Google Ads money goes straight from you to Google, as now.</p></div>
+  </section>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">Try it</div><h2>Move the slider</h2></div>
+    <div class="calc">
+      <label for="o"><span>Website orders a day</span><span id="oN"></span></label>
+      <input id="o" type="range" min="1" max="30" step="1" value="15">
+      <div class="out">
+        <div><b id="sales"></b><span>website sales a month</span></div>
+        <div><b id="pay"></b><span>you pay me (<span id="pct"></span> of sales)</span></div>
+        <div class="win"><b id="saved"></b><span>what the same orders would cost you on the apps, at 15–30% commission</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">Compare</div><h2>More for less</h2></div>
+    <div class="scroll"><table>
+      <tr><th></th><th class="us">Your website + me</th><th>Sauce</th><th>Delivery apps</th></tr>
+      <tr><td><b>Monthly</b></td><td class="us"><b data-v="fixed"></b> fixed</td><td>≈ $499<br><small>(Sauce's own published price)</small></td><td>$0</td></tr>
+      <tr><td><b>Per order</b></td><td class="us"><b data-v="bonus"></b>, only above <span data-v="baseline"></span> a month</td><td>delivery fees</td><td>15–30%</td></tr>
+      <tr><td><b>Marketing done for you</b></td><td class="us"><b>All of it</b></td><td>Their website</td><td>No</td></tr>
+      <tr><td><b>Customer list</b></td><td class="us"><b>Yours</b></td><td>On their system</td><td>Theirs</td></tr>
+      <tr><td><b>Domain and website</b></td><td class="us"><b>Yours</b></td><td>They hold the logins</td><td>n/a</td></tr>
+    </table></div>
+  </section>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">The first month</div><h2>What happens</h2></div>
+    <ol class="weeks">
+      <li><span>Week 1</span><div>Your old domain moves off Sauce and onto your website, <b>without breaking your email</b>. Google's "Order online" button puts your website first. Ads back on.</div></li>
+      <li><span>Week 2</span><div>Google indexes your website. Yelp, Facebook, Instagram and Apple Maps all point to it, with the right hours.</div></li>
+      <li><span>Week 3–4</span><div>Stickers and QR flyers in every bag, review requests, Lily's Club offers. Customers start ordering direct.</div></li>
+      <li><span>Weekly</span><div>Your report: what changed and what it brought in.</div></li>
+    </ol>
+    <p class="note"><b>Only you can do 2 things, once:</b> make me Admin on Google Ads, and get the domain back from GoDaddy (your licence and ID). About 15 minutes. I handle everything else.</p>
+  </section>
+
+  <section class="item">
+    <div class="t"><div class="eyebrow">Your protection</div><h2>You own everything</h2></div>
+    <ul class="ticks">
+      <li>Domain, website, Google, ads and customer data stay <b>in your name and on your card</b></li>
+      <li>I only have access. You can remove it any time.</li>
+      <li><b>Stop any time</b> with 30 days' notice. No contract to escape.</li>
+      <li>Your customer list can be downloaded whenever you want</li>
+      <li>Everything in writing, signed by both of us</li>
+    </ul>
+  </section>
+
+  <section class="item cta">
+    <h2>Shall we start this week?</h2>
+    <p>Reply <b>"yes"</b> on WhatsApp and I'll start with your domain.</p>
+    <a class="btn" href="https://wa.me/?text=Yes%2C%20let%27s%20start" rel="noopener">Reply on WhatsApp</a>
+  </section>
+
+</main>
+<footer>Zachary · prepared October 2026</footer>
+<script>
+  /* ---- edit these ---- */
+  const PLAN = {
+    system: 150,        // $/month, already agreed
+    marketing: 150,     // $/month
+    bonus: 1.5,         // $ per website order above the baseline
+    baseline: 45,       // website orders a month today (about 1.5 a day)
+    cap: 999,           // max $/month; null for no cap
+    avgOrder: 67,       // average website order, from the first 17 orders
+  };
+  /* -------------------- */
+  const usd = (n, d = 0) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const fixed = PLAN.system + PLAN.marketing;
+  const vals = {
+    system: usd(PLAN.system) + "/mo", marketing: usd(PLAN.marketing) + "/mo", fixed: usd(fixed) + "/mo",
+    bonus: usd(PLAN.bonus, PLAN.bonus % 1 ? 2 : 0), baseline: String(PLAN.baseline),
+    cap: PLAN.cap ? usd(PLAN.cap) + "/mo" : "", avg: usd(PLAN.avgOrder),
+  };
+  document.querySelectorAll("[data-v]").forEach((el) => { el.textContent = vals[el.dataset.v]; });
+  if (!PLAN.cap) document.querySelector("[data-cap]").hidden = true;
+
+  const pay = (perDay) => {
+    const p = fixed + Math.max(0, perDay * 30 - PLAN.baseline) * PLAN.bonus;
+    return PLAN.cap ? Math.min(p, PLAN.cap) : p;
+  };
+  const o = document.getElementById("o");
+  const draw = () => {
+    const n = Number(o.value), sales = n * 30 * PLAN.avgOrder, p = pay(n);
+    document.getElementById("oN").textContent = n;
+    document.getElementById("sales").textContent = usd(sales);
+    document.getElementById("pay").textContent = usd(p);
+    document.getElementById("pct").textContent = (p / sales * 100).toFixed(1) + "%";
+    document.getElementById("saved").textContent = usd(sales * 0.15) + " – " + usd(sales * 0.30);
+  };
+  o.addEventListener("input", draw);
+  draw();
+</script>
+</body>
+</html>
