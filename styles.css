@@ -949,6 +949,16 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 
 /* ------------------------------------------------------- online ordering */
 .order-hero .section-head { max-width: 60ch; }
+/* phones: the first dish was a full screen and a half down. Food goes in the
+   first screen; the hero keeps only the headline, times and open/closed. */
+@media (max-width: 720px) {
+  .order-hero.section { padding-top: 5.4rem; } /* clears the fixed nav */
+  .order-hero .section-head { margin-bottom: 1.2rem; }
+  .order-hero .section-head .eyebrow { display: none; }
+  .order-hero .section-head h1 { font-size: 2.3rem; margin-bottom: 0.4rem; }
+  .order-hero .section-head p { font-size: 1rem; line-height: 1.45; }
+  .order-hero .order-closed-note { margin-top: 0.8rem; padding-block: 0.6rem; font-size: 0.95rem; }
+}
 .order-closed-note {
   margin-top: 1.2rem; max-width: var(--measure);
   background: color-mix(in srgb, var(--lemon) 14%, transparent);

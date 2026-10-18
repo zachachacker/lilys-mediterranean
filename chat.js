@@ -96,9 +96,12 @@
     }
 
     if (has(q, ["uber", "doordash", "door dash", "grubhub", "grub hub", "deliver"])) {
-      const partners = L.delivery.partners.map(([n, u]) => link(u, n, true)).join(" · ");
+      // we deliver ourselves since 2026-10-16: send people to our own order page,
+      // not the commission apps
       return {
-        html: `Delivery comes via ${partners}. For pickup, ${link(L.orderUrl, "order right here on our site")} — it goes straight to the kitchen, ready in ~${L.ORDERING.prepMinutes} min.`,
+        html: L.ORDERING.deliveryEnabled
+          ? `We deliver ourselves! ${link(L.orderUrl, "Order right here on our site")}: free within 2 miles, $10 up to 5 miles, in about ${L.ORDERING.deliveryMinutes} min. Pickup is ready in about ${L.ORDERING.prepMinutes} min.`
+          : `For pickup, ${link(L.orderUrl, "order right here on our site")}. It goes straight to the kitchen, ready in about ${L.ORDERING.prepMinutes} min.`,
         chips: ["Order online", "Call the kitchen"],
       };
     }
