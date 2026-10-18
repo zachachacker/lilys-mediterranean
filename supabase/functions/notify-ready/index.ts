@@ -12,6 +12,30 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 const DIRECTIONS = "https://www.google.com/maps/dir/?api=1&destination=2+5th+Ave+STE+C+Indialantic+FL+32903";
+const SITE = "https://lilysmediterraneanfresh.com";
+const ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
+const newToken = () => [...crypto.getRandomValues(new Uint8Array(10))].map((b) => ALPHABET[b % 30]).join("");
+
+// Refer a friend (2026-10-19): the same one-per-customer link the confirmation
+// page shows (order-status referralFor), now also in the email people open.
+// 5 links had been made and none used: the page is gone once they leave.
+// deno-lint-ignore no-explicit-any
+async function referralLink(db: any, hash: string | null, code: string, demo: boolean): Promise<{ url: string; percent: number } | null> {
+  if (demo || !hash || code.startsWith("TEST-")) return null;
+  const { data: cfg } = await db.from("app_config").select("key,value").in("key", ["referral_enabled", "referral_percent"]);
+  const c = Object.fromEntries((cfg ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  if ((c.referral_enabled ?? "").trim() !== "true") return null;
+  const percent = Number(c.referral_percent ?? "10");
+  const find = () => db.from("promo_tokens").select("token").eq("kind", "referral").eq("referrer_hash", hash).maybeSingle();
+  let { data: have } = await find();
+  if (!have) {
+    const token = newToken();
+    const { error } = await db.from("promo_tokens").insert({ token, kind: "referral", percent, referrer_hash: hash });
+    // a parallel confirmation-page poll may have made it first (unique per customer)
+    have = error ? (await find()).data : { token };
+  }
+  return have ? { url: `${SITE}/order.html?src=referral#r=${have.token}`, percent } : null;
+}
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -37,7 +61,7 @@ Deno.serve(async (req) => {
   const { data: claimed, error } = await db.from("orders")
     .update({ ready_notified_at: new Date().toISOString() })
     .eq("id", orderId).eq("status", "ready").is("ready_notified_at", null).not("customer_email", "is", null)
-    .select("code,customer_name,customer_email,fulfilment,delivery_address,items,created_at");
+    .select("code,customer_name,customer_email,fulfilment,delivery_address,items,created_at,customer_hash,demo");
   if (error) return json({ error: "lookup failed" }, 500);
   const o = (claimed ?? [])[0];
   if (!o) return json({ ok: true, note: "nothing to send" });
@@ -52,6 +76,7 @@ Deno.serve(async (req) => {
   const line = delivery
     ? `It has just left the kitchen and is heading to ${esc(o.delivery_address ?? "you")}.`
     : `It's ready for pickup now at <b>2 5th Ave STE C, Indialantic</b>. Show this code at the counter:`;
+  const ref = await referralLink(db, o.customer_hash, o.code, o.demo);
 
   const html = `
   <div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1A1E1C">
@@ -64,7 +89,8 @@ Deno.serve(async (req) => {
       <div style="font-family:Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:2px;background:#F4F1E8;border-radius:8px;padding:12px;text-align:center;margin:0 0 16px">${esc(o.code)}</div>
       <ul style="padding-left:18px;font-size:15px;margin:0 0 16px">${items}</ul>
       ${delivery ? "" : `<p style="margin:0 0 6px"><a href="${DIRECTIONS}" style="color:#1F5A5F">Directions</a></p>`}
-      <p style="font-size:15px;margin:16px 0 0;padding:12px 14px;background:#FFF6DF;border-radius:8px">Enjoy it! <b>Join Lily's Club</b> for 5% off your next order and members-only offers: <a href="https://lilysmediterraneanfresh.com/club.html?src=ready-email" style="color:#B4472B;font-weight:700">join free</a></p>
+      <p style="font-size:15px;margin:16px 0 0;padding:12px 14px;background:#FFF6DF;border-radius:8px">Enjoy it! <b>Join Lily's Club</b> for 5% off your next order and members-only offers: <a href="${SITE}/club.html?src=ready-email" style="color:#B4472B;font-weight:700">join free</a></p>
+      ${ref ? `<p style="font-size:15px;margin:10px 0 0;padding:12px 14px;background:#EEF5EF;border-radius:8px"><b>Give a friend ${ref.percent}% off</b> their first online order. Send them your link: <a href="${ref.url}" style="color:#14532b;font-weight:700;word-break:break-all">${esc(ref.url.replace("https://", ""))}</a></p>` : ""}
       <p style="font-size:14px;color:#555;margin:14px 0 0">Questions? Call us at <a href="tel:+13213124444" style="color:#1F5A5F">(321) 312-4444</a>. Replies to this email aren't read.</p>
     </div>
   </div>`;
@@ -77,7 +103,8 @@ Deno.serve(async (req) => {
       to: [o.customer_email],
       subject: delivery ? `Your Lily's order ${o.code} is on its way` : `Your Lily's order ${o.code} is ready for pickup`,
       html,
-      text: `${headline}, ${first}! ${delivery ? "It's on its way." : `Pickup at 2 5th Ave STE C, Indialantic. Your code: ${o.code}.`} Questions? (321) 312-4444`,
+      text: `${headline}, ${first}! ${delivery ? "It's on its way." : `Pickup at 2 5th Ave STE C, Indialantic. Your code: ${o.code}.`} Questions? (321) 312-4444` +
+        (ref ? `\n\nGive a friend ${ref.percent}% off their first online order: ${ref.url}` : ""),
     }),
   });
   if (!resp.ok) {
