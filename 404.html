@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Page not found · Lily's Mediterranean Fresh Grill</title>
+<script>
+  /* GitHub Pages serves this for every unknown path. Pages of the old
+     lilysmediterranean.com site (Sauce/WordPress, indexed by Google) land here
+     once that domain redirects with its path kept: send each one straight to
+     its new page, tagged src=old-site so the dashboard counts them. */
+  (function () {
+    var p = location.pathname.toLowerCase().replace(/\/+$/, "");
+    var map = {
+      "": "/", "/home": "/", "/about-us": "/#story", "/our-story": "/#story",
+      "/contact-us": "/#visit", "/events": "/catering.html", "/catering": "/catering.html",
+      "/were-hiring": "/careers.html", "/terms-and-policies": "/privacy.html",
+      "/menu": "/menu.html", "/order": "/order.html", "/order-online": "/order.html",
+    };
+    var to = map[p];
+    if (to === undefined) return;
+    var q = location.search ? location.search + "&" : "?";
+    var hash = to.indexOf("#") >= 0 ? to.slice(to.indexOf("#")) : "";
+    var path = hash ? to.slice(0, to.indexOf("#")) : to;
+    location.replace(path + (/[?&]src=/.test(q) ? location.search : q + "src=old-site") + hash);
+  })();
+</script>
+<style>
+  :root { --green: #14532b; --foam: #F4F1E8; --char: #1A1E1C; --ember: #B4472B; }
+  @media (prefers-color-scheme: dark) { :root { --foam: #141816; --char: #F4F1E8; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { min-height: 100dvh; display: grid; place-items: center; background: var(--foam); color: var(--char);
+    font: 17px/1.5 -apple-system, "Public Sans", sans-serif; padding: 24px 16px; text-align: center; }
+  h1 { font: 700 2rem/1.1 Georgia, serif; margin-bottom: 10px; }
+  p { opacity: 0.8; margin-bottom: 22px; }
+  a.btn { display: inline-block; margin: 6px; padding: 13px 22px; border-radius: 99px; text-decoration: none; font-weight: 700; }
+  .go { background: var(--ember); color: #fff; }
+  .alt { border: 2px solid currentColor; color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>That page has moved.</h1>
+  <p>Lily's Mediterranean Fresh Grill has a new website. Everything is here.</p>
+  <a class="btn go" href="/order.html?src=old-site">Order online</a>
+  <a class="btn alt" href="/menu.html?src=old-site">See the menu</a>
+  <a class="btn alt" href="/">Home</a>
+  <p style="margin-top:22px;font-size:15px">Call us: <a href="tel:+13213124444" style="color:inherit">(321) 312-4444</a></p>
+</main>
+</body>
+</html>
