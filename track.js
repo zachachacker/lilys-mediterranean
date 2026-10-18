@@ -24,6 +24,8 @@
     let host = "";
     try { host = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, "") : ""; } catch { host = ""; }
     if (!host || host === location.hostname) return null; // direct or internal: keep what we had
+    // coming back from the payment page is the same visit, not a new source
+    if (/(^|\.)(stripe\.com|squareup\.com|square\.link)$/.test(host)) return null;
     const map = [
       [/(^|\.)google\./, "google"], [/(^|\.)bing\.com$/, "bing"], [/duckduckgo\.com$/, "duckduckgo"],
       [/instagram\.com$/, "instagram"], [/(facebook|fb)\.com$/, "facebook"], [/tiktok\.com$/, "tiktok"],
