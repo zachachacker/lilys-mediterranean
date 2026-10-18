@@ -1234,6 +1234,8 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
 .co-rate-b button:hover { border-color: var(--teal); }
 .co-rate textarea { font: inherit; font-size: 16px; width: 100%; padding: 0.6em 0.8em; border: 1px solid var(--mist); border-radius: 6px; }
 .co-rate .muted { opacity: 0.6; font-size: 0.85em; }
+/* one-tap Club join on the confirmation page (2026-10-19) */
+.co-club-f { margin: 0; font-size: 0.8rem; opacity: 0.7; text-align: center; line-height: 1.45; }
 
 /* ---- add-ons (2026-10-10) --------------------------------------------------
    A native <dialog>: a bottom sheet on phones, a centred card on desktop.

@@ -57,14 +57,22 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data, error } = await db
     .from("orders")
-    .select("id,code,status,items,subtotal_cents,discount_cents,tax_cents,total_cents,created_at,demo,customer_name,fulfilment,delivery_address,delivery_fee_cents,tip_cents,customer_hash")
+    .select("id,code,status,items,subtotal_cents,discount_cents,tax_cents,total_cents,created_at,demo,customer_name,fulfilment,delivery_address,delivery_fee_cents,tip_cents,customer_hash,customer_email")
     .eq("stripe_session_id", sid)
     .maybeSingle();
   if (error) return json({ error: "Lookup failed" }, 500);
   if (!data) return json({ error: "Order not found" }, 404);
   // whether this order has been rated, so the page doesn't ask twice; the
   // internal id is used for the lookup and never returned
-  const { id, customer_hash, ...order } = data;
+  const { id, customer_hash, customer_email, ...order } = data;
   const { data: fb } = await db.from("feedback").select("rating").eq("order_id", id).maybeSingle();
-  return json({ order: { ...order, rated: fb?.rating ?? null, referral: await referralFor(db, data) } });
+  // offer the one-tap Club join only to someone not already on the list (and
+  // not someone who left it); the email itself never leaves this function
+  const em = String(customer_email ?? "").trim().toLowerCase();
+  let club = false;
+  if (em && !data.demo) {
+    const { data: sub } = await db.from("subscribers").select("email").eq("email", em).maybeSingle();
+    club = !sub;
+  }
+  return json({ order: { ...order, rated: fb?.rating ?? null, referral: await referralFor(db, data), club } });
 });

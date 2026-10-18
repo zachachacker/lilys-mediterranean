@@ -71,6 +71,7 @@
              We'll email you the moment it's ready.
              <a class="ink" href="${L.directionsUrl}" target="_blank" rel="noopener">Directions</a> · <a class="ink" href="${L.phoneHref}">${L.phone}</a></p>`}
         ${o.status === "done" ? rateHTML(o) : ""}
+        ${o.club && !pending && o.status !== "canceled" ? clubHTML() : ""}
         ${o.referral ? shareHTML(o.referral) : ""}
         <div class="co-receipt">
           ${items}
@@ -103,6 +104,33 @@
         const u = $("coShareU"); u.textContent = "Link copied. Paste it to a friend."; u.hidden = false;
       } catch {
         const u = $("coShareU"); u.textContent = url; u.hidden = false; // copy by hand
+      }
+    });
+    // one-tap Club join (2026-10-19): the server uses the email on this order,
+    // so there's nothing to type. Only offered to people not already on the
+    // list; the wording matches deals CONFIRM_CONSENT, kept as proof of consent.
+    function clubHTML() {
+      return `<div class="co-rate co-club" id="coClub">
+        <p class="co-rate-t"><b>Get ${esc(O.clubPercent || 5)}% off your next order</b></p>
+        <div class="co-rate-b"><button type="button" data-club-join="1">Join Lily's Club</button></div>
+        <p class="co-club-f">Join Lily's Club with the email on this order: members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.</p>
+      </div>`;
+    }
+    confirmRoot.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-club-join]");
+      if (!b) return;
+      b.disabled = true;
+      const box = $("coClub");
+      try {
+        const r = await fetch(`${FN}/deals`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "join_order", sid }),
+        });
+        if (!r.ok) throw new Error(String(r.status));
+        box.innerHTML = `<p class="co-rate-t">You're in! Check your email for your ${esc(O.clubPercent || 5)}% off.</p>`;
+      } catch {
+        b.disabled = false;
+        box.querySelector(".co-club-f").textContent = "That didn't go through. Please try again in a moment.";
       }
     });
     // one-tap rating once the order is collected. The Google review link is

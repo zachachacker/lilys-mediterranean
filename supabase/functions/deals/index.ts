@@ -9,6 +9,7 @@
 // nobody can be signed up by someone else; checkout members (they ticked the
 // box) are confirmed already and get the same email.
 //   POST {action:"join", email}         website signup -> welcome email (unconfirmed until claimed)
+//   POST {action:"join_order", sid}     one tap on order-confirmed, with the order's own email
 //   POST {action:"welcome", email}      trigger, for confirmed members who haven't had one
 //   POST {action:"confirm", token}      -> {ok, offer} where offer is the welcome token to apply
 //   POST {action:"unsubscribe", token}
@@ -28,6 +29,8 @@ const json = (body: unknown, status = 200) =>
 
 // shown on club.html next to the signup form; kept with each signup as proof of consent
 const SIGNUP_CONSENT = "Join Lily's Club: members-only offers and first look at new dishes, about once a month. Unsubscribe any time.";
+// shown next to the one-tap button on order-confirmed (order.js clubHTML)
+const CONFIRM_CONSENT = "Join Lily's Club with the email on this order: members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TOKEN_RE = /^[0-9a-f]{32}$/;
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -117,7 +120,7 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  let body: { action?: string; email?: string; token?: string };
+  let body: { action?: string; email?: string; token?: string; sid?: string };
   try {
     body = await req.json();
   } catch {
@@ -144,6 +147,24 @@ Deno.serve(async (req) => {
   if (body.action === "welcome") {
     if (!EMAIL_RE.test(email)) return json({ error: "bad email" }, 400);
     return json({ ok: await welcome(db, email, true) });
+  }
+
+  // one tap on the order-confirmed page (2026-10-19): the order's own email,
+  // never typed, so the Stripe session id in that page's URL is the proof.
+  // Anyone already on the list, or who left it, is never touched this way.
+  if (body.action === "join_order") {
+    const sid = String(body.sid ?? "");
+    if (!sid || sid.length > 200) return json({ error: "bad request" }, 400);
+    const done = json({ ok: true });
+    const { data: o } = await db.from("orders").select("id,customer_email").eq("stripe_session_id", sid).maybeSingle();
+    const em = String(o?.customer_email ?? "").trim().toLowerCase();
+    if (!o || !EMAIL_RE.test(em) || em.length > 254) return done;
+    const { data: have } = await db.from("subscribers").select("email").eq("email", em).maybeSingle();
+    if (have) return done;
+    const { error } = await db.from("subscribers").insert({ email: em, source: "checkout", order_id: o.id, consent_text: CONFIRM_CONSENT });
+    if (error) return json({ error: "Please try again in a moment." }, 503);
+    await welcome(db, em, false);
+    return done;
   }
 
   if (body.action === "join") {
