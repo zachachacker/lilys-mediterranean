@@ -11,7 +11,9 @@
 // Config (app_config): notify_email (or weekly_report_to), weekly_report_cc,
 // weekly_report_enabled, weekly_report_baseline (orders/month included in the
 // fixed fee; shows the bonus line when set), ads_spend_week ("YYYY-MM-DD:dollars",
-// the Monday it applies to; shows cost per new customer when it matches).
+// the Monday it applies to; shows cost per new customer when it matches),
+// weekly_report_all_time ('true' = this send covers everything since the first
+// order; switched back to 'false' once it has gone out).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json = (body: unknown, status = 200) =>
@@ -51,6 +53,8 @@ export type Week = {
   top: { name: string; qty: number }[];
   prev: { orders: number; sales: number; newCustomers: number };
   monthOrders: number;
+  repeatCustomers: number; // ordered 2+ times inside the range (the all-time report's "came back")
+  firstDay: string | null; // earliest counted order ever, for the all-time report
 };
 
 export function summarize(all: Ord[], start: string, end: string): Week {
@@ -100,6 +104,8 @@ export function summarize(all: Ord[], start: string, end: string): Week {
     bySource, top,
     prev: { orders: prevWeek.length, sales: sales(prevWeek), newCustomers: newIn(prevWeek, pStart, pEnd) },
     monthOrders: inRange(`${end.slice(0, 7)}-01`, end).length,
+    repeatCustomers: [...people].filter((h) => week.filter((o) => o.customer_hash === h).length > 1).length,
+    firstDay: counted.reduce<string | null>((m, o) => (!m || o.day < m ? o.day : m), null),
   };
 }
 /* ----------------------------------------------------------------------- */
@@ -112,7 +118,7 @@ const change = (now: number, before: number) => {
 const niceDay = (d: string) =>
   new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
 
-function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string; ads?: string }) {
+function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string; ads?: string }, allTime: boolean) {
   const tile = (big: string, label: string, sub: string) => `
       <td style="width:50%;padding:12px 14px;border:1px solid #e3ded2;vertical-align:top">
         <div style="font-size:26px;font-weight:700;line-height:1.1">${big}</div>
@@ -128,13 +134,16 @@ function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string;
   return `
   <div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;color:#1A1E1C">
     <div style="background:#14532b;color:#F4F1E8;padding:18px 22px;border-radius:10px 10px 0 0">
-      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E4A72E;font-weight:700">Your week · ${niceDay(start)} to ${niceDay(end)}</div>
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E4A72E;font-weight:700">${allTime ? "Since your website started" : "Your week"} · ${niceDay(start)} to ${niceDay(end)}</div>
       <div style="font-size:22px;font-weight:700;margin-top:4px">Lily's website orders</div>
     </div>
     <div style="border:1px solid #e3ded2;border-top:0;border-radius:0 0 10px 10px;padding:20px">
       <table style="border-collapse:collapse;width:100%">
+        ${allTime ? `
+        <tr>${tile(String(w.orders), "orders", "")}${tile(money(w.sales), "food sales", "")}</tr>
+        <tr>${tile(String(w.newCustomers), "customers", "")}${tile(String(w.repeatCustomers), "came back", "ordered more than once")}</tr>` : `
         <tr>${tile(String(w.orders), "orders", change(w.orders, w.prev.orders))}${tile(money(w.sales), "food sales", change(w.sales, w.prev.sales))}</tr>
-        <tr>${tile(String(w.newCustomers), "new customers", change(w.newCustomers, w.prev.newCustomers))}${tile(String(w.returningCustomers), "came back", "ordered before")}</tr>
+        <tr>${tile(String(w.newCustomers), "new customers", change(w.newCustomers, w.prev.newCustomers))}${tile(String(w.returningCustomers), "came back", "ordered before")}</tr>`}
       </table>
       ${w.orders ? `
       <p style="margin:20px 0 6px;font-weight:700">Where they came from</p>
@@ -158,7 +167,8 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: config, error: cfgErr } = await db.from("app_config").select("key,value")
     .in("key", ["resend_api_key", "notify_email", "notify_from", "weekly_report_to", "weekly_report_cc",
-      "weekly_report_enabled", "weekly_report_baseline", "weekly_report_last_week", "ads_spend_week"]);
+      "weekly_report_enabled", "weekly_report_baseline", "weekly_report_last_week", "ads_spend_week",
+      "weekly_report_all_time"]);
   if (cfgErr) return json({ error: "config read failed" }, 503);
   const cfg = Object.fromEntries((config ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   if ((cfg.weekly_report_enabled ?? "false").trim() !== "true") return json({ ok: true, note: "weekly report switched off" });
@@ -180,7 +190,11 @@ Deno.serve(async (req) => {
     .eq("demo", false).not("code", "like", "TEST-%")
     .gte("created_at", new Date(Date.now() - 400 * 86400000).toISOString());
   if (error) { await release(); return json({ error: "orders read failed" }, 503); }
-  const w = summarize((rows ?? []) as Ord[], start, end);
+  // the first report covers everything since the first order, then weekly
+  const allTime = (cfg.weekly_report_all_time ?? "").trim() === "true";
+  const first = allTime ? summarize((rows ?? []) as Ord[], start, end).firstDay : null;
+  const from = first && first < start ? first : start;
+  const w = summarize((rows ?? []) as Ord[], from, end);
 
   const extra: { bonus?: string; ads?: string } = {};
   const baseline = Number(cfg.weekly_report_baseline);
@@ -203,9 +217,11 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: cfg.notify_from || "Lily's Orders <orders@lilysmediterraneanfresh.com>",
       to: [to], ...(cc.length ? { cc } : {}),
-      subject: `Lily's week: ${w.orders} orders · ${money(w.sales)} · ${w.newCustomers} new customer${w.newCustomers === 1 ? "" : "s"}`,
-      html: emailHtml(w, start, end, extra),
-      text: `Lily's website, ${start} to ${end}: ${w.orders} orders, ${money(w.sales)} food sales, ${w.newCustomers} new customers, ${w.returningCustomers} came back.\n` +
+      subject: allTime
+        ? `Lily's website so far: ${w.orders} orders · ${money(w.sales)} · ${w.newCustomers} customers`
+        : `Lily's week: ${w.orders} orders · ${money(w.sales)} · ${w.newCustomers} new customer${w.newCustomers === 1 ? "" : "s"}`,
+      html: emailHtml(w, from, end, extra, allTime),
+      text: `Lily's website, ${from} to ${end}: ${w.orders} orders, ${money(w.sales)} food sales, ${w.newCustomers} ${allTime ? "customers" : "new customers"}, ${allTime ? w.repeatCustomers : w.returningCustomers} came back.\n` +
         w.bySource.map((s) => `${s.label}: ${s.orders} orders, ${s.newCustomers} new`).join("\n"),
     }),
   });
@@ -214,5 +230,6 @@ Deno.serve(async (req) => {
     console.error("weekly report send failed:", resp.status, await resp.text().catch(() => ""));
     return json({ error: "send failed" }, 502);
   }
+  if (allTime) await db.from("app_config").update({ value: "false" }).eq("key", "weekly_report_all_time");
   return json({ ok: true, week: start });
 });

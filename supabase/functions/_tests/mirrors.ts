@@ -609,7 +609,7 @@ export function validateCatering(b: Record<string, unknown>, today: string): Cat
 }
 // --- end validateCatering ---
 
-/* ── weekly-report/index.ts:24-104: the whole pure block, verbatim ── */
+/* ── weekly-report/index.ts:24-108: the whole pure block, verbatim ── */
 /* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */
 export const COUNTED = ["paid", "making", "ready", "done"];
 export const SOURCE_NAMES: Record<string, string> = {
@@ -640,6 +640,8 @@ export type Week = {
   top: { name: string; qty: number }[];
   prev: { orders: number; sales: number; newCustomers: number };
   monthOrders: number;
+  repeatCustomers: number; // ordered 2+ times inside the range (the all-time report's "came back")
+  firstDay: string | null; // earliest counted order ever, for the all-time report
 };
 
 export function summarize(all: Ord[], start: string, end: string): Week {
@@ -689,6 +691,8 @@ export function summarize(all: Ord[], start: string, end: string): Week {
     bySource, top,
     prev: { orders: prevWeek.length, sales: sales(prevWeek), newCustomers: newIn(prevWeek, pStart, pEnd) },
     monthOrders: inRange(`${end.slice(0, 7)}-01`, end).length,
+    repeatCustomers: [...people].filter((h) => week.filter((o) => o.customer_hash === h).length > 1).length,
+    firstDay: counted.reduce<string | null>((m, o) => (!m || o.day < m ? o.day : m), null),
   };
 }
 

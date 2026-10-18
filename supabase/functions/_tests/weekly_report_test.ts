@@ -1,5 +1,5 @@
 /* Weekly owner report (2026-10-19): the week, new vs returning, sources. */
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
+import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { addDays, lastWeek, type Ord, summarize } from "./mirrors.ts";
 
 const START = "/* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */";
@@ -100,4 +100,26 @@ Deno.test("month to date counts the bonus base up to the week's Sunday", () => {
   assertEquals(summarize(orders, "2026-10-12", "2026-10-18").monthOrders, 2);
   // a week spanning two months counts the month the Sunday is in
   assertEquals(summarize([o("2026-10-30", "A", "x"), o("2026-11-01", "B", "x")], "2026-10-26", "2026-11-01").monthOrders, 1);
+});
+
+Deno.test("all-time report: first order day, and customers who came back within the range", () => {
+  const orders = [
+    o("2026-10-08", "A", "google"),
+    o("2026-10-12", "A", "google"),            // A ordered twice: came back
+    o("2026-10-10", "B", "direct"),
+    o("2026-10-11", null, "direct"),
+    o("2026-10-07", "C", "google", { status: "canceled" }), // never counts, not the first day
+  ];
+  const first = summarize(orders, "2026-10-12", "2026-10-18").firstDay;
+  assertEquals(first, "2026-10-08");
+  const all = summarize(orders, first!, "2026-10-18");
+  assertEquals([all.orders, all.newCustomers, all.repeatCustomers, all.untracked], [4, 2, 1, 1]);
+});
+
+Deno.test("drift: the all-time report runs once, then turns itself off", async () => {
+  const src = await Deno.readTextFile(new URL("../weekly-report/index.ts", import.meta.url));
+  assertStringIncludes(src, 'const allTime = (cfg.weekly_report_all_time ?? "").trim() === "true";');
+  assertStringIncludes(src, 'if (allTime) await db.from("app_config").update({ value: "false" }).eq("key", "weekly_report_all_time");');
+  // switched off only after the send succeeded
+  assert(src.indexOf('update({ value: "false" }).eq("key", "weekly_report_all_time")') > src.indexOf("if (!resp.ok) {"));
 });
