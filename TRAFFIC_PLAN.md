@@ -39,6 +39,12 @@ can move to the new site, and it should be the first thing we get.
    Keep auto-tagging on. The conversion tag is already on the new site.
 
 ### Step 2: Monday (the DNS call): redirect the old domain
+> **Updated 18 Oct: preferred route.** Once Karim has the domain back at GoDaddy,
+> `lilysmediterranean.com` becomes the **main** domain (it holds the Google ranking and
+> matches his email), and `lilysmediterraneanfresh.com` 301s to it. The redirect below
+> (old → fresh) is the fallback if getting the domain back stalls. Zoho records stay
+> untouched either way.
+
 The old domain's email runs on **Zoho** (MX `mx.zoho.com`, `mx2`, `mx3`). Leave the
 MX and TXT (SPF/DKIM) records **exactly as they are**, or Karim's
 `info@lilysmediterranean.com` email stops working. DNS is on Cloudflare
