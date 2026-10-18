@@ -545,6 +545,89 @@ export function validateApplication(b: Record<string, unknown>, today: string): 
 // --- end validateApplication ---
 
 
+/* ── weekly-report/index.ts:24-104: the whole pure block, verbatim ── */
+/* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */
+export const COUNTED = ["paid", "making", "ready", "done"];
+export const SOURCE_NAMES: Record<string, string> = {
+  "google-ads": "Google Ads", google: "Google search", direct: "Direct / typed in", instagram: "Instagram",
+  facebook: "Facebook", tiktok: "TikTok", yelp: "Yelp", tripadvisor: "TripAdvisor", bing: "Bing",
+  duckduckgo: "DuckDuckGo", sticker: "Bag sticker", ubereats: "Uber Eats", doordash: "DoorDash",
+  gbp: "Google listing", "gbp-order": "Google \"Order online\" button", "old-site": "Old website",
+  qr: "QR code", flyer: "Flyer", email: "Lily's Club email", club: "Lily's Club welcome",
+  referral: "Friend's link", "ready-email": "Order-ready email", "review-email": "Review email",
+};
+export const flDate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+export const addDays = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+/** Last full Monday-to-Sunday week before `today` (YYYY-MM-DD, Florida). */
+export function lastWeek(today: string): { start: string; end: string } {
+  const dow = new Date(`${today}T12:00:00Z`).getUTCDay(); // 0 = Sunday
+  const start = addDays(today, -((dow + 6) % 7) - 7);
+  return { start, end: addDays(start, 6) };
+}
+
+export type Ord = {
+  created_at: string; status: string; subtotal_cents: number; discount_cents: number | null;
+  customer_hash: string | null; source: string | null; items: { name: string; qty: number }[] | null;
+};
+export type Week = {
+  orders: number; sales: number; newCustomers: number; returningCustomers: number; untracked: number;
+  bySource: { source: string; label: string; orders: number; newCustomers: number }[];
+  top: { name: string; qty: number }[];
+  prev: { orders: number; sales: number; newCustomers: number };
+  monthOrders: number;
+};
+
+export function summarize(all: Ord[], start: string, end: string): Week {
+  const counted = all.filter((o) => COUNTED.includes(o.status)).map((o) => ({ ...o, day: flDate(o.created_at) }));
+  const firstDay = new Map<string, string>();
+  for (const o of counted) {
+    if (!o.customer_hash) continue;
+    const seen = firstDay.get(o.customer_hash);
+    if (!seen || o.day < seen) firstDay.set(o.customer_hash, o.day);
+  }
+  const inRange = (a: string, b: string) => counted.filter((o) => o.day >= a && o.day <= b);
+  const sales = (os: typeof counted) => os.reduce((s, o) => s + o.subtotal_cents - (o.discount_cents ?? 0), 0);
+  const isNew = (h: string, a: string, b: string) => { const f = firstDay.get(h)!; return f >= a && f <= b; };
+  const newIn = (os: typeof counted, a: string, b: string) =>
+    new Set(os.filter((o) => o.customer_hash && isNew(o.customer_hash, a, b)).map((o) => o.customer_hash)).size;
+
+  const week = inRange(start, end);
+  const pStart = addDays(start, -7), pEnd = addDays(start, -1);
+  const prevWeek = inRange(pStart, pEnd);
+  const people = new Set(week.filter((o) => o.customer_hash).map((o) => o.customer_hash as string));
+  const newCustomers = [...people].filter((h) => isNew(h, start, end)).length;
+
+  const src = new Map<string, { orders: number; fresh: Set<string> }>();
+  for (const o of week) {
+    const key = o.source || "";
+    const row = src.get(key) ?? { orders: 0, fresh: new Set<string>() };
+    row.orders++;
+    if (o.customer_hash && isNew(o.customer_hash, start, end)) row.fresh.add(o.customer_hash);
+    src.set(key, row);
+  }
+  const bySource = [...src.entries()]
+    .map(([source, r]) => ({
+      source, orders: r.orders, newCustomers: r.fresh.size,
+      label: SOURCE_NAMES[source] || (source ? source.replace(/-/g, " ") : "Unknown"),
+    }))
+    .sort((a, b) => b.orders - a.orders || a.label.localeCompare(b.label));
+
+  const qty = new Map<string, number>();
+  week.forEach((o) => (o.items ?? []).forEach((l) => qty.set(l.name, (qty.get(l.name) ?? 0) + l.qty)));
+  const top = [...qty.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5)
+    .map(([name, q]) => ({ name, qty: q }));
+
+  return {
+    orders: week.length, sales: sales(week), newCustomers,
+    returningCustomers: people.size - newCustomers,
+    untracked: week.filter((o) => !o.customer_hash).length,
+    bySource, top,
+    prev: { orders: prevWeek.length, sales: sales(prevWeek), newCustomers: newIn(prevWeek, pStart, pEnd) },
+    monthOrders: inRange(`${end.slice(0, 7)}-01`, end).length,
+  };
+}
+
 /* ── manage-api/index.ts — offer validation + offer emails (2026-10-10) ─ */
 export type PromoRow = {
   kind: string; label: string; active?: boolean;
