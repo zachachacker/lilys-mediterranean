@@ -24,7 +24,9 @@
     var q = location.search ? location.search + "&" : "?";
     var hash = to.indexOf("#") >= 0 ? to.slice(to.indexOf("#")) : "";
     var path = hash ? to.slice(0, to.indexOf("#")) : to;
-    location.replace(path + (/[?&]src=/.test(q) ? location.search : q + "src=old-site") + hash);
+    // an ad click (gclid…) or any explicit source keeps its own attribution
+    var tagged = /[?&](src|utm_source|gclid|gbraid|wbraid)=/.test(q);
+    location.replace(path + (tagged ? location.search : q + "src=old-site") + hash);
   })();
 </script>
 <style>
