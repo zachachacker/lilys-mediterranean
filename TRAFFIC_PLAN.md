@@ -13,6 +13,7 @@ from people who already had the link.
 | 2 | **The new domain has 0 pages in Google.** `site:lilysmediterraneanfresh.com` returns nothing. The domain went live on 7 Oct, there's no Search Console verification, and it doesn't rank for brand or generic searches. | search, 18 Oct | **Highest.** Without indexing, search traffic can't reach the new site at all. |
 | 3 | **For a "Lily's" search, the old Sauce site is the top result**, even though the Google Business Profile already links to the new site (Zachary confirmed this on 18 Oct). Searchers click the first result and order on Sauce. | Zachary, 18 Oct | High. Fixed by the redirect plus Change of address (steps 2–3). |
 | 4 | **"Order online" searches go to the apps.** DoorDash (2,000+ reviews), DoorDash's own order.online pages (store 1455015), Uber Eats, Postmates and Grubhub all rank. | search | High. The demand exists, but it's on the apps at 15–30% commission. |
+| 4b | **Google's "Order online" button shows ChowNow as "Preferred by this business"** (18 Oct). In the manager view, lilysmediterraneanfresh.com is set as preferred, and Zachary has set it twice. The public list shows ChowNow, ChowNow Local, the new site, Sauce, Square, the old domain and HoneyCart: 7 places to order, 5 of them not ours. | Zachary's screenshots, 18 Oct | High: it's the button people tap on the Google listing. |
 | 5 | **Catering goes elsewhere:** HoneyCart (`lilysmediterraneanfreshgrill.gethoneycart.com`), ezCater ($150 minimum) and Sauce catering. None of these point to `/catering.html`. | search | Medium |
 | 6 | **Wrong Wednesday hours.** Yelp and Restaurantji show Wed 4–9pm and ezCater shows Wednesday delivery, but Lily's is closed on Wednesdays. | search snippets | Medium: wasted trips and bad reviews |
 | 7 | **Google Ads sent 3 visits in 11 days.** The identity verification deadline is **18 Oct**, and the ads' final URL is unknown (it may be the old site or Sauce). | site_events | Medium (paid traffic wasted) |
@@ -27,6 +28,7 @@ can move to the new site, and it should be the first thing we get.
 ## Plan
 
 ### Step 1: today and tomorrow (Karim, about 15 minutes each)
+0. **Find out what keeps resetting the preferred ordering link.** Check Business Profile → ⋮ → Business Profile settings → **People and access**: every manager is listed there. Remove any company Karim no longer works with (Sauce, ChowNow, the old website agency). A provider that has its own Google link can also send its own "preferred" status. Then remove every provider he doesn't use from Food ordering → Edit service providers. A link Google won't remove has to be delisted by that provider. If ChowNow shows as preferred again **after** that, someone or something with access is still changing it.
 1. **Google Ads verification.** It's due today, or the ads pause.
 2. **Google Business Profile** (business.google.com; add Zachary as Manager so he can do the rest):
    - Website: already the new site. Add `?src=gbp` so these visits show separately: `https://lilysmediterraneanfresh.com/?src=gbp`
