@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Kitchen screen guide · Lily's</title>
+<title>18 October update · Lily's</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..800;1,9..144,600&family=Public+Sans:wght@400;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
@@ -38,6 +38,12 @@
   .ic.g { background: #7FBE93; color: #10241a; font-size: 11px; }
   .steps { padding: 4px 16px 16px 36px; display: grid; gap: 8px; color: var(--muted); }
   .note { margin: 0 16px 16px; padding: 10px 12px; border-left: 4px solid var(--lemon); background: rgba(228,167,46,0.14); border-radius: 0 8px 8px 0; color: var(--char); font-size: 15px; }
+  .part { font: 700 11px "Space Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ember); margin: 18px 4px -4px; scroll-margin-top: 12px; }
+  .item[id] { scroll-margin-top: 12px; }
+  .todo { list-style: none; padding: 4px 16px 16px; display: grid; gap: 10px; }
+  .todo li { padding-left: 30px; position: relative; color: var(--muted); }
+  .todo li::before { content: "☐"; position: absolute; left: 4px; top: -1px; font-size: 19px; color: var(--ember); }
+  .todo li b { color: var(--char); }
   footer { text-align: center; color: var(--muted); padding: 10px 16px 40px; }
   footer b { color: var(--char); }
 </style>
@@ -45,10 +51,12 @@
 <body>
 <header>
   <div class="k">Lily's Mediterranean · 18 October</div>
-  <h1>Your kitchen screen, <em>button by button</em></h1>
-  <p>Everything on the kitchen screen in one page. Save it, or keep it open on your phone next to the iPad.</p>
+  <h1>Your kitchen screen, and <em>more orders</em></h1>
+  <p>Part 1 is how to use the kitchen screen. Part 2 is why the website isn't getting enough orders yet, and what we need from you to fix it.</p>
 </header>
 <main>
+
+  <div class="part" id="kitchen">Part 1 · The kitchen screen</div>
 
   <section class="item">
     <div class="t"><span class="n">1</span><h2>The sound is louder now</h2>
@@ -97,8 +105,7 @@
   <section class="item">
     <div class="t"><span class="n">4</span><h2>Your offers page (the "dashboard")</h2>
       <p>This is where you <b>make and change offers</b>: buy one get one, % off, lunch deals, with the days and hours they run.</p>
-      <p>The link is private, so it is <b>in your email, not here</b>. Search your email for <b>"Your private Lily's links"</b> and tap <b>"1. Your offers page"</b>. Then tap Share, then <b>"Add to Home Screen"</b>, so it opens like an app every time. The kitchen screen link is in the same email.</p>
-      <p>Can't find the email? Tell Zachary and he will send it again.</p></div>
+      <p>Zachary sent you a <b>new private link on WhatsApp</b>. The old one has stopped working. Open it, tap Share, then <b>"Add to Home Screen"</b>, so it opens like an app every time. <b>Don't share the link:</b> anyone who has it can change your offers.</p></div>
   </section>
 
   <section class="item">
@@ -112,6 +119,64 @@
     </ul>
     <div class="t" style="padding-top:0"><p>Wraps, burgers and quesadillas have sides (and sauces). Salads have protein. Family Specials have extra skewers, hummus, sauces and pita. These are your in-store prices; online is 3% more, like the rest of the menu.</p>
       <p><b>Not yet:</b> Starters, From the Kitchen, Sides &amp; Wings, Kids, Desserts and Drinks. Send the add-ons and prices you want for those on WhatsApp and they will be added.</p></div>
+  </section>
+
+  <section class="item">
+    <div class="t"><span class="n">6</span><h2>The printer</h2>
+      <p>The kitchen screen <b>can't print yet</b>. Plugging the printer in won't print online orders by itself.</p>
+      <p>Send Zachary a <b>photo of the label on the printer</b> (the make and model), and say how it connects: a cable to the internet box, USB, or Bluetooth. Then he can set it up to print every order automatically.</p></div>
+  </section>
+
+  <div class="part" id="orders">Part 2 · Why orders are low</div>
+
+  <section class="item">
+    <div class="t"><span class="n">7</span><h2>The website works. Not enough people reach it.</h2>
+      <p>17 orders in 11 days, average <b>$67</b>. <b>Everyone</b> who started paying finished their order. About <b>25 people a day</b> visit the website, and here's why it isn't more:</p></div>
+    <ol class="steps">
+      <li><b>Your old website is still live.</b> When people search "Lily's", the first result is the old Sauce website (lilysmediterranean.com), and it still takes orders through Sauce.</li>
+      <li><b>Google doesn't show the new website in search yet.</b> It's new (7 October). Zachary is getting Google to add it.</li>
+      <li><b>Google's "Order online" button</b> puts ChowNow first, not your website (see 8).</li>
+      <li><b>Your Google Ads are paused</b> (see 9).</li>
+      <li><b>The apps:</b> DoorDash has 2,000+ reviews for Lily's. So you have lots of customers, but they order on the apps, and the apps take 15–30% of every order.</li>
+      <li><b>Wrong hours:</b> Yelp says you're open Wednesday 4–9pm, and ezCater allows Wednesday delivery.</li>
+    </ol>
+    <p class="note">The customers already exist. The plan is to <b>move them from Sauce and the apps to your website</b>, where you keep the full price. That's how you get to 15–20 orders a day.</p>
+  </section>
+
+  <section class="item" id="google">
+    <div class="t"><span class="n">8</span><h2>Google's "Order online" button</h2>
+      <p>When people tap <b>Order online</b> on your Google listing, they see 7 places to order:</p></div>
+    <ol class="steps">
+      <li>ChowNow, marked <b>"Preferred by this business"</b></li>
+      <li>ChowNow Local</li>
+      <li><b>Your new website</b></li>
+      <li>Sauce</li>
+      <li>Square</li>
+      <li>Your old website</li>
+      <li>HoneyCart</li>
+    </ol>
+    <div class="t" style="padding-top:0"><p>Zachary set your website as preferred <b>twice</b>, and it keeps going back to ChowNow. <b>Reply with the numbers you want to keep.</b> Your website stays first, and we remove the rest.</p>
+      <p>Also: <b>who is Jenn Marie?</b> She can change your Google listing.</p></div>
+  </section>
+
+  <section class="item" id="ads">
+    <div class="t"><span class="n">9</span><h2>Google Ads are paused</h2>
+      <p>Your ads got <b>185 clicks for $349</b>, then stopped on 7 October. Google now needs to <b>verify your business</b>, and only an <b>Admin</b> can do that. Zachary's access is one level below Admin, so he can't.</p>
+      <p>Google gives a <b>$500 free credit</b> if you spend $150 more by 8 November. The ads need to be running again within a few days to get it.</p></div>
+  </section>
+
+  <section class="item" id="todo">
+    <div class="t"><span class="n">✓</span><h2>What we need from you</h2></div>
+    <ul class="todo">
+      <li><b>Google Ads:</b> Admin → Access and security → Zachary → change to <b>Admin</b>.</li>
+      <li>Your business's <b>legal name</b>, exactly as registered with the state, and your <b>D-U-N-S number</b> if you have one.</li>
+      <li>The <b>numbers to keep</b> in Google's "Order online" list, and <b>who Jenn Marie is</b>.</li>
+      <li><b>Monday DNS call:</b> ask them to <b>redirect lilysmediterranean.com to lilysmediterraneanfresh.com</b>. Tell them <b>not to change the email (Zoho) settings</b>, or your email stops working. Ask who owns the Cloudflare account.</li>
+      <li><b>How many orders Sauce took</b> in the last 30 days (in your Sauce dashboard).</li>
+      <li>A <b>photo of the printer label</b>.</li>
+      <li>Put a <b>sticker or flyer in every bag</b>: DoorDash, Uber Eats and in-store.</li>
+      <li>Ask happy customers for a <b>Google review</b>.</li>
+    </ul>
   </section>
 
 </main>
