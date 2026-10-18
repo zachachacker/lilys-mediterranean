@@ -75,7 +75,7 @@ Deno.test("sources: orders and new customers per channel, readable names, busies
   const w = summarize(orders, "2026-10-12", "2026-10-18");
   assertEquals(w.bySource.map((s) => [s.label, s.orders, s.newCustomers]), [
     ["Google Ads", 2, 2],
-    ["Google search", 1, 0],
+    ["Google (listing, Maps & search)", 1, 0],
     ["Old website", 1, 1],
     ["Unknown (before tracking)", 1, 1],
   ]);
@@ -127,4 +127,36 @@ Deno.test("drift: the all-time report runs once, then turns itself off", async (
 Deno.test("drift: all-time starts at the very first order, even inside the week", async () => {
   const src = await Deno.readTextFile(new URL("../weekly-report/index.ts", import.meta.url));
   assertStringIncludes(src, "const from = first && first <= end ? first : start;");
+});
+
+Deno.test("highlights: money taken, dishes, biggest order, best day, real review asks only", async () => {
+  const { highlights } = await import("./mirrors.ts");
+  const orders = [
+    o("2026-10-10", "A", "google", { total_cents: 2500, tip_cents: 300, review_asked_at: "2026-10-10T22:00:00Z", items: [{ name: "Gyro", qty: 2 }] }),
+    o("2026-10-10", "B", "google", { total_cents: 4000, tip_cents: 0, review_asked_at: "1970-01-01T00:00:00Z", items: [{ name: "Falafel", qty: 1 }] }),
+    o("2026-10-12", "C", "direct", { total_cents: 9000, tip_cents: null, review_asked_at: null, items: [{ name: "Family Grill", qty: 1 }] }),
+    o("2026-10-12", "D", "direct", { total_cents: 999, status: "canceled" }),     // never counts
+    o("2026-10-20", "E", "direct", { total_cents: 5000 }),                       // after the range
+  ];
+  const h = highlights(orders, "2026-10-08", "2026-10-18");
+  assertEquals(h.takenCents, 15500);
+  assertEquals(h.tipsCents, 300);
+  assertEquals(h.dishes, 4);
+  assertEquals(h.biggestCents, 9000);
+  assertEquals(h.bestDay, { day: "2026-10-10", orders: 2, cents: 6500 });
+  assertEquals(h.reviewsAsked, 1); // the 1970 stamp means "looked at, not asked"
+});
+
+Deno.test("highlights: tips and delivery counted only from the day each went live", async () => {
+  const { highlights } = await import("./mirrors.ts");
+  const orders = [
+    o("2026-10-08", "A", "google", { tip_cents: 999, fulfilment: "pickup" }),    // before tips went live: not counted
+    o("2026-10-10", "B", "google", { tip_cents: 500, fulfilment: "pickup" }),
+    o("2026-10-17", "C", "direct", { tip_cents: 300, fulfilment: "delivery" }),
+  ];
+  const h = highlights(orders, "2026-10-08", "2026-10-18", { tips: "2026-10-10", delivery: "2026-10-16" });
+  assertEquals([h.tipsCents, h.tipsDays], [800, 9]);
+  assertEquals([h.deliveryOrders, h.deliveryDays], [1, 3]);
+  const none = highlights(orders, "2026-10-08", "2026-10-18");   // no dates set: the whole range
+  assertEquals([none.tipsCents, none.tipsDays], [1799, 11]);
 });

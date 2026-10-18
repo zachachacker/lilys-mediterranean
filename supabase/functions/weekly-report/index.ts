@@ -26,7 +26,7 @@ const money = (c: number) => `$${(c / 100).toLocaleString("en-US", { minimumFrac
 /* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */
 export const COUNTED = ["paid", "making", "ready", "done"];
 export const SOURCE_NAMES: Record<string, string> = {
-  "google-ads": "Google Ads", google: "Google search", direct: "Direct / typed in", instagram: "Instagram",
+  "google-ads": "Google Ads", google: "Google (listing, Maps & search)", direct: "Direct / typed in", instagram: "Instagram",
   facebook: "Facebook", tiktok: "TikTok", yelp: "Yelp", tripadvisor: "TripAdvisor", bing: "Bing",
   duckduckgo: "DuckDuckGo", sticker: "Bag sticker", ubereats: "Uber Eats", doordash: "DoorDash",
   gbp: "Google listing", "gbp-order": "Google \"Order online\" button", "old-site": "Old website",
@@ -46,6 +46,12 @@ export function lastWeek(today: string): { start: string; end: string } {
 export type Ord = {
   created_at: string; status: string; subtotal_cents: number; discount_cents: number | null;
   customer_hash: string | null; source: string | null; items: { name: string; qty: number }[] | null;
+  total_cents?: number; tip_cents?: number | null; review_asked_at?: string | null; fulfilment?: string | null;
+};
+export type Highlights = {
+  takenCents: number; tipsCents: number; tipsDays: number; dishes: number; biggestCents: number;
+  bestDay: { day: string; orders: number; cents: number } | null; reviewsAsked: number;
+  deliveryOrders: number; deliveryDays: number;
 };
 export type Week = {
   orders: number; sales: number; newCustomers: number; returningCustomers: number; untracked: number;
@@ -108,6 +114,36 @@ export function summarize(all: Ord[], start: string, end: string): Week {
     firstDay: counted.reduce<string | null>((m, o) => (!m || o.day < m ? o.day : m), null),
   };
 }
+
+const daysIn = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000) + 1;
+
+// the first (all-time) report leads with these: every one a real total. Tips
+// and delivery went live partway through, so each is counted over its own days
+// (since = the day it went live; app_config tips_live_since / delivery_live_since)
+export function highlights(all: Ord[], start: string, end: string, since: { tips?: string; delivery?: string } = {}): Highlights {
+  const os = all.filter((o) => COUNTED.includes(o.status))
+    .map((o) => ({ ...o, day: flDate(o.created_at) })).filter((o) => o.day >= start && o.day <= end);
+  const byDay = new Map<string, { orders: number; cents: number }>();
+  for (const o of os) {
+    const d = byDay.get(o.day) ?? { orders: 0, cents: 0 };
+    d.orders++; d.cents += o.total_cents ?? 0; byDay.set(o.day, d);
+  }
+  const best = [...byDay.entries()].sort((a, b) => b[1].orders - a[1].orders || b[1].cents - a[1].cents)[0];
+  const tipsFrom = since.tips && since.tips > start ? since.tips : start;
+  const delFrom = since.delivery && since.delivery > start ? since.delivery : start;
+  return {
+    takenCents: os.reduce((s, o) => s + (o.total_cents ?? 0), 0),
+    tipsCents: os.filter((o) => o.day >= tipsFrom).reduce((s, o) => s + (o.tip_cents ?? 0), 0),
+    tipsDays: tipsFrom <= end ? daysIn(tipsFrom, end) : 0,
+    deliveryOrders: os.filter((o) => o.day >= delFrom && o.fulfilment === "delivery").length,
+    deliveryDays: delFrom <= end ? daysIn(delFrom, end) : 0,
+    dishes: os.reduce((s, o) => s + (o.items ?? []).reduce((t, l) => t + l.qty, 0), 0),
+    biggestCents: os.reduce((m, o) => Math.max(m, o.total_cents ?? 0), 0),
+    bestDay: best ? { day: best[0], ...best[1] } : null,
+    // stamped 1970-01-01 = looked at but not asked (ask-review); only real asks count
+    reviewsAsked: os.filter((o) => o.review_asked_at && o.review_asked_at > "1971").length,
+  };
+}
 /* ----------------------------------------------------------------------- */
 
 const change = (now: number, before: number) => {
@@ -115,10 +151,13 @@ const change = (now: number, before: number) => {
   const p = Math.round(((now - before) / before) * 100);
   return p === 0 ? "same as last week" : `${p > 0 ? "▲" : "▼"} ${Math.abs(p)}% vs last week`;
 };
+const bigDay = (d: string) =>
+  new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "short", day: "numeric" });
 const niceDay = (d: string) =>
   new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
 
-function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string; ads?: string }, allTime: boolean) {
+function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string; ads?: string }, hl: Highlights | null, views: number, intro = "") {
+  const allTime = !!hl;
   const tile = (big: string, label: string, sub: string) => `
       <td style="width:50%;padding:12px 14px;border:1px solid #e3ded2;vertical-align:top">
         <div style="font-size:26px;font-weight:700;line-height:1.1">${big}</div>
@@ -128,7 +167,7 @@ function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string;
   const rows = w.bySource.map((s) => `<tr>
       <td style="padding:6px 8px 6px 0;border-bottom:1px solid #eee">${esc(s.label)}</td>
       <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${s.orders}</td>
-      <td style="padding:6px 0 6px 8px;border-bottom:1px solid #eee;text-align:right">${s.newCustomers}</td></tr>`).join("");
+      ${hl ? "" : `<td style="padding:6px 0 6px 8px;border-bottom:1px solid #eee;text-align:right">${s.newCustomers}</td>`}</tr>`).join("");
   const top = w.top.map((t) => `<tr><td style="padding:3px 12px 3px 0;font-weight:700">${t.qty}×</td><td style="padding:3px 0">${esc(t.name)}</td></tr>`).join("");
   const note = (s: string) => `<p style="font-size:15px;line-height:1.5;margin:16px 0 0;padding:10px 12px;background:#faf3e3;border-left:4px solid #E4A72E">${s}</p>`;
   return `
@@ -138,17 +177,36 @@ function emailHtml(w: Week, start: string, end: string, extra: { bonus?: string;
       <div style="font-size:22px;font-weight:700;margin-top:4px">Lily's website orders</div>
     </div>
     <div style="border:1px solid #e3ded2;border-top:0;border-radius:0 0 10px 10px;padding:20px">
+      ${hl ? `
+      ${intro ? `<p style="font-size:15px;line-height:1.5;margin:0 0 16px;padding:12px 14px;background:#EEF5EF;border-radius:8px">${intro}</p>` : ""}
+      <div style="text-align:center;padding:6px 0 18px">
+        <div style="font-size:44px;font-weight:800;line-height:1.05;color:#14532b">${money(hl.takenCents)}</div>
+        <div style="font-size:16px;font-weight:700;margin-top:4px">taken online</div>
+        <div style="font-size:13px;color:#8a8f8b;margin-top:2px">${money(w.sales)} of food, plus tax, tips and delivery</div>
+      </div>
       <table style="border-collapse:collapse;width:100%">
-        ${allTime ? `
-        <tr>${tile(String(w.orders), "orders", "")}${tile(money(w.sales), "food sales", "")}</tr>
-        <tr>${tile(String(w.newCustomers), "customers", "")}${tile(String(w.repeatCustomers), "came back", "ordered more than once")}</tr>` : `
-        <tr>${tile(String(w.orders), "orders", change(w.orders, w.prev.orders))}${tile(money(w.sales), "food sales", change(w.sales, w.prev.sales))}</tr>
-        <tr>${tile(String(w.newCustomers), "new customers", change(w.newCustomers, w.prev.newCustomers))}${tile(String(w.returningCustomers), "came back", "ordered before")}</tr>`}
+        <tr>${tile(String(w.orders), "orders", "")}${tile(`${w.newCustomers}${w.untracked ? "+" : ""}`, "customers", "")}</tr>
+        <tr>${tile(String(hl.dishes), "dishes served", "")}${tile(String(views), "website page views", "")}</tr>
       </table>
+      <p style="margin:20px 0 6px;font-weight:700">Highlights</p>
+      <table style="border-collapse:collapse;width:100%;font-size:15px;line-height:1.45">
+        ${[
+          `<b>Biggest order:</b> ${money(hl.biggestCents)}`,
+          hl.bestDay ? `<b>Best day:</b> ${bigDay(hl.bestDay.day)}, ${hl.bestDay.orders} orders worth ${money(hl.bestDay.cents)}` : "",
+          `<b>$${Math.round(w.sales * 0.15 / 100)} to $${Math.round(w.sales * 0.3 / 100)} kept:</b> what the delivery apps would have taken from these orders (15 to 30% commission). On your website it's $0.`,
+          hl.tipsCents ? `<b>${money(hl.tipsCents)} in tips</b> for your team, in the ${hl.tipsDays} days tips have been on` : "",
+          hl.deliveryOrders ? `<b>${hl.deliveryOrders} delivery order${hl.deliveryOrders === 1 ? "" : "s"}</b> in delivery's first ${hl.deliveryDays} day${hl.deliveryDays === 1 ? "" : "s"}` : "",
+          hl.reviewsAsked ? `<b>${hl.reviewsAsked} customers</b> automatically asked for a Google review` : "",
+        ].filter(Boolean).map((t) => `<tr><td style="padding:5px 10px 5px 0;vertical-align:top;color:#14532b;font-weight:700">✓</td><td style="padding:5px 0">${t}</td></tr>`).join("")}
+      </table>` : `
+      <table style="border-collapse:collapse;width:100%">
+        <tr>${tile(String(w.orders), "orders", change(w.orders, w.prev.orders))}${tile(money(w.sales), "food sales", change(w.sales, w.prev.sales))}</tr>
+        <tr>${tile(String(w.newCustomers), "new customers", change(w.newCustomers, w.prev.newCustomers))}${tile(String(w.returningCustomers), "came back", "ordered before")}</tr>
+      </table>`}
       ${w.orders ? `
       <p style="margin:20px 0 6px;font-weight:700">Where they came from</p>
       <table style="border-collapse:collapse;width:100%;font-size:15px">
-        <tr style="color:#5d625f;font-size:13px"><td style="padding:0 8px 4px 0">Source</td><td style="padding:0 8px 4px;text-align:right">Orders</td><td style="padding:0 0 4px 8px;text-align:right">New</td></tr>
+        <tr style="color:#5d625f;font-size:13px"><td style="padding:0 8px 4px 0">Source</td><td style="padding:0 8px 4px;text-align:right">Orders</td>${hl ? "" : `<td style="padding:0 0 4px 8px;text-align:right">New</td>`}</tr>
         ${rows}
       </table>
       <p style="margin:20px 0 6px;font-weight:700">Best sellers</p>
@@ -168,7 +226,7 @@ Deno.serve(async (req) => {
   const { data: config, error: cfgErr } = await db.from("app_config").select("key,value")
     .in("key", ["resend_api_key", "notify_email", "notify_from", "weekly_report_to", "weekly_report_cc",
       "weekly_report_enabled", "weekly_report_baseline", "weekly_report_last_week", "ads_spend_week",
-      "weekly_report_all_time"]);
+      "weekly_report_all_time", "weekly_report_all_time_note", "tips_live_since", "delivery_live_since"]);
   if (cfgErr) return json({ error: "config read failed" }, 503);
   const cfg = Object.fromEntries((config ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   if ((cfg.weekly_report_enabled ?? "false").trim() !== "true") return json({ ok: true, note: "weekly report switched off" });
@@ -186,7 +244,7 @@ Deno.serve(async (req) => {
   const release = () => db.from("app_config").update({ value: prevClaim }).eq("key", "weekly_report_last_week").eq("value", start);
 
   const { data: rows, error } = await db.from("orders")
-    .select("created_at,status,subtotal_cents,discount_cents,customer_hash,source,items")
+    .select("created_at,status,subtotal_cents,discount_cents,customer_hash,source,items,total_cents,tip_cents,review_asked_at,fulfilment")
     .eq("demo", false).not("code", "like", "TEST-%")
     .gte("created_at", new Date(Date.now() - 400 * 86400000).toISOString());
   if (error) { await release(); return json({ error: "orders read failed" }, 503); }
@@ -195,6 +253,12 @@ Deno.serve(async (req) => {
   const first = allTime ? summarize((rows ?? []) as Ord[], start, end).firstDay : null;
   const from = first && first <= end ? first : start; // the very first order, even if it falls inside the week
   const w = summarize((rows ?? []) as Ord[], from, end);
+  const hl = allTime ? highlights((rows ?? []) as Ord[], from, end, { tips: cfg.tips_live_since, delivery: cfg.delivery_live_since }) : null;
+  let views = 0;
+  if (hl) {
+    const { data: ev } = await db.from("site_events").select("event,count").gte("day", from).lte("day", end).like("event", "visit_%");
+    views = (ev ?? []).reduce((s: number, r: { count: number }) => s + Number(r.count ?? 0), 0);
+  }
 
   const extra: { bonus?: string; ads?: string } = {};
   const baseline = Number(cfg.weekly_report_baseline);
@@ -217,11 +281,13 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: cfg.notify_from || "Lily's Orders <orders@lilysmediterraneanfresh.com>",
       to: [to], ...(cc.length ? { cc } : {}),
-      subject: allTime
-        ? `Lily's website so far: ${w.orders} orders · ${money(w.sales)} · ${w.newCustomers} customers`
+      subject: hl
+        ? `Lily's website so far: ${money(hl.takenCents)} taken online · ${w.orders} orders`
         : `Lily's week: ${w.orders} orders · ${money(w.sales)} · ${w.newCustomers} new customer${w.newCustomers === 1 ? "" : "s"}`,
-      html: emailHtml(w, from, end, extra, allTime),
-      text: `Lily's website, ${from} to ${end}: ${w.orders} orders, ${money(w.sales)} food sales, ${w.newCustomers} ${allTime ? "customers" : "new customers"}, ${allTime ? w.repeatCustomers : w.returningCustomers} came back.\n` +
+      html: emailHtml(w, from, end, extra, hl, views, hl ? esc(cfg.weekly_report_all_time_note ?? "") : ""),
+      text: (hl
+        ? `Lily's website, ${from} to ${end}: ${money(hl.takenCents)} taken online (${money(w.sales)} food), ${w.orders} orders, ${w.newCustomers}${w.untracked ? "+" : ""} customers, ${hl.dishes} dishes.\n`
+        : `Lily's website, ${from} to ${end}: ${w.orders} orders, ${money(w.sales)} food sales, ${w.newCustomers} new customers, ${w.returningCustomers} came back.\n`) +
         w.bySource.map((s) => `${s.label}: ${s.orders} orders, ${s.newCustomers} new`).join("\n"),
     }),
   });

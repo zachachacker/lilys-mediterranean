@@ -609,11 +609,11 @@ export function validateCatering(b: Record<string, unknown>, today: string): Cat
 }
 // --- end validateCatering ---
 
-/* ── weekly-report/index.ts:26-110: the whole pure block, verbatim ── */
+/* ── weekly-report/index.ts:26-146: the whole pure block, verbatim ── */
 /* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */
 export const COUNTED = ["paid", "making", "ready", "done"];
 export const SOURCE_NAMES: Record<string, string> = {
-  "google-ads": "Google Ads", google: "Google search", direct: "Direct / typed in", instagram: "Instagram",
+  "google-ads": "Google Ads", google: "Google (listing, Maps & search)", direct: "Direct / typed in", instagram: "Instagram",
   facebook: "Facebook", tiktok: "TikTok", yelp: "Yelp", tripadvisor: "TripAdvisor", bing: "Bing",
   duckduckgo: "DuckDuckGo", sticker: "Bag sticker", ubereats: "Uber Eats", doordash: "DoorDash",
   gbp: "Google listing", "gbp-order": "Google \"Order online\" button", "old-site": "Old website",
@@ -633,6 +633,12 @@ export function lastWeek(today: string): { start: string; end: string } {
 export type Ord = {
   created_at: string; status: string; subtotal_cents: number; discount_cents: number | null;
   customer_hash: string | null; source: string | null; items: { name: string; qty: number }[] | null;
+  total_cents?: number; tip_cents?: number | null; review_asked_at?: string | null; fulfilment?: string | null;
+};
+export type Highlights = {
+  takenCents: number; tipsCents: number; tipsDays: number; dishes: number; biggestCents: number;
+  bestDay: { day: string; orders: number; cents: number } | null; reviewsAsked: number;
+  deliveryOrders: number; deliveryDays: number;
 };
 export type Week = {
   orders: number; sales: number; newCustomers: number; returningCustomers: number; untracked: number;
@@ -693,6 +699,36 @@ export function summarize(all: Ord[], start: string, end: string): Week {
     monthOrders: inRange(`${end.slice(0, 7)}-01`, end).length,
     repeatCustomers: [...people].filter((h) => week.filter((o) => o.customer_hash === h).length > 1).length,
     firstDay: counted.reduce<string | null>((m, o) => (!m || o.day < m ? o.day : m), null),
+  };
+}
+
+const daysIn = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000) + 1;
+
+// the first (all-time) report leads with these: every one a real total. Tips
+// and delivery went live partway through, so each is counted over its own days
+// (since = the day it went live; app_config tips_live_since / delivery_live_since)
+export function highlights(all: Ord[], start: string, end: string, since: { tips?: string; delivery?: string } = {}): Highlights {
+  const os = all.filter((o) => COUNTED.includes(o.status))
+    .map((o) => ({ ...o, day: flDate(o.created_at) })).filter((o) => o.day >= start && o.day <= end);
+  const byDay = new Map<string, { orders: number; cents: number }>();
+  for (const o of os) {
+    const d = byDay.get(o.day) ?? { orders: 0, cents: 0 };
+    d.orders++; d.cents += o.total_cents ?? 0; byDay.set(o.day, d);
+  }
+  const best = [...byDay.entries()].sort((a, b) => b[1].orders - a[1].orders || b[1].cents - a[1].cents)[0];
+  const tipsFrom = since.tips && since.tips > start ? since.tips : start;
+  const delFrom = since.delivery && since.delivery > start ? since.delivery : start;
+  return {
+    takenCents: os.reduce((s, o) => s + (o.total_cents ?? 0), 0),
+    tipsCents: os.filter((o) => o.day >= tipsFrom).reduce((s, o) => s + (o.tip_cents ?? 0), 0),
+    tipsDays: tipsFrom <= end ? daysIn(tipsFrom, end) : 0,
+    deliveryOrders: os.filter((o) => o.day >= delFrom && o.fulfilment === "delivery").length,
+    deliveryDays: delFrom <= end ? daysIn(delFrom, end) : 0,
+    dishes: os.reduce((s, o) => s + (o.items ?? []).reduce((t, l) => t + l.qty, 0), 0),
+    biggestCents: os.reduce((m, o) => Math.max(m, o.total_cents ?? 0), 0),
+    bestDay: best ? { day: best[0], ...best[1] } : null,
+    // stamped 1970-01-01 = looked at but not asked (ask-review); only real asks count
+    reviewsAsked: os.filter((o) => o.review_asked_at && o.review_asked_at > "1971").length,
   };
 }
 

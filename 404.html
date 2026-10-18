@@ -18,7 +18,13 @@
       "/were-hiring": "/careers.html", "/terms-and-policies": "/privacy.html",
       "/menu": "/menu.html", "/order": "/order.html", "/order-online": "/order.html",
       "/order/online": "/order.html", // the Google Ads display path
+      // old WordPress pages Google still lists under this domain (from when it
+      // forwarded to the Sauce site), found 18 Oct
+      "/story": "/#story", "/food-truck": "/catering.html", "/places/satellite-beach": "/",
+      "/shop": "/order.html", "/cart": "/order.html", "/checkout": "/order.html",
     };
+    // old product pages (/product/beef-kafta-platter/ ...) go to ordering
+    if (p.indexOf("/product/") === 0 || p.indexOf("/product-category/") === 0) map[p] = "/order.html";
     var to = map[p];
     if (to === undefined) return;
     var q = location.search ? location.search + "&" : "?";
