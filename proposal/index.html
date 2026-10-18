@@ -185,7 +185,7 @@
     bonus: 1.5,         // $ per website order above the baseline
     baseline: 45,       // website orders a month today (about 1.5 a day)
     cap: 1499,          // max $/month (reached at ~28 orders a day); null for no cap
-    avgOrder: 67,       // average website order, from the first 17 orders
+    avgOrder: 63,       // average website order (food, as the dashboard), first 16 real orders
   };
   /* -------------------- */
   const usd = (n, d = 0) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });

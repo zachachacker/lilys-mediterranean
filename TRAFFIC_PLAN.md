@@ -3,7 +3,7 @@
 ## Diagnosis
 
 **The site converts. People never reach it.** From 7–17 Oct: 249 home visits →
-74 order-page visits → 17 checkouts → 17 paid. No paid checkout was lost, and
+74 order-page visits → 17 checkouts → 17 paid (16 real orders and 1 test). No paid checkout was lost, and
 23% of order-page visitors buy. Traffic is about 40 page views a day, almost all
 from people who already had the link.
 
@@ -88,7 +88,7 @@ switching it off, compare its fees and order volume.
 
 ### Step 5: weeks 2–6: grow demand
 - **Reviews:** the review-request emails exist. Check that they send after every order. The aim is more Google reviews than Skewers.
-- **Google Ads**, once landing pages and verification are sorted: search campaigns within about 6 miles for brand terms plus "mediterranean / gyro / shawarma near me", weighted to 11am–3pm and 5–9pm (16 of the 17 orders came in those hours). Track by the purchase conversion.
+- **Google Ads**, once landing pages and verification are sorted: search campaigns within about 6 miles for brand terms plus "mediterranean / gyro / shawarma near me", weighted to 11am–3pm and 5–9pm (15 of the 16 real orders came in those hours). Track by the purchase conversion.
 - **Google Business Profile posts** weekly: lunch specials, BOGO offers.
 - **In store:** a QR card at the counter and on tables, the sticker on every bag (in-store orders too), and staff saying "order direct next time, it's cheaper".
 - **Lily's Club:** offer the join as a one-tap button on the order-confirmed page (2 of 13 buyers tick it at checkout).
