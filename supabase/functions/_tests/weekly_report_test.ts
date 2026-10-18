@@ -77,7 +77,7 @@ Deno.test("sources: orders and new customers per channel, readable names, busies
     ["Google Ads", 2, 2],
     ["Google search", 1, 0],
     ["Old website", 1, 1],
-    ["Unknown", 1, 1],
+    ["Unknown (before tracking)", 1, 1],
   ]);
 });
 
@@ -122,4 +122,9 @@ Deno.test("drift: the all-time report runs once, then turns itself off", async (
   assertStringIncludes(src, 'if (allTime) await db.from("app_config").update({ value: "false" }).eq("key", "weekly_report_all_time");');
   // switched off only after the send succeeded
   assert(src.indexOf('update({ value: "false" }).eq("key", "weekly_report_all_time")') > src.indexOf("if (!resp.ok) {"));
+});
+
+Deno.test("drift: all-time starts at the very first order, even inside the week", async () => {
+  const src = await Deno.readTextFile(new URL("../weekly-report/index.ts", import.meta.url));
+  assertStringIncludes(src, "const from = first && first <= end ? first : start;");
 });

@@ -88,7 +88,7 @@ export function summarize(all: Ord[], start: string, end: string): Week {
   const bySource = [...src.entries()]
     .map(([source, r]) => ({
       source, orders: r.orders, newCustomers: r.fresh.size,
-      label: SOURCE_NAMES[source] || (source ? source.replace(/-/g, " ") : "Unknown"),
+      label: SOURCE_NAMES[source] || (source ? source.replace(/-/g, " ") : "Unknown (before tracking)"),
     }))
     .sort((a, b) => b.orders - a.orders || a.label.localeCompare(b.label));
 
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
   // the first report covers everything since the first order, then weekly
   const allTime = (cfg.weekly_report_all_time ?? "").trim() === "true";
   const first = allTime ? summarize((rows ?? []) as Ord[], start, end).firstDay : null;
-  const from = first && first < start ? first : start;
+  const from = first && first <= end ? first : start; // the very first order, even if it falls inside the week
   const w = summarize((rows ?? []) as Ord[], from, end);
 
   const extra: { bonus?: string; ads?: string } = {};

@@ -609,7 +609,7 @@ export function validateCatering(b: Record<string, unknown>, today: string): Cat
 }
 // --- end validateCatering ---
 
-/* ── weekly-report/index.ts:24-108: the whole pure block, verbatim ── */
+/* ── weekly-report/index.ts:26-110: the whole pure block, verbatim ── */
 /* ---- pure helpers (mirrored in _tests/mirrors.ts) ---------------------- */
 export const COUNTED = ["paid", "making", "ready", "done"];
 export const SOURCE_NAMES: Record<string, string> = {
@@ -675,7 +675,7 @@ export function summarize(all: Ord[], start: string, end: string): Week {
   const bySource = [...src.entries()]
     .map(([source, r]) => ({
       source, orders: r.orders, newCustomers: r.fresh.size,
-      label: SOURCE_NAMES[source] || (source ? source.replace(/-/g, " ") : "Unknown"),
+      label: SOURCE_NAMES[source] || (source ? source.replace(/-/g, " ") : "Unknown (before tracking)"),
     }))
     .sort((a, b) => b.orders - a.orders || a.label.localeCompare(b.label));
 
