@@ -9,9 +9,9 @@ from people who already had the link.
 
 | # | Leak | Evidence | Impact |
 |---|---|---|---|
-| 1 | **The old site is live and takes orders through Sauce.** `lilysmediterranean.com` (WordPress by Sauce, Cloudflare) returns 200 with 11 "Order online" links to `getsauce.com/order/lilys-mediterranean-fresh-grill` and 3 catering links. It has its own sitemap, a self-canonical tag and GA4 `G-CTCJHL724T`. | curl, 18 Oct | **Highest.** Every "Website" click on Google, Facebook and Wanderlog lands there, and its orders never show up in our numbers. |
+| 1 | **The old site is live and takes orders through Sauce.** `lilysmediterranean.com` (WordPress by Sauce, Cloudflare) returns 200 with 11 "Order online" links to `getsauce.com/order/lilys-mediterranean-fresh-grill` and 3 catering links. It has its own sitemap, a self-canonical tag and GA4 `G-CTCJHL724T`. | curl, 18 Oct | **Highest.** It's the top search result for "Lily's", and Facebook and Wanderlog link to it, and its orders never show up in our numbers. |
 | 2 | **The new domain has 0 pages in Google.** `site:lilysmediterraneanfresh.com` returns nothing. The domain went live on 7 Oct, there's no Search Console verification, and it doesn't rank for brand or generic searches. | search, 18 Oct | **Highest.** Without indexing, search traffic can't reach the new site at all. |
-| 3 | **Google Business Profile website is probably the old domain.** Google-sourced listings (Wanderlog) and Facebook show `lilysmediterranean.com`. | Not verified: needs owner login | High |
+| 3 | **For a "Lily's" search, the old Sauce site is the top result**, even though the Google Business Profile already links to the new site (Zachary confirmed this on 18 Oct). Searchers click the first result and order on Sauce. | Zachary, 18 Oct | High. Fixed by the redirect plus Change of address (steps 2–3). |
 | 4 | **"Order online" searches go to the apps.** DoorDash (2,000+ reviews), DoorDash's own order.online pages (store 1455015), Uber Eats, Postmates and Grubhub all rank. | search | High. The demand exists, but it's on the apps at 15–30% commission. |
 | 5 | **Catering goes elsewhere:** HoneyCart (`lilysmediterraneanfreshgrill.gethoneycart.com`), ezCater ($150 minimum) and Sauce catering. None of these point to `/catering.html`. | search | Medium |
 | 6 | **Wrong Wednesday hours.** Yelp and Restaurantji show Wed 4–9pm and ezCater shows Wednesday delivery, but Lily's is closed on Wednesdays. | search snippets | Medium: wasted trips and bad reviews |
@@ -29,7 +29,7 @@ can move to the new site, and it should be the first thing we get.
 ### Step 1: today and tomorrow (Karim, about 15 minutes each)
 1. **Google Ads verification.** It's due today, or the ads pause.
 2. **Google Business Profile** (business.google.com; add Zachary as Manager so he can do the rest):
-   - Website: `https://lilysmediterraneanfresh.com/?src=gbp`
+   - Website: already the new site. Add `?src=gbp` so these visits show separately: `https://lilysmediterraneanfresh.com/?src=gbp`
    - Menu link: `https://lilysmediterraneanfresh.com/menu.html?src=gbp`
    - Order online: add `https://lilysmediterraneanfresh.com/order.html?src=gbp-order` and set it as the **preferred** ordering link, ahead of DoorDash, Uber Eats and Sauce.
    - Hours: check that Wednesday shows **Closed**.
