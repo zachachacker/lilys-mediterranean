@@ -63,6 +63,26 @@ The new site's `404.html` (shipped 18 Oct) sends each old page to its new page:
 `/terms-and-policies/` → `/privacy.html`. Visits from the old site show up as
 source `old-site` on the dashboard.
 
+> **Update 20 Oct: Sauce is cancelled, effective 31 Oct** (Karim's email to
+> support@getsauce.com, 19 Oct). If Sauce's Cloudflare account holds the zone and
+> deletes it, the domain stops resolving, and Zoho email stops with it. So
+> **GoDaddy access is due by about 29 Oct**: rebuild the zone in a Cloudflare account
+> in Karim's name, add the redirect rule above, then switch the nameservers.
+> Public records as of 20 Oct (no DKIM found under the common selectors):
+>
+> | Name | Type | Value |
+> |---|---|---|
+> | @ | MX | 10 `mx.zoho.com` · 20 `mx2.zoho.com` · 50 `mx3.zoho.com` |
+> | @ | TXT | `v=spf1 include:zohomail.com include:_spf.mail.hostinger.com ~all` |
+> | @ | TXT | `zoho-verification=zb50415204.zmverify.zoho.com` |
+> | @ | TXT | `google-site-verification=EKi5WJTA4qSbZ6XFcv-8nB3eHAr-q_7xPacxRg_3JkY` |
+> | @ | TXT | `google-site-verification=FVC27SJFYWFfy6JVaLHwiPlUujeFpCsCPgrdKC8sZjo` |
+> | _dmarc | TXT | `v=DMARC1; p=none` |
+>
+> The @ and www A/AAAA records point at Sauce hosting. Don't copy them: give @ and www
+> any proxied placeholder (for example A `192.0.2.1`, orange cloud) so the redirect
+> rule runs. Check Sauce's zone export for anything extra before switching.
+
 Then decide about **Sauce**: switch its ordering off, or keep it only for the
 "free delivery over $60" customers, and ask Sauce to delist
 `getsauce.com/order/lilys-mediterranean-fresh-grill` from search. Before
