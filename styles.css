@@ -1481,3 +1481,10 @@ fieldset.af-field[aria-invalid="true"] .af-chip { border-color: var(--ember); }
 .apply-done p { line-height: 1.6; margin: 0 0 0.6rem; max-width: var(--measure); }
 .apply-done a[href^="tel"], .apply-section .section-head a[href^="tel"] { white-space: nowrap; }
 @media (max-width: 520px) { .af-submit { justify-self: stretch; justify-content: center; } }
+
+/* "Why order here" (2026-10-20): the three things the apps can't match. The
+   loyalty line matches app_config loyalty_every / loyalty_cents (loyalty_test). */
+.perks { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem; padding: 0; margin: 0.9rem 0 0; }
+.perks li { font-size: 0.86rem; font-weight: 700; padding: 0.32rem 0.75rem; border-radius: 99px;
+  border: 1.5px solid currentColor; opacity: 0.92; }
+.perks li::before { content: "✓ "; color: var(--go); }

@@ -62,6 +62,7 @@
   let key = hashKey || localStorage.getItem(KEY_STORE) || "";
   let orders = [];
   let pausedUntil = null; // ISO, from every list poll; null = taking online orders
+  let loyalty = null; // {every, cents} when the loyalty reward is on (kitchen-api list)
   let knownIds = new Set(); // orders seen at least once (arrival chime + flash)
   let firstLoad = true;
   let recalled = new Set(); // ids recalled this session — red RECALLED chip
@@ -210,6 +211,7 @@
       const res = await call({ action: "list" });
       const list = res.orders;
       pausedUntil = res.paused_until || null;
+      loyalty = res.loyalty || null;
       // a list snapshot can be older than a tap we just made — local wins
       list.forEach((o) => {
         const override = inFlight.get(o.id) ?? pending.find((p) => p.id === o.id)?.to;
@@ -1020,6 +1022,12 @@
       row("TOTAL", money(total), "r-total"),
       `<div class="r-c">PAID ONLINE</div>`,
     ].join("") : "";
+    // loyalty progress (kitchen-api counts it; the hash never reaches here)
+    const L = o.loyalty && loyalty ? o.loyalty : null;
+    const reward = loyalty ? `$${(loyalty.cents / 100).toFixed(loyalty.cents % 100 ? 2 : 0)}` : "";
+    const loyal = !L ? "" : Math.floor(L.n / loyalty.every) - L.used > 0
+      ? `<div class="r-c r-loyal">★ Your next online order is ${reward} off ★</div>`
+      : `<div class="r-c r-loyal">Online order ${L.n % loyalty.every} of ${loyalty.every}: then ${reward} off</div>`;
     const delivery = o.fulfilment === "delivery";
     return `<div class="r-receipt">
       <div class="r-c r-name">Lily's Mediterranean Fresh Grill</div>
@@ -1037,6 +1045,7 @@
       ${items}
       ${o.notes ? `<div class="r-notes">${esc(o.notes)}</div>` : ""}
       ${totals ? `<div class="r-hr"></div>${totals}` : ""}
+      ${loyal}
       ${o.demo && !o.club ? "" : `<div class="r-club">
         <div class="r-c r-club-h">JOIN LILY'S CLUB</div>
         <div class="r-c r-club-big">${CLUB_PERCENT}% OFF</div>

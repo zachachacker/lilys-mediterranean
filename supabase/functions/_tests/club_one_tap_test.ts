@@ -24,7 +24,8 @@ Deno.test("join_order: the order's own email, never re-joins someone who is on t
 
 Deno.test("order-status: offers the join without ever returning the email", async () => {
   const s = await read("../order-status/index.ts");
-  assertStringIncludes(s, "const { id, customer_hash, customer_email, ...order } = data;");
+  // the email, the customer hash and the raw discounts all stay on the server
+  assertStringIncludes(s, "const { id, customer_hash, customer_email, discounts, ...order } = data;");
   assertStringIncludes(s, "if (em && !data.demo) {");
-  assertStringIncludes(s, "referral: await referralFor(db, data), club } });");
+  assertStringIncludes(s, "referral: await referralFor(db, data), club, loyalty: await loyaltyFor(db, data) } });");
 });

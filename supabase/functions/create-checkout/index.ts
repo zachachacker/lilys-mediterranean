@@ -220,11 +220,21 @@ function codeDiscountCents(afterPromos: number, percent: number): number {
   return Math.round((afterPromos * percent) / 100);
 }
 
-// Lily's Club welcome gift (2026-10-20): 10% off, never more than this many cents
-// (app_config club_max_cents, 750 = $7.50). Unset or invalid = no cap.
+// Lily's Club welcome gift and bag stickers (2026-10-20): 10% off, never more
+// than this many cents (app_config club_max_cents, 750 = $7.50). Unset or
+// invalid = no cap.
 function clubCapCents(raw: string | undefined): number {
   const n = Number(raw);
   return Number.isInteger(n) && n > 0 ? n : Infinity;
+}
+
+// Loyalty (2026-10-20): every `every` paid online orders earn one reward,
+// spent on a later order. Banked, not "the 5th order": a lunch-only order or a
+// failed check never loses it, because a reward only counts as used once a
+// paid order carries it (orders.discounts id "loyalty").
+function loyaltyDue(paidOrders: number, usedRewards: number, every: number): boolean {
+  if (!Number.isInteger(every) || every < 2) return false;
+  return Math.floor(paidOrders / every) > usedRewards;
 }
 
 /* ── analytics (2026-10-08) ─────────────────────────────────────────────
@@ -402,7 +412,7 @@ Deno.serve(async (req) => {
       }
     }
     const percent = t.kind === "referral" ? Number(c.referral_percent ?? "10") : t.percent;
-    const cap = t.kind === "club" ? clubCapCents(c.club_max_cents) : Infinity;
+    const cap = t.kind === "club" || t.kind === "sticker" ? clubCapCents(c.club_max_cents) : Infinity;
     return json({ ok: true, kind: t.kind, percent, ...(Number.isFinite(cap) ? { max_cents: cap } : {}) });
   }
 
@@ -641,11 +651,13 @@ Deno.serve(async (req) => {
       }
       tokenRow = t;
       const pct = t.kind === "referral" ? referralPct : t.percent;
-      const cents = Math.min(codeDiscountCents(offerable(), pct), t.kind === "club" ? clubCap : Infinity, offerable());
+      const capped = t.kind === "club" || t.kind === "sticker";
+      const cents = Math.min(codeDiscountCents(offerable(), pct), capped ? clubCap : Infinity, offerable());
       if (cents > 0) {
         discount += cents;
-        const label = t.kind === "sticker" ? `${pct}% off your first online order`
-          : t.kind === "club" ? `Lily's Club: ${pct}% off${Number.isFinite(clubCap) ? ` (up to $${(clubCap / 100).toFixed(2)})` : ""}`
+        const upTo = capped && Number.isFinite(clubCap) ? ` (up to $${(clubCap / 100).toFixed(2)})` : "";
+        const label = t.kind === "sticker" ? `${pct}% off your first online order${upTo}`
+          : t.kind === "club" ? `Lily's Club: ${pct}% off${upTo}`
           : `Friend's ${pct}% off`;
         applied.push({ id: t.kind, label, cents });
       }
@@ -678,6 +690,27 @@ Deno.serve(async (req) => {
   } catch (ex) {
     console.error("discount link check failed:", ex instanceof Error ? ex.message : ex);
     return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+  }
+
+  // loyalty reward, on top of any link: never on lunch lines (offerable). A
+  // failed count skips it for this order only; it stays banked for the next.
+  const loyaltyEvery = Number(cfg.loyalty_every ?? "5");
+  const loyaltyCents = Number(cfg.loyalty_cents ?? "0");
+  if ((cfg.loyalty_enabled ?? "").trim() === "true" && custHash && Number.isInteger(loyaltyCents) && loyaltyCents > 0) {
+    const [paid, used] = await Promise.all([
+      db.from("orders").select("id", { count: "exact", head: true }).eq("customer_hash", custHash).in("status", PAID_STATUSES),
+      db.from("orders").select("id", { count: "exact", head: true }).eq("customer_hash", custHash).in("status", PAID_STATUSES)
+        .filter("discounts", "cs", '[{"id":"loyalty"}]'),
+    ]);
+    if (paid.error || used.error) {
+      console.error("loyalty count failed:", paid.error?.message ?? used.error?.message);
+    } else if (loyaltyDue(paid.count ?? 0, used.count ?? 0, loyaltyEvery)) {
+      const cents = Math.min(loyaltyCents, offerable());
+      if (cents > 0) {
+        discount += cents;
+        applied.push({ id: "loyalty", label: `Loyalty reward: $${(loyaltyCents / 100).toFixed(2)} off`, cents });
+      }
+    }
   }
 
   let deliveryMiles: number | null = null;

@@ -8,6 +8,15 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-kitchen-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+// Loyalty progress (2026-10-20; byte-identical in order-status and kitchen-api):
+// a customer's paid online orders up to and including `at`, and how many of
+// those spent a reward. create-checkout decides the reward itself.
+type LoyaltyRow = { created_at: string; discounts: { id?: string }[] | null };
+function loyaltyAt(rows: LoyaltyRow[], at: string): { n: number; used: number } {
+  const upTo = rows.filter((r) => r.created_at <= at);
+  return { n: upTo.length, used: upTo.filter((r) => (r.discounts ?? []).some((d) => d?.id === "loyalty")).length };
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -225,7 +234,7 @@ Deno.serve(async (req) => {
     const twelveHoursAgo = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     const { data, error } = await db
       .from("orders")
-      .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,demo,stripe_payment_intent,fulfilment,delivery_address,delivery_miles,delivery_fee_cents,tip_cents")
+      .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,demo,stripe_payment_intent,fulfilment,delivery_address,delivery_miles,delivery_fee_cents,tip_cents,customer_hash")
       // finished TEST- orders (go-live checks) never clutter "Earlier today" or the
       // day's totals; a live TEST order still shows, so a test can still ring
       .or(`status.in.(paid,making,ready),and(status.in.(done,canceled),created_at.gte.${twelveHoursAgo},code.not.like.TEST-*)`)
@@ -234,7 +243,28 @@ Deno.serve(async (req) => {
     // every poll carries the pause, so a pause set on one device shows on all
     const { data: p } = await db.from("app_config").select("value").eq("key", "orders_paused_until").maybeSingle();
     const until = Date.parse(p?.value ?? "");
-    return json({ orders: data, now: new Date().toISOString(), paused_until: until > Date.now() ? p!.value : null });
+    // loyalty progress for the printed receipt (2026-10-20): the count only;
+    // the customer hash itself never leaves this function
+    const { data: lc } = await db.from("app_config").select("key,value").in("key", ["loyalty_enabled", "loyalty_every", "loyalty_cents"]);
+    const lcfg = Object.fromEntries((lc ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+    const every = Number(lcfg.loyalty_every ?? "5"), cents = Number(lcfg.loyalty_cents ?? "0");
+    const loyaltyOn = (lcfg.loyalty_enabled ?? "").trim() === "true" && Number.isInteger(every) && every >= 2 && cents > 0;
+    const hashes = [...new Set((data ?? []).filter((o) => !o.demo && o.customer_hash).map((o) => o.customer_hash as string))];
+    const byHash = new Map<string, LoyaltyRow[]>();
+    if (loyaltyOn && hashes.length) {
+      const { data: hist } = await db.from("orders").select("customer_hash,created_at,discounts")
+        .in("customer_hash", hashes).in("status", ["paid", "making", "ready", "done"]);
+      (hist ?? []).forEach((r: LoyaltyRow & { customer_hash: string }) =>
+        byHash.set(r.customer_hash, [...(byHash.get(r.customer_hash) ?? []), r]));
+    }
+    const orders = (data ?? []).map(({ customer_hash, ...o }) => {
+      const rows = customer_hash ? byHash.get(customer_hash) : undefined;
+      return rows ? { ...o, loyalty: loyaltyAt(rows, o.created_at) } : o;
+    });
+    return json({
+      orders, now: new Date().toISOString(), paused_until: until > Date.now() ? p!.value : null,
+      ...(loyaltyOn ? { loyalty: { every, cents } } : {}),
+    });
   }
 
   if (body.action === "pause") {

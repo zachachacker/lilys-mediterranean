@@ -23,7 +23,9 @@ Deno.test("drift: discount-link rules in create-checkout", async () => {
   // referral stays off unless app_config says exactly "true"
   assertStringIncludes(s, 'const referralOn = (cfg.referral_enabled ?? "").trim() === "true";');
   // the code discount is measured after menu promotions and never exceeds what's left
-  assertStringIncludes(s, 'const cents = Math.min(codeDiscountCents(offerable(), pct), t.kind === "club" ? clubCap : Infinity, offerable());');
+  // Club gifts and bag stickers share the cap; referral links don't
+  assertStringIncludes(s, 'const capped = t.kind === "club" || t.kind === "sticker";');
+  assertStringIncludes(s, "const cents = Math.min(codeDiscountCents(offerable(), pct), capped ? clubCap : Infinity, offerable());");
   // the Club cap: same helper as the mirror, read from app_config
   assertStringIncludes(s, "const clubCap = clubCapCents(cfg.club_max_cents);");
   assertStringIncludes(s, "  const n = Number(raw);\n  return Number.isInteger(n) && n > 0 ? n : Infinity;");

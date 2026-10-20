@@ -73,6 +73,7 @@
         ${o.status === "done" ? rateHTML(o) : ""}
         ${o.club && !pending && o.status !== "canceled" ? clubHTML() : ""}
         ${o.referral ? shareHTML(o.referral) : ""}
+        ${o.loyalty && !pending ? loyaltyHTML(o.loyalty) : ""}
         <div class="co-receipt">
           ${items}
           <div class="co-line co-sub"><span>Subtotal</span><span>${money(o.subtotal_cents)}</span></div>
@@ -83,6 +84,17 @@
           <div class="co-line co-total"><span>${totalLabel}</span><span>${money(o.total_cents)}</span></div>
         </div>`;
     };
+    // loyalty (2026-10-20): every N paid online orders earn $X off a later one.
+    // order-status counts it (this order included); create-checkout applies it
+    function loyaltyHTML(l) {
+      const off = `$${(l.cents / 100).toFixed(l.cents % 100 ? 2 : 0)}`;
+      const banked = Math.floor(l.n / l.every) - l.used;
+      const saved = l.usedNow ? `You saved ${off} with your loyalty reward. ` : "";
+      const p = l.n % l.every;
+      return `<div class="co-rate co-loyal"><p class="co-rate-t">${saved}${banked > 0
+        ? `<b>${p === 0 ? `${l.every} of ${l.every}! ` : ""}Your next online order is ${off} off.</b>`
+        : `Every ${l.every} online orders, your next one is ${off} off. <b>You're on ${p} of ${l.every}.</b>`}</p></div>`;
+    }
     // refer a friend: the customer's own link (server-made, held off until
     // Kareem turns it on). The token rides the #fragment, never the query.
     const shareUrl = (r) => `${location.origin}/order.html?src=referral#r=${r.token}`;
@@ -318,7 +330,7 @@
       const note = document.createElement("div");
       note.className = "order-code-note";
       note.textContent = j.kind === "sticker"
-        ? `Thanks for scanning! ${j.percent}% off your first online order, taken off at checkout.`
+        ? `Thanks for scanning! ${j.percent}% off your first online order${promoCode.upTo}, taken off at checkout.`
         : j.kind === "club"
         ? `Welcome to Lily's Club! Your ${j.percent}% off${promoCode.upTo} is applied at checkout.`
         : `A friend sent you ${j.percent}% off your first online order, taken off at checkout.`;
@@ -916,7 +928,7 @@
     } catch { /* no offers shown; nothing is lost */ }
     const code = promoCode
       ? `<div class="offer">${promoCode.kind === "sticker"
-          ? `${promoCode.percent}% off your first online order (bag sticker)`
+          ? `${promoCode.percent}% off your first online order${promoCode.upTo || ""} (bag sticker)`
           : promoCode.kind === "club"
           ? `Lily's Club: ${promoCode.percent}% off this order${promoCode.upTo || ""}`
           : `${promoCode.percent}% off from a friend's link`}

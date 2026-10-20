@@ -474,6 +474,11 @@ export function clubCapCents(raw: string | undefined): number {
   return Number.isInteger(n) && n > 0 ? n : Infinity;
 }
 
+export function loyaltyDue(paidOrders: number, usedRewards: number, every: number): boolean {
+  if (!Number.isInteger(every) || every < 2) return false;
+  return Math.floor(paidOrders / every) > usedRewards;
+}
+
 /* ── apply/index.ts: job applications from careers.html (2026-10-16).
       The block between the markers is byte-identical to the source;
       apply_test.ts asserts it. ───────────────────────────────────────── */

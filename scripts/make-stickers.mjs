@@ -30,12 +30,17 @@ const design = arg("design", "");
 const count = Number(arg("count", "24"));
 const batch = arg("batch", "");
 const percent = Number(arg("percent", "5"));
+// the most a sticker takes off (2026-10-20: 10% up to $7.50). Printed on the
+// sticker; the cap itself is create-checkout's (app_config club_max_cents).
+const upto = arg("upto", "");
 const qrlib = arg("qrlib", "");
 const tokensFrom = arg("tokens-from", "");
 if (!["a", "b", "c"].includes(design)) throw new Error("--design: a, b or c");
 if (!/^[a-z0-9-]{3,40}$/.test(batch)) throw new Error("--batch: 3-40 chars, a-z 0-9 -");
 if (!tokensFrom && !(count > 0 && count <= 600)) throw new Error("--count: 1..600");
 if (!(percent >= 1 && percent <= 50)) throw new Error("--percent: 1..50");
+if (upto && !/^\$\d{1,3}(\.\d\d)?$/.test(upto)) throw new Error("--upto: like $7.50");
+const capLine = upto ? `<br>up to ${upto} off` : "";
 if (!qrlib) throw new Error("--qrlib: path to the npm 'qrcode' package (install it outside the repo)");
 const QR = createRequire(import.meta.url)(qrlib);
 
@@ -67,18 +72,18 @@ const CELL = {
     <div class="rule"></div>
     <div class="qrw">${svg}</div>
     <div class="txt"><div class="big"><b>${percent}%</b><span>off</span></div>
-      <div class="sub">your first order direct</div></div>
+      <div class="sub">your first order direct${capLine}</div></div>
     <div class="foot">Skip the app fees. <i>Scan to order.</i></div>
   </div>`,
   b: (svg) => `
   <div class="st b">
     <div class="ph"></div>
-    <div class="head">Loved it? <em>Skip the app</em> next time.</div>${offer(svg, "your first order direct")}
+    <div class="head">Loved it? <em>Skip the app</em> next time.</div>${offer(svg, `your first order direct${capLine}`)}
   </div>`,
   c: (svg) => `
   <div class="st c">
     <div class="band"></div>
-    <div class="head">Same food.<br><em>Less money.</em></div>${offer(svg, "order direct, no app fees")}
+    <div class="head">Same food.<br><em>Less money.</em></div>${offer(svg, `${upto ? "no app fees" : "order direct, no app fees"}${capLine}`)}
   </div>`,
 };
 
@@ -139,11 +144,13 @@ const html = `<!DOCTYPE html>
   .sub { font: 600 6.2pt/1.2 "Public Sans", sans-serif; margin-top: 4pt; }
   .cta { font: 700 5.6pt "Space Mono", monospace; color: #1F5A5F; margin-top: 3pt; }
   ${CSS[design]}
+  /* a two-digit offer is a third wider than "5%": shrink it so it clears the band */
+  ${percent >= 10 ? ".big b { font-size: 28pt; } .big span { font-size: 16pt; }" : ""}
   @media screen { .st { outline: 0.5pt dashed #bbb; } }
 </style></head>
 <body>${pages.join("\n")}</body></html>`;
 
-const sql = `-- ${tokens.size} sticker tokens, batch ${batch} (design ${design}), ${percent}% off a first online order. Apply before printing.
+const sql = `-- ${tokens.size} sticker tokens, batch ${batch} (design ${design}), ${percent}% off a first online order${upto ? ` (up to ${upto})` : ""}. Apply before printing.
 insert into public.promo_tokens (token, kind, percent, batch) values
 ${[...tokens].map((t) => `('${t}', 'sticker', ${percent}, '${batch}')`).join(",\n")};
 `;
