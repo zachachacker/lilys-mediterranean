@@ -1,0 +1,13 @@
+# GitHub Pages (Jekyll) build config.
+# Everything in the repo is served publicly unless listed here. Internal docs,
+# server-side source and build scripts must never reach the live site.
+exclude:
+  - README.md
+  - SECURITY_TEST_PLAN.md
+  - SYSTEM_PROFILE.md
+  - GO_LIVE_CHECKLIST.md
+  - TRAFFIC_PLAN.md
+  - WEDNESDAY-RUNBOOK.md
+  - supabase/
+  - scripts/
+  - menu-print/build-trifold.mjs
