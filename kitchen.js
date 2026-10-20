@@ -17,6 +17,7 @@
   const KEY_STORE = "lilys-kitchen-key";
   const QUEUE_STORE = "lilys-kitchen-pending";
   const TOUR_STORE = "lilys-kitchen-tour-v1";
+  const PRINT_STORE = "lilys-kitchen-print-on-start";
   const POLL_MS = 5000;
   const OFFLINE_BANNER_AFTER_MS = 45000;
   const RECALL_WINDOW_MS = 60 * 60 * 1000;
@@ -351,7 +352,7 @@
     if (o.status === "paid") {
       return `<div class="t new ${o._fresh ? "fresh" : ""}" data-start="${o.id}">
         ${band}<div class="t-body">${items}${notes}${del}${tipNote}</div>${meta}
-        <div class="t-hint">Tap to start</div>
+        <div class="t-hint">${printOnStart() ? "Tap to start + print" : "Tap to start"}</div>
       </div>`;
     }
     return `<div class="t">
@@ -418,6 +419,7 @@
           <button class="k-tool${pausedUntil ? " paused" : ""}" id="kPause" title="Pause online orders">⏸</button>
           <button class="k-tool" id="kStock" title="Mark items out of stock">86</button>
           <button class="k-tool" id="kPromo" title="Switch offers on and off">%</button>
+          <button class="k-tool" id="kPrinter" title="Receipt printer">🖨</button>
           <button class="k-tool" id="kHelp" title="How to use this screen">?</button>
           <button class="k-tool" id="kFull" title="Fullscreen" ${document.fullscreenElement ? "hidden" : ""}>⛶</button>
           <span class="k-clock" id="kClock">${clock(new Date())}</span>
@@ -454,6 +456,7 @@
     document.getElementById("kSoundBanner")?.addEventListener("click", () => ensureAudio());
     document.getElementById("kStock")?.addEventListener("click", openStock);
     document.getElementById("kPromo")?.addEventListener("click", openOffers);
+    document.getElementById("kPrinter")?.addEventListener("click", openPrinter);
     document.getElementById("kPause")?.addEventListener("click", openPause);
     document.getElementById("kResume")?.addEventListener("click", () => setPause("resume"));
     document.getElementById("kHelp")?.addEventListener("click", () => startTour());
@@ -815,7 +818,7 @@
     { id: "undo", title: "Tapped the wrong thing?",
       text: "Right after any tap, an UNDO button shows at the bottom for a few seconds. Picked-up orders also wait under \"Earlier today\" with a Recall button." },
     { id: "more", title: "The ··· button",
-      text: "Every order has a ··· button: go back a step, call the customer, or cancel. Cancelling does NOT refund the customer. Refunds are done in Stripe." },
+      text: "Every order has a ··· button: print the receipt, go back a step, call the customer, or cancel. Cancelling does NOT refund the customer. Refunds are done in Stripe." },
     { id: "stock", title: "Run out of something?",
       text: "Tap 86 at the top, then tap the dish. It disappears from the website straight away. Tap it again when it's back." },
     { id: "pause", title: "Too busy?",
@@ -920,6 +923,8 @@
         if (e.target.closest("a")) return; // phone link
         const o = orders.find((x) => x.id === card.dataset.start);
         act(card.dataset.start, "making", { label: `${o?.code ?? ""} started` });
+        // inside the tap itself: iPad Safari only opens the print menu from a tap
+        if (o && o !== practice && printOnStart()) printReceipts([o]);
       })
     );
     board.querySelectorAll("[data-ready]").forEach((b) =>
@@ -958,6 +963,7 @@
       <div class="k-sheet">
         <h3>${esc(o.code)} · ${esc(o.customer_name)}</h3>
         ${o.demo ? "" : '<p class="warn">Canceling does NOT refund the payment — issue the refund in the Stripe dashboard.</p>'}
+        <button class="plain" id="sheetPrint">Print receipt</button>
         ${refundLink}
         <button class="danger" id="sheetCancel">Cancel this order</button>
         <button class="plain" id="sheetClose">Never mind</button>
@@ -965,10 +971,107 @@
     document.body.appendChild(wrap);
     wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
     wrap.querySelector("#sheetClose").addEventListener("click", () => wrap.remove());
+    wrap.querySelector("#sheetPrint").addEventListener("click", () => { wrap.remove(); printReceipts([o]); });
     wrap.querySelector("#sheetCancel").addEventListener("click", () => {
       wrap.remove();
       act(id, "canceled", { undoable: false });
     });
+  }
+
+
+  /* ---- receipts (2026-10-20) --------------------------------------------
+     Kareem connected a receipt printer to the iPad. A web page can't drive a
+     printer directly, so receipts go through the iPad's own print menu
+     (AirPrint): ··· → Print receipt on any order, or switch on "print when I
+     start an order" so tapping a new ticket prints it too. The receipt is
+     built into #kPrintArea, which only shows when printing (kitchen.html). */
+  const printOnStart = () => { try { return localStorage.getItem(PRINT_STORE) === "1"; } catch { return false; } };
+  const flStamp = (iso) => new Date(iso).toLocaleString("en-US",
+    { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  function receiptHTML(o) {
+    const row = (l, r, cls = "") => `<div class="r-row${cls ? " " + cls : ""}"><span>${l}</span><span>${r}</span></div>`;
+    const items = (o.items || []).map((l) =>
+      row(`${l.qty}× ${esc(l.name)}`, l.unit_cents != null ? money(l.unit_cents * l.qty) : "") +
+      (l.addons?.length ? `<div class="r-add">+ ${l.addons.map((a) => esc(a.name)).join(", ")}</div>` : "")).join("");
+    const sub = o.subtotal_cents ?? 0, tax = o.tax_cents ?? 0, del = o.delivery_fee_cents ?? 0,
+      tip = o.tip_cents ?? 0, total = o.total_cents ?? 0;
+    const off = sub + tax + del + tip - total; // discounts aren't sent to the board; the total already has them
+    const totals = total ? [
+      row("Subtotal", money(sub)),
+      off > 0 ? row("Discount", "−" + money(off)) : "",
+      row("Tax", money(tax)),
+      del ? row("Delivery", money(del)) : "",
+      tip ? row("Tip", money(tip)) : "",
+      row("TOTAL", money(total), "r-total"),
+      `<div class="r-c">PAID ONLINE</div>`,
+    ].join("") : "";
+    const delivery = o.fulfilment === "delivery";
+    return `<div class="r-receipt">
+      <div class="r-c r-name">Lily's Mediterranean Fresh Grill</div>
+      <div class="r-c">2 5th Ave STE C, Indialantic, FL 32903</div>
+      <div class="r-c">(321) 312-4444</div>
+      <div class="r-hr"></div>
+      <div class="r-c r-big">${esc(o.code)}</div>
+      <div class="r-c r-kind">${delivery ? "DELIVERY" : "PICKUP"}${o.demo ? " · TEST" : ""}</div>
+      <div class="r-c">${flStamp(o.created_at)}</div>
+      <div class="r-hr"></div>
+      <div>${esc(o.customer_name)}${o.customer_phone ? ` · ${esc(o.customer_phone)}` : ""}</div>
+      ${delivery && o.delivery_address ? `<div>${esc(o.delivery_address)}</div>` : ""}
+      <div class="r-hr"></div>
+      ${items}
+      ${o.notes ? `<div class="r-notes">${esc(o.notes)}</div>` : ""}
+      ${totals ? `<div class="r-hr"></div>${totals}` : ""}
+      <div class="r-hr"></div>
+      <div class="r-c">Thank you! Order again at</div>
+      <div class="r-c">lilysmediterraneanfresh.com</div>
+    </div>`;
+  }
+
+  function printReceipts(list) {
+    let area = document.getElementById("kPrintArea");
+    if (!area) {
+      area = document.createElement("div");
+      area.id = "kPrintArea";
+      document.body.appendChild(area);
+    }
+    area.innerHTML = list.map(receiptHTML).join("");
+    try { window.print(); } catch { /* no print support on this device */ }
+  }
+
+  function openPrinter() {
+    const wrap = document.createElement("div");
+    wrap.className = "k-sheet-wrap";
+    const paint = () => {
+      const on = printOnStart();
+      wrap.innerHTML = `
+        <div class="k-sheet">
+          <h3>Receipt printer</h3>
+          <p class="warn">Receipts print through the iPad's print menu. The first time, tap <b>Printer</b> in that menu and pick yours; the iPad remembers it after that.</p>
+          <button class="${on ? "go" : "plain"}" id="prToggle">Print when I start an order: ${on ? "ON" : "OFF"}</button>
+          <button class="plain" id="prTest">Print a test receipt</button>
+          <button class="plain" id="prClose">Done</button>
+        </div>`;
+      wrap.querySelector("#prToggle").addEventListener("click", () => {
+        try { localStorage.setItem(PRINT_STORE, on ? "0" : "1"); } catch { /* fine */ }
+        paint();
+        lastSnapshot = ""; // repaint the "Tap to start + print" hints
+        renderBoard();
+      });
+      wrap.querySelector("#prTest").addEventListener("click", () => {
+        const now = new Date().toISOString();
+        printReceipts([{
+          code: "TEST-PRINT", demo: true, customer_name: "Printer test", customer_phone: "", fulfilment: "pickup",
+          items: [{ qty: 1, name: "Chicken Shawarma Wrap", unit_cents: 1339, addons: [{ name: "Extra garlic sauce" }] }],
+          notes: "If you can read this, the printer works.", created_at: now,
+          subtotal_cents: 1339, tax_cents: 94, total_cents: 1433,
+        }]);
+      });
+      wrap.querySelector("#prClose").addEventListener("click", () => wrap.remove());
+    };
+    paint();
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
+    document.body.appendChild(wrap);
   }
 
   /* -------------------------------------------------- 1s ticker -------- */

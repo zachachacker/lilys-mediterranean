@@ -200,6 +200,7 @@
   .k-sheet button { min-height: 52px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; font-size: 15px; }
   .k-sheet .danger { background: var(--red); color: #fff; }
   .k-sheet .plain { background: rgba(244,241,232,0.12); }
+  .k-sheet .go { background: var(--go); color: #0b1a10; }
 
   /* ------------------------------------------------------------ login */
   .k-login {
@@ -306,6 +307,26 @@
   .k-promo-row.on .s { color:#2a9d5c; }
   .k-promo-row .warn { color:#e0b15c; }
 
+  /* receipts (2026-10-20): built into #kPrintArea by kitchen.js and printed
+     through the iPad's print menu. Sized for 80mm receipt paper; still fine
+     on a normal printer. Nothing else on the page prints. */
+  #kPrintArea { display: none; }
+  @media print {
+    @page { margin: 3mm; }
+    html, body { background: #fff !important; color: #000 !important; }
+    body > *:not(#kPrintArea) { display: none !important; }
+    #kPrintArea { display: block; width: 72mm; color: #000; font: 12px/1.35 ui-monospace, Menlo, monospace; }
+    .r-receipt + .r-receipt { break-before: page; }
+    .r-c { text-align: center; }
+    .r-name { font-weight: 700; font-size: 14px; }
+    .r-big { font-size: 24px; font-weight: 700; margin-top: 2px; }
+    .r-kind { font-weight: 700; letter-spacing: 0.1em; }
+    .r-row { display: flex; justify-content: space-between; gap: 8px; }
+    .r-add { padding-left: 2.2em; font-size: 11px; }
+    .r-hr { border-top: 1px dashed #000; margin: 6px 0; }
+    .r-total { font-weight: 700; font-size: 15px; margin-top: 2px; }
+    .r-notes { border: 1px solid #000; padding: 4px; margin-top: 6px; font-weight: 700; }
+  }
 </style>
 </head>
 <body>
