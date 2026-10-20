@@ -11,16 +11,15 @@
 <link rel="apple-touch-icon" href="assets/app-icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lily's">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUV8FyLNQOQZAnv9ZwIlOkuy91B.woff2">
-<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUT8FyLNQOQZAnv9ZwNpOskzP9Ddt0.woff2">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/fraunces-normal-100-900.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/fraunces-italic-100-900.woff2">
+<link rel="preconnect" href="https://hytvfqydahwsrcdbnvfq.supabase.co" crossorigin>
 <script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="styles.css">
-<!-- Google tag (Kareem's Google Ads, AW-18438934153, added 2026-10-07) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18438934153"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18438934153');</script>
+<!-- Google tag (Kareem's Google Ads, AW-18438934153, added 2026-10-07). gtag.js is 160 KiB, so it loads
+     after the page has painted and gone idle; gtag() calls made before then wait in dataLayer. -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18438934153');
+addEventListener('load',function(){var go=function(){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=AW-18438934153';document.head.appendChild(s);};'requestIdleCallback' in window?requestIdleCallback(go,{timeout:3000}):setTimeout(go,0);});</script>
 </head>
 <body class="menu-page club-page">
 <a class="skip-link" href="#club">Skip to Lily's Club</a>
@@ -94,7 +93,7 @@
       <p class="footer-blurb">Family-run Lebanese &amp; Mediterranean grill on Florida's Space Coast. Fresh, never frozen, grilled to order since 2020.</p>
     </div>
     <div>
-      <h4>Visit</h4>
+      <h2>Visit</h2>
       <ul>
         <li>2 5th Ave STE C</li>
         <li>Indialantic, FL 32903</li>
@@ -105,7 +104,7 @@
       </ul>
     </div>
     <div>
-      <h4>Order &amp; follow</h4>
+      <h2>Order &amp; follow</h2>
       <ul>
         <li><a class="ink" href="order.html">Order online</a></li>
         <li><a class="ink" href="menu.html">Full menu</a></li>

@@ -138,7 +138,8 @@
   const nav = document.getElementById("nav");
   if (!document.body.classList.contains("menu-page")) {
     const onScroll = () => { nav.classList.toggle("solid", window.scrollY > window.innerHeight * 0.72); };
-    onScroll();
+    // first check waits a frame: reading scrollY mid-boot forced a synchronous layout (~200 ms on mobile)
+    requestAnimationFrame(onScroll);
     window.addEventListener("scroll", onScroll, { passive: true });
   }
 

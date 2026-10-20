@@ -63,16 +63,15 @@
 <link rel="apple-touch-icon" href="assets/app-icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lily's">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUV8FyLNQOQZAnv9ZwIlOkuy91B.woff2">
-<link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/fraunces/v38/6NUT8FyLNQOQZAnv9ZwNpOskzP9Ddt0.woff2">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Public+Sans:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/fraunces-normal-100-900.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/fraunces-italic-100-900.woff2">
+<link rel="preconnect" href="https://hytvfqydahwsrcdbnvfq.supabase.co" crossorigin>
 <script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="styles.css">
-<!-- Google tag (Kareem's Google Ads, AW-18438934153, added 2026-10-07) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18438934153"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18438934153');</script>
+<!-- Google tag (Kareem's Google Ads, AW-18438934153, added 2026-10-07). gtag.js is 160 KiB, so it loads
+     after the page has painted and gone idle; gtag() calls made before then wait in dataLayer. -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18438934153');
+addEventListener('load',function(){var go=function(){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=AW-18438934153';document.head.appendChild(s);};'requestIdleCallback' in window?requestIdleCallback(go,{timeout:3000}):setTimeout(go,0);});</script>
 </head>
 <body>
 <a class="skip-link" href="#top">Skip to content</a>
@@ -114,7 +113,7 @@
 <!-- ===================================================== HERO -->
 <main id="top">
 <section class="hero hero-cine" id="hero">
-  <img class="hero-bg" src="assets/photos/family-mixed-grill.webp" alt="Lily's family mixed grill platter — skewers, rice and grilled vegetables" fetchpriority="high">
+  <img class="hero-bg" src="assets/photos/family-mixed-grill-960.webp" srcset="assets/photos/family-mixed-grill-640.webp 640w, assets/photos/family-mixed-grill-960.webp 960w, assets/photos/family-mixed-grill-1280.webp 1280w, assets/photos/family-mixed-grill.webp 1920w" sizes="100vw" alt="Lily's family mixed grill platter — skewers, rice and grilled vegetables" fetchpriority="high">
   <div class="hero-scrim" aria-hidden="true"></div>
   <div class="hero-mark" aria-hidden="true">مشاوي</div>
   <div class="hero-copy">
@@ -157,11 +156,11 @@
     <div class="story-media reveal d1">
       <figure class="story-main photo">
         <span class="badge">Fresh · never frozen</span>
-        <img loading="lazy" src="assets/photos/interior-dining-room.webp" alt="Lily's dining room in Indialantic, with its beach mural and booths">
+        <img loading="lazy" src="assets/photos/interior-dining-room-600.webp" srcset="assets/photos/interior-dining-room-400.webp 400w, assets/photos/interior-dining-room-600.webp 600w, assets/photos/interior-dining-room-750.webp 750w" sizes="(max-width: 900px) 90vw, 50vw" alt="Lily's dining room in Indialantic, with its beach mural and booths">
         <figcaption><span>The dining room</span><span>Indialantic, FL</span></figcaption>
       </figure>
       <figure class="story-inset photo">
-        <img loading="lazy" src="assets/photos/storefront-exterior.webp" alt="Lily's storefront on 5th Avenue — look for the pergola">
+        <img loading="lazy" src="assets/photos/storefront-exterior-300.webp" srcset="assets/photos/storefront-exterior-300.webp 300w, assets/photos/storefront-exterior-500.webp 500w, assets/photos/storefront-exterior-750.webp 750w" sizes="(max-width: 900px) 40vw, 22vw" alt="Lily's storefront on 5th Avenue — look for the pergola">
         <figcaption>Look for the pergola · 2 5th Ave</figcaption>
       </figure>
     </div>
@@ -180,7 +179,7 @@
     </div>
     <div class="rail" id="rail">
       <a class="dish" data-dish="Lamb &amp; Beef Gyro Wrap" href="menu.html#cat-wraps-gyros-subs">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lamb-beef-gyro-wrap.webp" alt="Lamb and beef gyro wrap on grilled pita"><span class="veg">Most loved</span></div>
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lamb-beef-gyro-wrap-400.webp" srcset="assets/photos/lamb-beef-gyro-wrap-400.webp 400w, assets/photos/lamb-beef-gyro-wrap-700.webp 700w, assets/photos/lamb-beef-gyro-wrap.webp 1000w" sizes="(max-width: 893px) 250px, (max-width: 1178px) 28vw, 330px" alt="Lamb and beef gyro wrap on grilled pita"><span class="veg">Most loved</span></div>
         <div class="dish-body">
           <h3>Lamb &amp; Beef Gyro Wrap</h3>
           <div class="price">$14.40</div>
@@ -188,7 +187,7 @@
         </div>
       </a>
       <a class="dish" data-dish="Lily's Ultimate Hummus" href="menu.html#cat-mezze-starters">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/ultimate-hummus-pita-overhead.webp" alt="Lily's Ultimate Hummus topped with feta, olives and tomato, with pita"></div>
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/ultimate-hummus-pita-overhead-400.webp" srcset="assets/photos/ultimate-hummus-pita-overhead-400.webp 400w, assets/photos/ultimate-hummus-pita-overhead-700.webp 700w, assets/photos/ultimate-hummus-pita-overhead.webp 1000w" sizes="(max-width: 893px) 250px, (max-width: 1178px) 28vw, 330px" alt="Lily's Ultimate Hummus topped with feta, olives and tomato, with pita"></div>
         <div class="dish-body">
           <h3>Lily's Ultimate Hummus</h3>
           <div class="price">$13.90</div>
@@ -196,7 +195,7 @@
         </div>
       </a>
       <a class="dish" data-dish="Lily's Mixed Grill Platter" href="menu.html#cat-lily-s-platters">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lily-s-mixed-grill-platter.webp" alt="Lily's mixed grill platter with skewers, shrimp and rice"></div>
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/lily-s-mixed-grill-platter-400.webp" srcset="assets/photos/lily-s-mixed-grill-platter-400.webp 400w, assets/photos/lily-s-mixed-grill-platter-700.webp 700w, assets/photos/lily-s-mixed-grill-platter.webp 1000w" sizes="(max-width: 893px) 250px, (max-width: 1178px) 28vw, 330px" alt="Lily's mixed grill platter with skewers, shrimp and rice"></div>
         <div class="dish-body">
           <h3>Lily's Mixed Grill Platter</h3>
           <div class="price">$27.30</div>
@@ -204,7 +203,7 @@
         </div>
       </a>
       <a class="dish" data-dish="Batata Harrah" href="menu.html#cat-from-the-kitchen">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/batata-harrah.webp" alt="Batata harrah — crisp potato cubes with herbs, lemon and tomato"><span class="veg">Vegan</span></div>
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/batata-harrah-400.webp" srcset="assets/photos/batata-harrah-400.webp 400w, assets/photos/batata-harrah-700.webp 700w, assets/photos/batata-harrah.webp 1000w" sizes="(max-width: 893px) 250px, (max-width: 1178px) 28vw, 330px" alt="Batata harrah — crisp potato cubes with herbs, lemon and tomato"><span class="veg">Vegan</span></div>
         <div class="dish-body">
           <h3>Batata Harrah</h3>
           <div class="price">$9.75</div>
@@ -212,7 +211,7 @@
         </div>
       </a>
       <a class="dish" data-dish="Bone-In Lamb Chops Platter" href="menu.html#cat-lily-s-platters">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/bone-in-lamb-chops-platter.webp" alt="Bone-in lamb chops platter with rice, hummus and salad"></div>
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/bone-in-lamb-chops-platter-400.webp" srcset="assets/photos/bone-in-lamb-chops-platter-400.webp 400w, assets/photos/bone-in-lamb-chops-platter-700.webp 700w, assets/photos/bone-in-lamb-chops-platter.webp 1000w" sizes="(max-width: 893px) 250px, (max-width: 1178px) 28vw, 330px" alt="Bone-in lamb chops platter with rice, hummus and salad"></div>
         <div class="dish-body">
           <h3>Bone-In Lamb Chops</h3>
           <div class="price">$27.80</div>
@@ -220,7 +219,7 @@
         </div>
       </a>
       <a class="dish" data-dish="Homemade Baklava" href="menu.html#cat-desserts">
-        <div class="dish-img photo"><img loading="lazy" src="assets/photos/baklava.webp" alt="Slice of homemade baklava with pistachio"></div>
+        <div class="dish-img photo"><img loading="lazy" src="assets/photos/baklava-400.webp" srcset="assets/photos/baklava-400.webp 400w, assets/photos/baklava-700.webp 700w, assets/photos/baklava.webp 1000w" sizes="(max-width: 893px) 250px, (max-width: 1178px) 28vw, 330px" alt="Slice of homemade baklava with pistachio"></div>
         <div class="dish-body">
           <h3>Homemade Baklava</h3>
           <div class="price">$7.20</div>
@@ -274,7 +273,7 @@
       <cite>— Gabriela Huselton, Treasure Coast Foodie</cite>
     </blockquote>
     <figure class="quote-photo photo reveal d2">
-      <img loading="lazy" src="assets/photos/family-dining-booth.webp" width="750" height="750" alt="A family filling the corner booth at Lily's, plates across the table">
+      <img loading="lazy" src="assets/photos/family-dining-booth-400.webp" srcset="assets/photos/family-dining-booth-400.webp 400w, assets/photos/family-dining-booth-750.webp 750w" sizes="(max-width: 900px) min(100vw, 420px), 280px" width="750" height="750" alt="A family filling the corner booth at Lily's, plates across the table">
       <figcaption>Regulars at the corner booth</figcaption>
     </figure>
   </div>
@@ -283,7 +282,7 @@
 
 <!-- ===================================================== MENU CTA (full-bleed food band) -->
 <section class="menu-band" id="menu">
-  <img class="menu-band-img" loading="lazy" src="assets/photos/family-mixed-grill.webp" alt="">
+  <img class="menu-band-img" loading="lazy" src="assets/photos/family-mixed-grill-960.webp" srcset="assets/photos/family-mixed-grill-640.webp 640w, assets/photos/family-mixed-grill-960.webp 960w, assets/photos/family-mixed-grill-1280.webp 1280w, assets/photos/family-mixed-grill.webp 1920w" sizes="100vw" alt="">
   <div class="menu-band-inner">
     <span class="eyebrow reveal">Thirteen categories · vegan &amp; gluten-free throughout</span>
     <h2 class="reveal d1">Sixty-two dishes.<br>One menu.</h2>
@@ -402,7 +401,7 @@
       <p class="footer-blurb">Family-run Lebanese &amp; Mediterranean grill on Florida's Space Coast. Fresh, never frozen — grilled to order since 2020.</p>
     </div>
     <div>
-      <h4>Visit</h4>
+      <h2>Visit</h2>
       <ul>
         <li>2 5th Ave STE C</li>
         <li>Indialantic, FL 32903</li>
@@ -413,7 +412,7 @@
       </ul>
     </div>
     <div>
-      <h4>Order &amp; follow</h4>
+      <h2>Order &amp; follow</h2>
       <ul>
         <li><a class="ink" href="order.html">Order online</a></li>
         <li><a class="ink" href="menu.html">Full menu</a></li>
