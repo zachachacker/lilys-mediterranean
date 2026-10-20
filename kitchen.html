@@ -315,7 +315,9 @@
     @page { margin: 3mm; }
     html, body { background: #fff !important; color: #000 !important; }
     body > *:not(#kPrintArea) { display: none !important; }
-    #kPrintArea { display: block; width: 72mm; color: #000; font: 12px/1.35 ui-monospace, Menlo, monospace; }
+    /* centred on whatever page the printer reports: 80mm roll or a full sheet */
+    #kPrintArea { display: block; box-sizing: border-box; width: 100%; max-width: 72mm; margin: 0 auto;
+      color: #000; font: 12px/1.35 ui-monospace, Menlo, monospace; }
     .r-receipt + .r-receipt { break-before: page; }
     .r-c { text-align: center; }
     .r-name { font-weight: 700; font-size: 14px; }

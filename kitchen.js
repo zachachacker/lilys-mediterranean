@@ -1017,7 +1017,8 @@
     const delivery = o.fulfilment === "delivery";
     return `<div class="r-receipt">
       <div class="r-c r-name">Lily's Mediterranean Fresh Grill</div>
-      <div class="r-c">2 5th Ave STE C, Indialantic, FL 32903</div>
+      <div class="r-c">2 5th Ave STE C</div>
+      <div class="r-c">Indialantic, FL 32903</div>
       <div class="r-c">(321) 312-4444</div>
       <div class="r-hr"></div>
       <div class="r-c r-big">${esc(o.code)}</div>
