@@ -221,11 +221,13 @@ function codeDiscountCents(afterPromos: number, percent: number): number {
 }
 
 // Lily's Club welcome gift and bag stickers (2026-10-20): 10% off, never more
-// than this many cents (app_config club_max_cents, 750 = $7.50). Unset or
-// invalid = no cap.
+// than this many cents (app_config club_max_cents, 750 = $7.50). Fails closed:
+// a missing, zero or malformed setting ("7.50", "abc") is the $7.50 default,
+// never "no cap", so a bad edit can't turn a capped offer into an open one.
+const CLUB_CAP_DEFAULT_CENTS = 750;
 function clubCapCents(raw: string | undefined): number {
   const n = Number(raw);
-  return Number.isInteger(n) && n > 0 ? n : Infinity;
+  return Number.isInteger(n) && n > 0 ? n : CLUB_CAP_DEFAULT_CENTS;
 }
 
 // Loyalty (2026-10-20): every `every` paid online orders earn one reward,
@@ -624,6 +626,9 @@ Deno.serve(async (req) => {
   const referralOn = (cfg.referral_enabled ?? "").trim() === "true";
   const referralPct = Number(cfg.referral_percent ?? "10");
   const clubCap = clubCapCents(cfg.club_max_cents);
+  if (String(clubCap) !== String(cfg.club_max_cents ?? "").trim()) {
+    console.error(`club_max_cents missing or invalid (${JSON.stringify(cfg.club_max_cents ?? null)}): capping at ${clubCap} cents`);
+  }
   const promoToken = String(body.promo_token ?? "").toUpperCase();
   let tokenRow: { token: string; kind: string; percent: number; referrer_hash: string | null; order_id: string | null } | null = null;
   let rewardId: number | null = null;
@@ -655,7 +660,7 @@ Deno.serve(async (req) => {
       const cents = Math.min(codeDiscountCents(offerable(), pct), capped ? clubCap : Infinity, offerable());
       if (cents > 0) {
         discount += cents;
-        const upTo = capped && Number.isFinite(clubCap) ? ` (up to $${(clubCap / 100).toFixed(2)})` : "";
+        const upTo = capped ? ` (up to $${(clubCap / 100).toFixed(2)})` : "";
         const label = t.kind === "sticker" ? `${pct}% off your first online order${upTo}`
           : t.kind === "club" ? `Lily's Club: ${pct}% off${upTo}`
           : `Friend's ${pct}% off`;
