@@ -997,6 +997,12 @@
   const flStamp = (iso) => new Date(iso).toLocaleString("en-US",
     { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
+  // 9077827576 or +19077827576 -> (907) 782-7576; anything else as typed
+  const usPhone = (p) => {
+    const d = String(p ?? "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+    return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : String(p ?? "");
+  };
+
   function receiptHTML(o) {
     const row = (l, r, cls = "") => `<div class="r-row${cls ? " " + cls : ""}"><span>${l}</span><span>${r}</span></div>`;
     const items = (o.items || []).map((l) =>
@@ -1025,7 +1031,7 @@
       <div class="r-c r-kind">${delivery ? "DELIVERY" : "PICKUP"}${o.demo ? " · TEST" : ""}</div>
       <div class="r-c">${flStamp(o.created_at)}</div>
       <div class="r-hr"></div>
-      <div>${esc(o.customer_name)}${o.customer_phone ? ` · ${esc(o.customer_phone)}` : ""}</div>
+      <div>${esc(o.customer_name)}${o.customer_phone ? ` · ${esc(usPhone(o.customer_phone))}` : ""}</div>
       ${delivery && o.delivery_address ? `<div>${esc(o.delivery_address)}</div>` : ""}
       <div class="r-hr"></div>
       ${items}
