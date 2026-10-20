@@ -220,6 +220,13 @@ function codeDiscountCents(afterPromos: number, percent: number): number {
   return Math.round((afterPromos * percent) / 100);
 }
 
+// Lily's Club welcome gift (2026-10-20): 10% off, never more than this many cents
+// (app_config club_max_cents, 750 = $7.50). Unset or invalid = no cap.
+function clubCapCents(raw: string | undefined): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : Infinity;
+}
+
 /* ── analytics (2026-10-08) ─────────────────────────────────────────────
    Where the order came from (set by the site from the landing URL/referrer)
    and an anonymous repeat-customer fingerprint: a salted SHA-256 of the
@@ -376,7 +383,7 @@ Deno.serve(async (req) => {
     const db0 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const [{ data: t }, { data: cfgRows }] = await Promise.all([
       db0.from("promo_tokens").select("kind,percent,order_id").eq("token", token).maybeSingle(),
-      db0.from("app_config").select("key,value").in("key", ["referral_enabled", "referral_percent"]),
+      db0.from("app_config").select("key,value").in("key", ["referral_enabled", "referral_percent", "club_max_cents"]),
     ]);
     const c = Object.fromEntries((cfgRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
     if (!t || (t.kind === "referral" && (c.referral_enabled ?? "").trim() !== "true")) {
@@ -395,7 +402,8 @@ Deno.serve(async (req) => {
       }
     }
     const percent = t.kind === "referral" ? Number(c.referral_percent ?? "10") : t.percent;
-    return json({ ok: true, kind: t.kind, percent });
+    const cap = t.kind === "club" ? clubCapCents(c.club_max_cents) : Infinity;
+    return json({ ok: true, kind: t.kind, percent, ...(Number.isFinite(cap) ? { max_cents: cap } : {}) });
   }
 
   const fulfilment = body.fulfilment === "delivery" ? "delivery" : "pickup";
@@ -605,6 +613,7 @@ Deno.serve(async (req) => {
   // sticker / referral link, or a referral reward this customer has earned
   const referralOn = (cfg.referral_enabled ?? "").trim() === "true";
   const referralPct = Number(cfg.referral_percent ?? "10");
+  const clubCap = clubCapCents(cfg.club_max_cents);
   const promoToken = String(body.promo_token ?? "").toUpperCase();
   let tokenRow: { token: string; kind: string; percent: number; referrer_hash: string | null; order_id: string | null } | null = null;
   let rewardId: number | null = null;
@@ -632,11 +641,12 @@ Deno.serve(async (req) => {
       }
       tokenRow = t;
       const pct = t.kind === "referral" ? referralPct : t.percent;
-      const cents = Math.min(codeDiscountCents(offerable(), pct), offerable());
+      const cents = Math.min(codeDiscountCents(offerable(), pct), t.kind === "club" ? clubCap : Infinity, offerable());
       if (cents > 0) {
         discount += cents;
         const label = t.kind === "sticker" ? `${pct}% off your first online order`
-          : t.kind === "club" ? `Lily's Club: ${pct}% off` : `Friend's ${pct}% off`;
+          : t.kind === "club" ? `Lily's Club: ${pct}% off${Number.isFinite(clubCap) ? ` (up to $${(clubCap / 100).toFixed(2)})` : ""}`
+          : `Friend's ${pct}% off`;
         applied.push({ id: t.kind, label, cents });
       }
     } else if (referralOn && custHash) {

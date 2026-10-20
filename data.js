@@ -57,9 +57,11 @@ window.LILYS = {
     // shows/hides the Delivery option. The server has its own switch
     // (app_config.delivery_enabled) and refuses delivery while that is off.
     deliveryEnabled: true, // on 2026-10-16 (Kareem: free within 2 miles, $10 up to 5)
-    // Lily's Club welcome gift, shown at checkout. The server's own figure is
-    // app_config.club_welcome_percent: keep the two the same.
-    clubPercent: 5,
+    // Lily's Club welcome gift, shown at checkout. The server's own figures are
+    // app_config.club_welcome_percent and club_max_cents: keep them the same.
+    // 10% up to $7.50 from 2026-10-20 (was 5%; about $6.30 off the average order)
+    clubPercent: 10,
+    clubMaxOff: "$7.50",
     // Lunch Specials (Kareem's flyer, 2026-10-16): weekdays 11am to 3pm Florida,
     // pickup or dine-in only, never combined with other offers. create-checkout
     // has its own copy (LUNCH_CATEGORY, lunchRunsAt) and is the one that enforces it.

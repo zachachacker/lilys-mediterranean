@@ -111,7 +111,7 @@
     // list; the wording matches deals CONFIRM_CONSENT, kept as proof of consent.
     function clubHTML() {
       return `<div class="co-rate co-club" id="coClub">
-        <p class="co-rate-t"><b>Get ${esc(O.clubPercent || 5)}% off your next order</b></p>
+        <p class="co-rate-t"><b>Get ${esc(O.clubPercent || 5)}% off your next order</b>${O.clubMaxOff ? ` (up to ${esc(O.clubMaxOff)})` : ""}</p>
         <div class="co-rate-b"><button type="button" data-club-join="1">Join Lily's Club</button></div>
         <p class="co-club-f">Join Lily's Club with the email on this order: members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.</p>
       </div>`;
@@ -216,7 +216,7 @@
 
   if ($("prepMin")) $("prepMin").textContent = O.prepMinutes;
   if ($("cfClubText") && O.clubPercent) {
-    $("cfClubText").textContent = `${O.clubPercent}% off your next order for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.`;
+    $("cfClubText").textContent = `${O.clubPercent}% off your next order${O.clubMaxOff ? ` (up to ${O.clubMaxOff})` : ""} for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.`;
   }
   if ($("delMin")) $("delMin").textContent = O.deliveryMinutes;
   if (!O.deliveryEnabled) {
@@ -311,7 +311,7 @@
       });
       const j = await r.json();
       if (!r.ok) { showErr(j.error || "That discount link isn't valid."); return; }
-      promoCode = { token: m[2].toUpperCase(), kind: j.kind, percent: j.percent };
+      promoCode = { token: m[2].toUpperCase(), kind: j.kind, percent: j.percent, upTo: j.max_cents ? ` (up to $${(j.max_cents / 100).toFixed(2)})` : "" };
       try { localStorage.setItem(CODE_KEY, JSON.stringify(promoCode)); } catch { /* still applies this visit */ }
       loadOffers();
       // say it up top too: on a phone the cart (and its offers box) is far below
@@ -320,7 +320,7 @@
       note.textContent = j.kind === "sticker"
         ? `Thanks for scanning! ${j.percent}% off your first online order, taken off at checkout.`
         : j.kind === "club"
-        ? `Welcome to Lily's Club! Your ${j.percent}% off is applied at checkout.`
+        ? `Welcome to Lily's Club! Your ${j.percent}% off${promoCode.upTo} is applied at checkout.`
         : `A friend sent you ${j.percent}% off your first online order, taken off at checkout.`;
       $("closedNote")?.before(note);
     } catch { /* offline: no discount shown, nothing lost */ }
@@ -918,7 +918,7 @@
       ? `<div class="offer">${promoCode.kind === "sticker"
           ? `${promoCode.percent}% off your first online order (bag sticker)`
           : promoCode.kind === "club"
-          ? `Lily's Club: ${promoCode.percent}% off this order`
+          ? `Lily's Club: ${promoCode.percent}% off this order${promoCode.upTo || ""}`
           : `${promoCode.percent}% off from a friend's link`}
           <button type="button" class="offer-x" id="codeX">Remove</button></div>`
       : "";

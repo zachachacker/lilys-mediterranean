@@ -2,7 +2,7 @@
  * money out of the till, so: random tokens only, single-use stickers claimed
  * atomically, first online order only, never a typed code. */
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { codeDiscountCents, TOKEN_RE } from "./mirrors.ts";
+import { clubCapCents, codeDiscountCents, TOKEN_RE } from "./mirrors.ts";
 
 const root = new URL("../", import.meta.url);
 const src = () => Deno.readTextFile(new URL("create-checkout/index.ts", root));
@@ -23,7 +23,10 @@ Deno.test("drift: discount-link rules in create-checkout", async () => {
   // referral stays off unless app_config says exactly "true"
   assertStringIncludes(s, 'const referralOn = (cfg.referral_enabled ?? "").trim() === "true";');
   // the code discount is measured after menu promotions and never exceeds what's left
-  assertStringIncludes(s, "const cents = Math.min(codeDiscountCents(offerable(), pct), offerable());");
+  assertStringIncludes(s, 'const cents = Math.min(codeDiscountCents(offerable(), pct), t.kind === "club" ? clubCap : Infinity, offerable());');
+  // the Club cap: same helper as the mirror, read from app_config
+  assertStringIncludes(s, "const clubCap = clubCapCents(cfg.club_max_cents);");
+  assertStringIncludes(s, "  const n = Number(raw);\n  return Number.isInteger(n) && n > 0 ? n : Infinity;");
 });
 
 Deno.test("drift: order.js never sends a token from a query string", async () => {
@@ -54,4 +57,15 @@ Deno.test("tokens: 10 chars from the no-lookalike alphabet, nothing else", () =>
   assert(!TOKEN_RE.test("0OIL1ABCDE"));    // lookalikes never minted
   assert(!TOKEN_RE.test("abcdefghjk"));    // server upper-cases first
   assert(!TOKEN_RE.test("SAVE5SAVE5'")); 
+});
+
+Deno.test("Club welcome: 10% off, never more than the cap", () => {
+  const cap = clubCapCents("750");
+  const club = (food: number) => Math.min(codeDiscountCents(food, 10), cap, food);
+  assertEquals(club(6300), 630); // the average order: $6.30 off
+  assertEquals(club(7500), 750);
+  assertEquals(club(23047), 750); // the biggest order so far: still $7.50
+  assertEquals(clubCapCents(undefined), Infinity);
+  assertEquals(clubCapCents("abc"), Infinity);
+  assertEquals(clubCapCents("0"), Infinity);
 });

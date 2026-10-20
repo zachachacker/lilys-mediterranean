@@ -31,7 +31,7 @@ export const SOURCE_NAMES: Record<string, string> = {
   duckduckgo: "DuckDuckGo", sticker: "Bag sticker", ubereats: "Uber Eats", doordash: "DoorDash",
   gbp: "Google listing", "gbp-order": "Google \"Order online\" button", "old-site": "Old website",
   qr: "QR code", flyer: "Flyer", email: "Lily's Club email", club: "Lily's Club welcome",
-  referral: "Friend's link", "ready-email": "Order-ready email", "review-email": "Review email",
+  referral: "Friend's link", "ready-email": "Order-ready email", "review-email": "Review email", receipt: "Receipt QR",
 };
 export const flDate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 export const addDays = (day: string, n: number) =>

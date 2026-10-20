@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Lily's Club · Lily's Mediterranean Fresh Grill</title>
-<meta name="description" content="Join Lily's Club: 5% off your next order, members-only offers and a first look at new dishes from Lily's Mediterranean in Indialantic, FL.">
+<meta name="description" content="Join Lily's Club: 10% off your next order (up to $7.50), members-only offers and a first look at new dishes from Lily's Mediterranean in Indialantic, FL.">
 <link rel="canonical" href="https://lilysmediterraneanfresh.com/club.html">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#14532b">
@@ -64,9 +64,9 @@
     <div class="section-head club-box" id="clubBox">
       <span class="eyebrow">Members only</span>
       <h1>Lily's Club</h1>
-      <p class="club-lede">Join free and get <strong><span class="club-pct">5</span>% off your next online order</strong>. After that: our best offers and a first look at new dishes, about once a month.</p>
+      <p class="club-lede">Join free and get <strong><span class="club-pct">10</span>% off your next online order</strong> (up to $7.50). After that: our best offers and a first look at new dishes, about once a month.</p>
       <ul class="club-perks">
-        <li><b><span class="club-pct">5</span>% off</b> your next order, just for joining</li>
+        <li><b><span class="club-pct">10</span>% off</b> your next order, just for joining (up to $7.50)</li>
         <li><b>Members-only offers</b> you won't see anywhere else</li>
         <li><b>First taste</b> of new dishes and specials</li>
       </ul>
@@ -181,7 +181,7 @@
     const btn = e.target.querySelector("button");
     btn.disabled = true;
     try {
-      await post({ action: "join", email });
+      await post({ action: "join", email, via: window.LILYS_TRACK?.source() || "" });
       show(`<span class="eyebrow">Almost there</span><h1>Check your inbox</h1>
         <p class="club-lede">We've sent your welcome gift to <strong>${email.replace(/</g, "&lt;")}</strong>. Tap <b>Claim</b> in that email and you're in.</p>`);
     } catch (err) {

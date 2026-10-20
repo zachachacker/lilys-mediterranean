@@ -18,6 +18,14 @@
   const QUEUE_STORE = "lilys-kitchen-pending";
   const TOUR_STORE = "lilys-kitchen-tour-v1";
   const PRINT_STORE = "lilys-kitchen-print-on-start";
+  // the receipt's Club offer: keep equal to data.js clubPercent and
+  // app_config club_welcome_percent (club_receipt_test.ts checks data.js)
+  const CLUB_PERCENT = 10;
+  const CLUB_MAX = "$7.50"; // app_config club_max_cents
+  // QR for https://lilysmediterraneanfresh.com/club.html?src=receipt (qrcode 1.5.4,
+  // error correction Q). Static on purpose: the 5% itself comes as a one-use
+  // token by email after joining, so a printed QR can't be harvested.
+  const CLUB_QR = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 41 41" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h41v41H0z"/><path stroke="#000000" d="M2 2.5h7m1 0h1m2 0h1m2 0h3m1 0h1m1 0h3m1 0h1m1 0h2m2 0h7M2 3.5h1m5 0h1m4 0h5m1 0h1m1 0h1m1 0h3m1 0h1m1 0h1m2 0h1m5 0h1M2 4.5h1m1 0h3m1 0h1m1 0h2m4 0h1m4 0h2m2 0h1m2 0h1m1 0h1m1 0h1m1 0h3m1 0h1M2 5.5h1m1 0h3m1 0h1m1 0h1m2 0h3m2 0h1m1 0h2m2 0h2m2 0h2m2 0h1m1 0h3m1 0h1M2 6.5h1m1 0h3m1 0h1m7 0h2m1 0h2m1 0h1m1 0h2m1 0h3m2 0h1m1 0h3m1 0h1M2 7.5h1m5 0h1m1 0h4m1 0h3m1 0h2m3 0h1m3 0h3m1 0h1m5 0h1M2 8.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M10 9.5h2m1 0h4m4 0h4m1 0h1m1 0h1M3 10.5h1m1 0h1m1 0h4m1 0h3m2 0h4m1 0h2m2 0h8m1 0h2m1 0h1M2 11.5h2m2 0h1m9 0h3m5 0h1m1 0h1m3 0h1m1 0h2m2 0h3M2 12.5h1m1 0h1m2 0h5m2 0h1m2 0h1m1 0h3m4 0h1m3 0h1m1 0h1m2 0h4M3 13.5h1m1 0h3m1 0h2m4 0h1m2 0h4m1 0h1m1 0h3m1 0h2m2 0h2m2 0h2M3 14.5h1m1 0h5m3 0h2m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1m2 0h3m2 0h1m2 0h1M3 15.5h1m7 0h1m2 0h2m5 0h2m3 0h2m4 0h2m1 0h1m1 0h2M3 16.5h6m4 0h2m2 0h2m3 0h2m1 0h4m3 0h3m1 0h1m1 0h1M2 17.5h1m2 0h3m1 0h6m1 0h1m2 0h3m3 0h3m2 0h1m2 0h1M6 18.5h1m1 0h2m2 0h1m1 0h1m2 0h2m1 0h3m1 0h2m3 0h1m1 0h3m1 0h4M4 19.5h3m2 0h1m2 0h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h3m1 0h1m3 0h1M2 20.5h3m1 0h1m1 0h3m1 0h1m2 0h1m1 0h8m1 0h1m3 0h2m2 0h1m1 0h3M3 21.5h1m2 0h2m1 0h1m4 0h4m1 0h1m2 0h2m1 0h1m4 0h1m1 0h2m2 0h1M3 22.5h1m2 0h3m3 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h4m1 0h1m1 0h3m2 0h1M3 23.5h3m1 0h1m3 0h3m1 0h1m2 0h1m3 0h2m3 0h2m2 0h2m2 0h2m1 0h1M4 24.5h3m1 0h1m2 0h3m1 0h2m1 0h6m2 0h2m3 0h1m1 0h2m3 0h1M2 25.5h3m1 0h2m1 0h2m1 0h1m2 0h2m1 0h2m1 0h3m1 0h1m1 0h1m3 0h1m2 0h2M3 26.5h2m2 0h6m4 0h2m1 0h2m1 0h1m2 0h2m1 0h4m4 0h1M6 27.5h2m1 0h1m1 0h6m1 0h1m4 0h2m1 0h2m4 0h2m1 0h2m1 0h1M2 28.5h1m1 0h6m1 0h6m1 0h1m1 0h3m2 0h1m2 0h1m1 0h3m1 0h2m2 0h1M3 29.5h2m1 0h2m2 0h2m4 0h4m3 0h1m1 0h1m1 0h1m4 0h2M2 30.5h3m1 0h1m1 0h1m3 0h2m1 0h2m2 0h3m1 0h2m1 0h1m3 0h9M10 31.5h1m3 0h1m1 0h2m2 0h1m2 0h1m1 0h6m3 0h1m3 0h1M2 32.5h7m1 0h2m1 0h1m1 0h2m4 0h2m1 0h1m4 0h2m1 0h1m1 0h1m1 0h3M2 33.5h1m5 0h1m1 0h1m3 0h1m1 0h3m2 0h3m1 0h1m2 0h3m3 0h1m1 0h1M2 34.5h1m1 0h3m1 0h1m2 0h1m1 0h2m2 0h1m1 0h1m1 0h1m2 0h1m2 0h2m1 0h6M2 35.5h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h2m2 0h1m1 0h2m1 0h1m1 0h2m3 0h1m1 0h4m1 0h1M2 36.5h1m1 0h3m1 0h1m3 0h1m1 0h4m1 0h1m2 0h1m1 0h1m2 0h1m1 0h3m2 0h2m2 0h1M2 37.5h1m5 0h1m1 0h1m8 0h1m3 0h2m2 0h1m2 0h1m2 0h1M2 38.5h7m4 0h1m1 0h1m4 0h4m1 0h3m1 0h2m2 0h1m1 0h1m1 0h2"/></svg>';
   const POLL_MS = 5000;
   const OFFLINE_BANNER_AFTER_MS = 45000;
   const RECALL_WINDOW_MS = 60 * 60 * 1000;
@@ -1022,6 +1030,13 @@
       ${items}
       ${o.notes ? `<div class="r-notes">${esc(o.notes)}</div>` : ""}
       ${totals ? `<div class="r-hr"></div>${totals}` : ""}
+      ${o.demo && !o.club ? "" : `<div class="r-club">
+        <div class="r-c r-club-h">JOIN LILY'S CLUB</div>
+        <div class="r-c r-club-big">${CLUB_PERCENT}% OFF</div>
+        <div class="r-c">your next order (up to ${CLUB_MAX})</div>
+        <div class="r-qr">${CLUB_QR}</div>
+        <div class="r-c">Scan to join free · members-only offers</div>
+      </div>`}
       <div class="r-hr"></div>
       <div class="r-c">Thank you! Order again at</div>
       <div class="r-c">lilysmediterraneanfresh.com</div>
@@ -1061,7 +1076,7 @@
       wrap.querySelector("#prTest").addEventListener("click", () => {
         const now = new Date().toISOString();
         printReceipts([{
-          code: "TEST-PRINT", demo: true, customer_name: "Printer test", customer_phone: "", fulfilment: "pickup",
+          code: "TEST-PRINT", demo: true, club: true, customer_name: "Printer test", customer_phone: "", fulfilment: "pickup",
           items: [{ qty: 1, name: "Chicken Shawarma Wrap", unit_cents: 1339, addons: [{ name: "Extra garlic sauce" }] }],
           notes: "If you can read this, the printer works.", created_at: now,
           subtotal_cents: 1339, tax_cents: 94, total_cents: 1433,
