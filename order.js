@@ -183,11 +183,14 @@
     // Google Ads purchase conversion: dormant until Kareem's conversion label is
     // set in data.js (googleAdsConversion, e.g. "AW-18438934153/AbCdEf"). Fires
     // once per order, only for real paid orders, with the food value.
+    let adsUser = null;
     function reportConversion(o) {
       const label = L.googleAdsConversion;
       if (!label || o.demo || o.status === "pending" || o.status === "canceled" || typeof gtag !== "function") return;
       const k = "lilys-conv-" + o.code;
       try { if (localStorage.getItem(k)) return; localStorage.setItem(k, "1"); } catch { /* fine */ }
+      // enhanced conversions: hashed email/phone, hashed by order-status
+      if (adsUser) gtag("set", "user_data", adsUser);
       gtag("event", "conversion", { send_to: label, value: (o.subtotal_cents - (o.discount_cents || 0)) / 100, currency: "USD", transaction_id: o.code });
     }
 
@@ -202,6 +205,7 @@
         failures = 0;
         // never re-render over a rating the customer is in the middle of
         if (!document.getElementById("coRate")?.dataset.rating) render(j.order);
+        adsUser = j.ads_user || null;
         reportConversion(j.order);
         if (!["done", "canceled"].includes(j.order.status)) {
           setTimeout(load, j.order.status === "pending" ? 5000 : 15000);

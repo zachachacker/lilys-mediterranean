@@ -16,6 +16,22 @@ const json = (body: unknown, status = 200) =>
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 const newToken = () => [...crypto.getRandomValues(new Uint8Array(10))].map((b) => ALPHABET[b % 30]).join("");
 
+// Google Ads enhanced conversions (2026-10-22): the buyer's email and phone,
+// normalised and SHA-256 hashed HERE, so the page only ever holds the hashes
+// it passes to gtag("set", "user_data"). Raw details never reach the browser.
+const sha256 = async (s: string) =>
+  [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))]
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+async function adsUserData(email: string | null, phone: string | null) {
+  const out: { sha256_email_address?: string; sha256_phone_number?: string } = {};
+  const e = (email ?? "").trim().toLowerCase();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) out.sha256_email_address = await sha256(e);
+  let d = (phone ?? "").replace(/\D/g, "");
+  if (d.length === 10) d = "1" + d; // US number without the country code
+  if (d.length === 11 && d.startsWith("1")) out.sha256_phone_number = await sha256("+" + d);
+  return Object.keys(out).length ? out : null;
+}
+
 // Loyalty progress (2026-10-20; byte-identical in order-status and kitchen-api):
 // a customer's paid online orders up to and including `at`, and how many of
 // those spent a reward. create-checkout decides the reward itself.
@@ -86,14 +102,14 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data, error } = await db
     .from("orders")
-    .select("id,code,status,items,subtotal_cents,discount_cents,discounts,tax_cents,total_cents,created_at,demo,customer_name,fulfilment,delivery_address,delivery_fee_cents,tip_cents,customer_hash,customer_email")
+    .select("id,code,status,items,subtotal_cents,discount_cents,discounts,tax_cents,total_cents,created_at,demo,customer_name,fulfilment,delivery_address,delivery_fee_cents,tip_cents,customer_hash,customer_email,customer_phone")
     .eq("stripe_session_id", sid)
     .maybeSingle();
   if (error) return json({ error: "Lookup failed" }, 500);
   if (!data) return json({ error: "Order not found" }, 404);
   // whether this order has been rated, so the page doesn't ask twice; the
   // internal id is used for the lookup and never returned
-  const { id, customer_hash, customer_email, discounts, ...order } = data;
+  const { id, customer_hash, customer_email, customer_phone, discounts, ...order } = data;
   const { data: fb } = await db.from("feedback").select("rating").eq("order_id", id).maybeSingle();
   // offer the one-tap Club join only to someone not already on the list (and
   // not someone who left it); the email itself never leaves this function
@@ -103,5 +119,8 @@ Deno.serve(async (req) => {
     const { data: sub } = await db.from("subscribers").select("email").eq("email", em).maybeSingle();
     club = !sub;
   }
-  return json({ order: { ...order, rated: fb?.rating ?? null, referral: await referralFor(db, data), club, loyalty: await loyaltyFor(db, data) } });
+  return json({
+    order: { ...order, rated: fb?.rating ?? null, referral: await referralFor(db, data), club, loyalty: await loyaltyFor(db, data) },
+    ads_user: await adsUserData(customer_email, customer_phone),
+  });
 });
