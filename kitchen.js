@@ -47,7 +47,7 @@
   // age thresholds per state, minutes → [warn, late]
   const AGE = { paid: [3, 6], making: [12, 18], ready: [10, 20] };
   // Florida-time opening hours — keep in sync with data.js HOURS (0=Sun..6=Sat)
-  const HOURS = { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] };
+  const HOURS = { 0: [11, 22], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] };
   const flNow = () => {
     const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false }).formatToParts(new Date());
     const get = (t) => parts.find((p) => p.type === t)?.value ?? "";

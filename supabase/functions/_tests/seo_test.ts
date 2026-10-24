@@ -6,7 +6,8 @@ import { assertEquals } from "jsr:@std/assert@1";
 const repo = new URL("../../../", import.meta.url);
 const read = (p: string) => Deno.readTextFile(new URL(p, repo));
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const hhmm = (h: number) => `${String(h).padStart(2, "0")}:00`;
+// 21.5 -> "21:30" (weeknights close at half past, 2026-10-24)
+const hhmm = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 
 Deno.test("seo: JSON-LD opening hours match data.js HOURS", async () => {
   const dataJs = await read("data.js");

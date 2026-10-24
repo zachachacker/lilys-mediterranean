@@ -16,7 +16,8 @@
     const whole = Math.floor(h);
     const suffix = whole >= 12 ? "pm" : "am";
     const display = whole > 12 ? whole - 12 : whole;
-    return `${display}${suffix}`;
+    const mins = Math.round((h - whole) * 60); // 21.5 -> 9:30pm
+    return `${display}${mins ? `:${String(mins).padStart(2, "0")}` : ""}${suffix}`;
   };
   const hoursLine = (d) => (L.HOURS[d] ? `${fmtHour(L.HOURS[d][0])}–${fmtHour(L.HOURS[d][1])}` : "Closed");
 

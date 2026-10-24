@@ -220,16 +220,22 @@
   }
 
   /* ---- live open/closed pill + today highlight ----
-     Hours confirmed by Kareem (2026-07-11): Wed closed, Fri/Sat till 11pm. */
+     Hours confirmed by Kareem (2026-10-24 call): Mon, Tue, Thu 11-9:30pm,
+     Fri-Sun 11-10pm, Wed closed. */
   const HOURS = (window.LILYS && window.LILYS.HOURS) ||
-    { 0: [11, 22], 1: [11, 22], 2: [11, 22], 3: null, 4: [11, 22], 5: [11, 23], 6: [11, 23] };
+    { 0: [11, 22], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] };
   // The restaurant runs on Florida time regardless of where the visitor is.
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const day = now.getDay();
   const hour = now.getHours() + now.getMinutes() / 60;
   const today = HOURS[day];
   const open = today && hour >= today[0] && hour < today[1];
-  const fmt = (h) => (h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`);
+  // 21.5 -> "9:30pm" (Kareem closes at half past on weeknights)
+  const fmt = (h) => {
+    const whole = Math.floor(h), mins = Math.round((h - whole) * 60);
+    const base = whole === 12 ? 12 : whole > 12 ? whole - 12 : whole;
+    return `${base}${mins ? `:${String(mins).padStart(2, "0")}` : ""}${whole >= 12 ? "pm" : "am"}`;
+  };
   const mount = document.getElementById("statusMount");
   if (mount) {
     let label;
