@@ -395,9 +395,8 @@
     // and nothing reached the kitchen. Only charged-then-cancelled counts.
     const abandoned = cur.filter((o) => (o.status === "canceled" && !o.charged) || o.status === "pending").length;
     const cancelled = cur.filter((o) => o.status === "canceled" && o.charged).length;
-    const done = ok.filter((o) => o.status === "done")
-      .map((o) => (new Date(o.updated_at) - new Date(o.created_at)) / 60000).filter((m) => m > 0 && m < 240).sort((a, b) => a - b);
-    const median = done.length ? Math.round(done[Math.floor((done.length - 1) / 2)]) : null;
+    // paid -> collected stamps, not updated_at: ask-review touches the row ~90 min+ later
+    const median = medianOf(ok.filter((o) => o.status === "done" && o.paid_at && o.done_at).map((o) => mins(o.paid_at, o.done_at)));
     const mixCard = el("div", { class: "card" },
       el("h2", { text: "Pickup vs delivery" }),
       el("p", { class: "cap", text: deliv ? "Share of orders" : "Delivery is switched off for now" }),
@@ -410,7 +409,7 @@
         el("span", {}, el("i", { style: "background:var(--series-2)" }), `Delivery ${deliv}`)),
       el("div", { class: "stack" },
         el("table", {}, el("tbody", {},
-          el("tr", {}, el("td", { text: "Order to collected (median)" }), el("td", { class: "r", text: median === null ? "–" : `${median} min` })),
+          el("tr", {}, el("td", { text: "Order to collected (median)" }), el("td", { class: "r", text: fmtMin(median) })),
           el("tr", {}, el("td", { text: "Driver tips" }), el("td", { class: "r", text: money(tips) })),
           el("tr", {}, el("td", { text: "Delivery fees" }), el("td", { class: "r", text: money(fees) })),
           el("tr", {}, el("td", { text: "Cancelled by the kitchen" }), el("td", { class: "r", text: String(cancelled) })),
