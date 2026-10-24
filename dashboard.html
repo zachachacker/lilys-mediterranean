@@ -393,7 +393,10 @@
     const fees = sum(ok, (o) => o.delivery_fee_cents || 0);
     // an unpaid checkout that expired is not a cancellation: nobody was charged
     // and nothing reached the kitchen. Only charged-then-cancelled counts.
-    const abandoned = cur.filter((o) => (o.status === "canceled" && !o.charged) || o.status === "pending").length;
+    const unpaid = cur.filter((o) => (o.status === "canceled" && !o.charged) || o.status === "pending");
+    const abandoned = unpaid.length;
+    // filled by the reconcile sweep from Stripe; "declined: ..." means they tried to pay
+    const declined = unpaid.filter((o) => (o.unpaid_reason || "").startsWith("declined")).length;
     const cancelled = cur.filter((o) => o.status === "canceled" && o.charged).length;
     // paid -> collected stamps, not updated_at: ask-review touches the row ~90 min+ later
     const median = medianOf(ok.filter((o) => o.status === "done" && o.paid_at && o.done_at).map((o) => mins(o.paid_at, o.done_at)));
@@ -413,7 +416,7 @@
           el("tr", {}, el("td", { text: "Driver tips" }), el("td", { class: "r", text: money(tips) })),
           el("tr", {}, el("td", { text: "Delivery fees" }), el("td", { class: "r", text: money(fees) })),
           el("tr", {}, el("td", { text: "Cancelled by the kitchen" }), el("td", { class: "r", text: String(cancelled) })),
-          el("tr", {}, el("td", { text: "Checkouts not completed (never paid)" }), el("td", { class: "r", text: String(abandoned) }))))));
+          el("tr", {}, el("td", { text: "Checkouts not completed (never paid)" }), el("td", { class: "r", text: declined ? `${abandoned} (${declined} card declined)` : String(abandoned) }))))));
 
     // recent orders
     const recent = [...cur].reverse().slice(0, 25);

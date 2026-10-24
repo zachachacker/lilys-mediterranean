@@ -64,5 +64,38 @@ Deno.serve(async (req) => {
     } catch { /* transient — next sweep */ }
   }
 
-  return json({ ok: true, checked: (stuck ?? []).length, recovered, expired });
+  // why never-paid checkouts didn't pay (2026-10-24): a declined card and a
+  // customer who walked away look the same in our table. Stripe only creates
+  // the PaymentIntent when someone actually tries to pay.
+  const { data: unpaid } = await db
+    .from("orders")
+    .select("id,stripe_session_id")
+    .eq("status", "canceled")
+    .is("stripe_payment_intent", null)
+    .is("unpaid_reason", null)
+    .not("stripe_session_id", "is", null)
+    .gt("created_at", new Date(Date.now() - 60 * 86400 * 1000).toISOString())
+    .limit(20);
+  let explained = 0;
+  for (const o of unpaid ?? []) {
+    try {
+      const r = await fetch(
+        `https://api.stripe.com/v1/checkout/sessions/${o.stripe_session_id}?expand[]=payment_intent`,
+        { headers: { Authorization: `Bearer ${stripeKey}` } },
+      );
+      if (!r.ok) continue;
+      const s = await r.json();
+      const pi = s.payment_intent;
+      const err = pi?.last_payment_error;
+      const reason = !pi
+        ? "left before paying"
+        : err
+        ? `declined: ${[err.code, err.decline_code, err.payment_method?.type].filter(Boolean).join(" / ")}`
+        : `tried to pay, ${pi.status}`;
+      await db.from("orders").update({ unpaid_reason: reason }).eq("id", o.id);
+      explained++;
+    } catch { /* next sweep */ }
+  }
+
+  return json({ ok: true, checked: (stuck ?? []).length, recovered, expired, explained });
 });
