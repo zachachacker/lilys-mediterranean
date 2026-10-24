@@ -2,7 +2,7 @@
  * money out of the till, so: random tokens only, single-use stickers claimed
  * atomically, first online order only, never a typed code. */
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { clubCapCents, codeDiscountCents, TOKEN_RE } from "./mirrors.ts";
+import { CLUB_CAP_DEFAULT_CENTS, clubCapCents, codeDiscountCents, TOKEN_RE } from "./mirrors.ts";
 
 const root = new URL("../", import.meta.url);
 const src = () => Deno.readTextFile(new URL("create-checkout/index.ts", root));
@@ -28,7 +28,16 @@ Deno.test("drift: discount-link rules in create-checkout", async () => {
   assertStringIncludes(s, "const cents = Math.min(codeDiscountCents(offerable(), pct), capped ? clubCap : Infinity, offerable());");
   // the Club cap: same helper as the mirror, read from app_config
   assertStringIncludes(s, "const clubCap = clubCapCents(cfg.club_max_cents);");
-  assertStringIncludes(s, "  const n = Number(raw);\n  return Number.isInteger(n) && n > 0 ? n : Infinity;");
+  // fails closed: a bad setting is the $7.50 default, never uncapped
+  assertStringIncludes(s, "const CLUB_CAP_DEFAULT_CENTS = 750;");
+  assertStringIncludes(s, "  const n = Number(raw);\n  return Number.isInteger(n) && n > 0 ? n : CLUB_CAP_DEFAULT_CENTS;");
+  const helper = s.slice(s.indexOf("function clubCapCents("), s.indexOf("\n}\n", s.indexOf("function clubCapCents(")));
+  assert(!helper.includes("Infinity"), "clubCapCents must never return Infinity");
+  // the code check (promotion validation) uses the same helper for Club and stickers and always reports the cap
+  assertStringIncludes(s, 'const cap = t.kind === "club" || t.kind === "sticker" ? clubCapCents(c.club_max_cents) : Infinity;');
+  assertStringIncludes(s, "return json({ ok: true, kind: t.kind, percent, ...(Number.isFinite(cap) ? { max_cents: cap } : {}) });");
+  // the checkout label always states the cap for Club and stickers
+  assertStringIncludes(s, 'const upTo = capped ? ` (up to $${(clubCap / 100).toFixed(2)})` : "";');
 });
 
 Deno.test("drift: order.js never sends a token from a query string", async () => {
@@ -67,7 +76,34 @@ Deno.test("Club welcome: 10% off, never more than the cap", () => {
   assertEquals(club(6300), 630); // the average order: $6.30 off
   assertEquals(club(7500), 750);
   assertEquals(club(23047), 750); // the biggest order so far: still $7.50
-  assertEquals(clubCapCents(undefined), Infinity);
-  assertEquals(clubCapCents("abc"), Infinity);
-  assertEquals(clubCapCents("0"), Infinity);
+  // a missing or broken setting must never uncap it: same $7.50
+  for (const bad of [undefined, "", " ", "abc", "7.50", "0", "-5", "NaN", "Infinity", "1e400"]) {
+    assertEquals(clubCapCents(bad), CLUB_CAP_DEFAULT_CENTS, `club_max_cents ${JSON.stringify(bad)}`);
+  }
+});
+
+Deno.test("cap setting: valid values are used as set", () => {
+  assertEquals(CLUB_CAP_DEFAULT_CENTS, 750);
+  assertEquals(clubCapCents("750"), 750);
+  assertEquals(clubCapCents("1000"), 1000);
+  assertEquals(clubCapCents(" 500 "), 500);
+});
+
+Deno.test("checkout maths: Club and sticker discounts stay capped whatever the setting", () => {
+  // the same expression create-checkout uses for a Club or sticker token
+  const discount = (food: number, pct: number, raw: string | undefined) =>
+    Math.min(codeDiscountCents(food, pct), clubCapCents(raw), food);
+  for (const raw of ["750", undefined, "", "abc", "7.50", "0", "-5"]) {
+    assertEquals(discount(23047, 10, raw), 750, `$230.47 order, setting ${JSON.stringify(raw)}`); // biggest order so far
+    assertEquals(discount(6300, 10, raw), 630, `$63 order, setting ${JSON.stringify(raw)}`); // the average: under the cap
+    assertEquals(discount(20000, 5, raw), 750, `old 5% sticker on $200, setting ${JSON.stringify(raw)}`);
+  }
+  // a valid higher cap is honoured
+  assertEquals(discount(23047, 10, "1500"), 1500);
+});
+
+Deno.test("drift: the welcome email states the same fallback cap", async () => {
+  const deals = await Deno.readTextFile(new URL("deals/index.ts", root));
+  assertStringIncludes(deals, "const max = Number.isInteger(n) && n > 0 ? n : 750;");
+  assertStringIncludes(deals, "const upTo = ` (up to $${(max / 100).toFixed(2)})`;");
 });

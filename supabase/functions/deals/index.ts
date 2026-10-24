@@ -88,9 +88,12 @@ async function welcome(db: DB, email: string, requireConfirmed: boolean): Promis
   const { data: cfgRows } = await db.from("app_config").select("key,value").in("key", ["club_welcome_percent", "club_max_cents"]);
   const cfg = Object.fromEntries((cfgRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   const pct = Number(cfg.club_welcome_percent ?? "5");
-  // the cap itself is applied at checkout (create-checkout clubCapCents); this is only the wording
-  const max = Number(cfg.club_max_cents);
-  const upTo = Number.isInteger(max) && max > 0 ? ` (up to $${(max / 100).toFixed(2)})` : "";
+  // the cap itself is applied at checkout (create-checkout clubCapCents); this
+  // is only the wording, with the same $7.50 fallback so the email never
+  // promises more than checkout gives
+  const n = Number(cfg.club_max_cents);
+  const max = Number.isInteger(n) && n > 0 ? n : 750;
+  const upTo = ` (up to $${(max / 100).toFixed(2)})`;
   const percent = Number.isInteger(pct) && pct >= 1 && pct <= 50 ? pct : 5;
   // one welcome gift per email, ever: leaving and rejoining reuses the first one
   let error = null;

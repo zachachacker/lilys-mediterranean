@@ -469,9 +469,10 @@ export function codeDiscountCents(afterPromos: number, percent: number): number 
   return Math.round((afterPromos * percent) / 100);
 }
 
+export const CLUB_CAP_DEFAULT_CENTS = 750;
 export function clubCapCents(raw: string | undefined): number {
   const n = Number(raw);
-  return Number.isInteger(n) && n > 0 ? n : Infinity;
+  return Number.isInteger(n) && n > 0 ? n : CLUB_CAP_DEFAULT_CENTS;
 }
 
 export function loyaltyDue(paidOrders: number, usedRewards: number, every: number): boolean {
