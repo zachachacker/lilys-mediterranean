@@ -237,7 +237,10 @@ Deno.serve(async (req) => {
       .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,demo,stripe_payment_intent,fulfilment,delivery_address,delivery_miles,delivery_fee_cents,tip_cents,customer_hash")
       // finished TEST- orders (go-live checks) never clutter "Earlier today" or the
       // day's totals; a live TEST order still shows, so a test can still ring
-      .or(`status.in.(paid,making,ready),and(status.in.(done,canceled),created_at.gte.${twelveHoursAgo},code.not.like.TEST-*)`)
+      // a canceled order shows only if it was ever paid (the kitchen canceled it).
+      // A checkout the customer abandoned and redid also ends "canceled", but was
+      // never charged: listing it looked like a duplicate order (Kareem, 2026-10-24)
+      .or(`status.in.(paid,making,ready),and(status.eq.done,created_at.gte.${twelveHoursAgo},code.not.like.TEST-*),and(status.eq.canceled,stripe_payment_intent.not.is.null,created_at.gte.${twelveHoursAgo},code.not.like.TEST-*)`)
       .order("created_at", { ascending: true });
     if (error) return json({ error: "List failed" }, 500);
     // every poll carries the pause, so a pause set on one device shows on all
