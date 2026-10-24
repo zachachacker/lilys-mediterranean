@@ -1314,6 +1314,7 @@ body.nav-open .order-bar, body.nav-open .cb-root { opacity: 0; visibility: hidde
   background: color-mix(in srgb, var(--lemon) 12%, #fff);
 }
 .cart-form .club-opt:has(input:checked) { border-style: solid; border-color: var(--teal); background: color-mix(in srgb, var(--teal) 8%, #fff); }
+.cart-form .club-opt[hidden] { display: none; }
 .club-opt input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--teal); }
 .club-txt b { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.98rem; }
 .club-txt em { display: block; font-style: normal; font-size: 0.8rem; line-height: 1.4; margin-top: 0.15rem; color: color-mix(in srgb, var(--char) 72%, transparent); }

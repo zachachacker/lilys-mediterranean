@@ -40,6 +40,12 @@
   function renderClub() {
     const el = $("clubPts");
     if (!el) return;
+    // a signed-in member who already gets the offers emails isn't asked again
+    const optIn = $("cfClub")?.closest("label");
+    if (optIn) {
+      optIn.hidden = !!(club && club.offers);
+      if (optIn.hidden) $("cfClub").checked = false;
+    }
     if (!count() || (club && !club.on)) { el.hidden = true; return; }
     const tiers = club?.tiers || [];
     const spendCents = tiers.find((t) => t.points === clubSpend)?.cents || 0;

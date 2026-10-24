@@ -29,7 +29,8 @@ async function verifySignature(payload: string, header: string, secret: string):
 }
 
 // shown next to the checkout tickbox (order.html); kept with each subscriber as proof of consent
-const OFFERS_CONSENT = "Join Lily's Club: 5% off your next order for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.";
+// (2026-10-24: was still the old 5% wording; now exactly what the box shows)
+const OFFERS_CONSENT = "Email me Lily's Club offers: 10% off your next order (up to $7.50) for joining, then members-only offers and a first look at new dishes, about once a month. Unsubscribe any time.";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("POST only", { status: 405 });
