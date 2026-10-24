@@ -3,13 +3,11 @@ import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 
 const read = (p: string) => Deno.readTextFile(new URL(p, import.meta.url));
 
-Deno.test("receipt: the printed Club percent matches the website's", async () => {
+Deno.test("receipt: the printed Club rungs match app_config club_reward_tiers", async () => {
   const kitchen = await read("../../../kitchen.js");
-  const data = await read("../../../data.js");
-  const k = kitchen.match(/const CLUB_PERCENT = (\d+);/);
-  const d = data.match(/clubPercent: (\d+),/);
-  assert(k && d, "CLUB_PERCENT or clubPercent missing");
-  assertEquals(k[1], d[1]);
+  const mig = await read("../../migrations/20261024_club_points.sql");
+  assertStringIncludes(kitchen, 'const CLUB_RUNGS = "50 points = $5 off, 100 = $12 off";');
+  assertStringIncludes(mig, "('club_reward_tiers', '50:500,100:1200')");
 });
 
 Deno.test("receipt: the QR is static and points at the Club page tagged receipt", async () => {

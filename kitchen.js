@@ -31,10 +31,15 @@
   const PRINTER_SCHEMES = ["https", "http"];
   const AUTO_TRIES = 3; // per order, then a person decides (a print that
   // landed but whose answer was blocked must never loop)
-  // the receipt's Club offer: keep equal to data.js clubPercent and
-  // app_config club_welcome_percent (club_receipt_test.ts checks data.js)
-  const CLUB_PERCENT = 10;
-  const CLUB_MAX = "$7.50"; // app_config club_max_cents
+  // the receipt's Club box (2026-10-24: points, not the old 10% pitch). Keep
+  // equal to app_config club_reward_tiers '50:500,100:1200' (club_receipt_test.ts)
+  const CLUB_RUNGS = "50 points = $5 off, 100 = $12 off";
+  // points this order earns: $1 of food after discounts (= club clubPoints)
+  const orderPoints = (o) => {
+    const sub = o.subtotal_cents ?? 0, total = o.total_cents ?? 0;
+    const off = total ? sub + (o.tax_cents ?? 0) + (o.delivery_fee_cents ?? 0) + (o.tip_cents ?? 0) - total : 0;
+    return Math.floor(Math.max(0, sub - Math.max(0, off)) / 100);
+  };
   // QR for https://lilysmediterraneanfresh.com/club.html?src=receipt (qrcode 1.5.4,
   // error correction Q). Static on purpose: the 5% itself comes as a one-use
   // token by email after joining, so a printed QR can't be harvested.
@@ -1083,11 +1088,11 @@
       ${totals ? `<div class="r-hr"></div>${totals}` : ""}
       ${loyal}
       ${o.demo && !o.club ? "" : `<div class="r-club">
-        <div class="r-c r-club-h">JOIN LILY'S CLUB</div>
-        <div class="r-c r-club-big">${CLUB_PERCENT}% OFF</div>
-        <div class="r-c">your next order (up to ${CLUB_MAX})</div>
+        <div class="r-c r-club-h">LILY'S CLUB</div>
+        <div class="r-c r-club-big">${orderPoints(o) ? `+${orderPoints(o)} POINTS` : "EARN POINTS"}</div>
+        <div class="r-c">${orderPoints(o) ? "from this order" : "on every online order"} · ${CLUB_RUNGS}</div>
         <div class="r-qr">${CLUB_QR}</div>
-        <div class="r-c">Scan to join free · members-only offers</div>
+        <div class="r-c">Scan and sign in with the email you paid with. Your points are already there.</div>
       </div>`}
       <div class="r-hr"></div>
       <div class="r-c">Thank you! Order again at</div>
@@ -1211,10 +1216,12 @@
         : `Online order ${L.n % loyalty.every} of ${loyalty.every}: then ${reward} off\n`));
     }
     if (!o.demo || o.club) {
-      parts.push(t(HR), t("JOIN LILY'S CLUB\n", ' em="true"'), '<text em="false"/>',
-        big(`${CLUB_PERCENT}% OFF\n`), t(`your next order (up to ${CLUB_MAX})\n`),
+      const pts = orderPoints(o);
+      parts.push(t(HR), t("LILY'S CLUB\n", ' em="true"'), '<text em="false"/>',
+        big(pts ? `+${pts} POINTS\n` : "EARN POINTS\n"),
+        t(`${pts ? "from this order" : "on every online order"}\n${CLUB_RUNGS}\n`),
         '<symbol type="qrcode_model_2" level="level_q" width="5">https://lilysmediterraneanfresh.com/club.html?src=receipt</symbol>',
-        t("\nScan to join free - members-only offers\n"));
+        t("\n" + wrapText("Scan and sign in with the email you paid with. Your points are already there.").join("\n") + "\n"));
     }
     parts.push(t(HR), t("Thank you! Order again at\nlilysmediterraneanfresh.com\n"), '<feed line="2"/>', '<cut type="feed"/>');
     return `<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">${parts.join("")}</epos-print>`;
