@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     const twelveHoursAgo = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     const { data, error } = await db
       .from("orders")
-      .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,demo,stripe_payment_intent,fulfilment,delivery_address,delivery_miles,delivery_fee_cents,tip_cents,customer_hash")
+      .select("id,code,status,customer_name,customer_phone,notes,items,subtotal_cents,tax_cents,total_cents,created_at,updated_at,paid_at,printed_at,demo,stripe_payment_intent,fulfilment,delivery_address,delivery_miles,delivery_fee_cents,tip_cents,customer_hash")
       // finished TEST- orders (go-live checks) never clutter "Earlier today" or the
       // day's totals; a live TEST order still shows, so a test can still ring
       // a canceled order shows only if it was ever paid (the kitchen canceled it).
@@ -281,6 +281,31 @@ Deno.serve(async (req) => {
     }
     console.log(`online ordering ${until ? `paused until ${until}` : "resumed"}`);
     return json({ ok: true, paused_until: until || null });
+  }
+
+  /* ---- printing (2026-10-24) -------------------------------------------
+     The tablet claims an order (printed_at, only while null) BEFORE it sends
+     the ticket to the Epson, so a refresh or a second device can never print
+     it twice. A failed print releases the claim so the next poll retries. */
+  if (body.action === "print_claim") {
+    const id = String(body.id ?? "");
+    if (!id) return json({ error: "Bad request" }, 400);
+    const { data, error } = await db
+      .from("orders")
+      .update({ printed_at: new Date().toISOString() })
+      .eq("id", id)
+      .is("printed_at", null)
+      .select("id");
+    if (error) return json({ error: "Update failed" }, 500);
+    return json({ claimed: (data ?? []).length > 0 });
+  }
+
+  if (body.action === "print_release") {
+    const id = String(body.id ?? "");
+    if (!id) return json({ error: "Bad request" }, 400);
+    const { error } = await db.from("orders").update({ printed_at: null }).eq("id", id);
+    if (error) return json({ error: "Update failed" }, 500);
+    return json({ ok: true });
   }
 
   if (body.action === "advance") {

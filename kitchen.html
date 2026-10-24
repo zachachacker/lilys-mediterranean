@@ -159,6 +159,14 @@
   }
   .t-go:active { filter: brightness(1.15); }
   .t-more { min-width: 44px; min-height: 44px; font-size: 22px; color: rgba(244,241,232,0.55); align-self: center; }
+  /* Print / Reprint (2026-10-24): on every open ticket, Epson or iPad */
+  .t-print { min-width: 44px; min-height: 44px; padding: 0 12px; align-self: center; border-radius: 8px;
+    font-family: var(--mono); font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase;
+    background: rgba(244,241,232,0.1); color: rgba(244,241,232,0.85); }
+  .t-hint .t-print { margin-left: 12px; }
+  .k-banner.print-ok { background: var(--go); color: #0b1a10; }
+  .k-pr-addr { min-height: 52px; font: 18px var(--mono); padding: 0 12px; border-radius: 8px;
+    background: #0f1211; color: #f4f1ea; border: 1px solid rgba(255,255,255,0.16); }
 
   /* ready rail cards — inverted hierarchy: the NAME gets shouted */
   .t.ready-card .t-name { font-size: 24px; font-weight: 700; padding: 10px 14px 0; }

@@ -18,6 +18,17 @@
   const QUEUE_STORE = "lilys-kitchen-pending";
   const TOUR_STORE = "lilys-kitchen-tour-v1";
   const PRINT_STORE = "lilys-kitchen-print-on-start";
+  const EPSON_STORE = "lilys-kitchen-epson"; // printer address on this device, e.g. 192.168.1.16
+  const AUTOPRINT_STORE = "lilys-kitchen-autoprint";
+  // pickup / delivery ready times for the ticket; keep equal to data.js
+  // prepMinutes / deliveryMinutes
+  const READY_MIN = { pickup: 30, delivery: 40 };
+  // how the page reaches the Epson (see epsonSend): HTTPS first, because an
+  // https page can't call plain http in Android WebView without a Fully Kiosk
+  // setting, and new UK/EU Epsons only print over HTTPS ("Secure Printing")
+  const PRINTER_SCHEMES = ["https", "http"];
+  const AUTO_TRIES = 3; // per order, then a person decides (a print that
+  // landed but whose answer was blocked must never loop)
   // the receipt's Club offer: keep equal to data.js clubPercent and
   // app_config club_welcome_percent (club_receipt_test.ts checks data.js)
   const CLUB_PERCENT = 10;
@@ -59,6 +70,11 @@
   // A #fragment is never sent to any server.
   const hashKey = new URLSearchParams(location.hash.slice(1)).get("key") || "";
   if (hashKey) { try { localStorage.setItem(KEY_STORE, hashKey); } catch { /* fine */ } }
+  // ...&printer=192.168.1.16 also sets up this device as the one that prints
+  const hashPrinter = new URLSearchParams(location.hash.slice(1)).get("printer") || "";
+  if (/^[\w.:-]+$/.test(hashPrinter)) {
+    try { localStorage.setItem(EPSON_STORE, hashPrinter); localStorage.setItem(AUTOPRINT_STORE, "1"); } catch { /* fine */ }
+  }
   let key = hashKey || localStorage.getItem(KEY_STORE) || "";
   let orders = [];
   let pausedUntil = null; // ISO, from every list poll; null = taking online orders
@@ -229,6 +245,7 @@
       failCount = 0;
       syncReminder();
       renderBoard();
+      autoPrint();
       maybeAutoTour();
     } catch (e) {
       if (e.auth) { logout(e.message); return; }
@@ -362,13 +379,14 @@
     if (o.status === "paid") {
       return `<div class="t new ${o._fresh ? "fresh" : ""}" data-start="${o.id}">
         ${band}<div class="t-body">${items}${notes}${del}${tipNote}</div>${meta}
-        <div class="t-hint">${printOnStart() ? "Tap to start + print" : "Tap to start"}</div>
+        <div class="t-hint">${printOnStart() && !epsonAddr() ? "Tap to start + print" : "Tap to start"}${printBtn(o)}</div>
       </div>`;
     }
     return `<div class="t">
       ${band}<div class="t-body">${items}${notes}${del}${tipNote}</div>${meta}
       <div class="t-actions">
         <button class="t-go" data-ready="${o.id}">Ready</button>
+        ${printBtn(o)}
         <button class="t-more" data-more="${o.id}" aria-label="More options for ${esc(o.code)}">···</button>
       </div>
     </div>`;
@@ -396,6 +414,7 @@
       <div class="t-sub">${(o.items || []).reduce((s, l) => s + l.qty, 0)} items · <a href="${telHref(o.customer_phone)}" style="color:inherit">${esc(o.customer_phone)}</a>${o.demo ? ' · <span class="t-demo">test</span>' : ""}</div>
       <div class="t-actions">
         <button class="t-go" data-picked="${o.id}">${o.fulfilment === "delivery" ? "Out for delivery" : "Picked up"}</button>
+        ${printBtn(o)}
         <button class="t-more" data-more="${o.id}" aria-label="More options for ${esc(o.code)}">···</button>
       </div>
     </div>`;
@@ -438,6 +457,8 @@
       ${soundReady() ? "" : '<div class="k-banner sound" id="kSoundBanner">🔕 Tap anywhere to enable the new-order sound</div>'}
       ${batteryLow() ? `<div class="k-banner offline">🔋 Tablet battery at ${Math.round(battery.level * 100)}% and not charging — plug it in or the board goes dark</div>` : ""}
       ${pausedUntil ? `<div class="k-banner paused">⏸ ONLINE ORDERS PAUSED ${pauseLabel(pausedUntil)} <button id="kResume">Resume</button></div>` : ""}
+      ${autoErr && autoPrintOn() ? `<div class="k-banner offline">🖨 ${esc(autoErr)}. <button id="kPrintRetry">Try again</button></div>` : ""}
+      ${printNote ? `<div class="k-banner ${printNote.ok ? "print-ok" : "offline"}">🖨 ${esc(printNote.text)}</div>` : ""}
       ${offlineNow() ? `<div class="k-banner offline">OFFLINE — showing orders as of ${clock(new Date(lastOkAt))}. Taps are saved and will sync.</div>` : ""}
       ${!kitchenOpen() && !orders.some((o) => ["paid", "making", "ready"].includes(o.status)) ? '<div class="k-banner closed">Kitchen closed — board is resting, checking once a minute. New orders still ring through.</div>' : ""}`;
   }
@@ -467,6 +488,7 @@
     document.getElementById("kStock")?.addEventListener("click", openStock);
     document.getElementById("kPromo")?.addEventListener("click", openOffers);
     document.getElementById("kPrinter")?.addEventListener("click", openPrinter);
+    document.getElementById("kPrintRetry")?.addEventListener("click", () => { autoRetryAt = 0; autoPrint(); });
     document.getElementById("kPause")?.addEventListener("click", openPause);
     document.getElementById("kResume")?.addEventListener("click", () => setPause("resume"));
     document.getElementById("kHelp")?.addEventListener("click", () => startTour());
@@ -930,11 +952,11 @@
     const board = document.getElementById("kBoard");
     board.querySelectorAll("[data-start]").forEach((card) =>
       card.addEventListener("click", (e) => {
-        if (e.target.closest("a")) return; // phone link
+        if (e.target.closest("a, button")) return; // phone link, print button
         const o = orders.find((x) => x.id === card.dataset.start);
         act(card.dataset.start, "making", { label: `${o?.code ?? ""} started` });
         // inside the tap itself: iPad Safari only opens the print menu from a tap
-        if (o && o !== practice && printOnStart()) printReceipts([o]);
+        if (o && o !== practice && printOnStart() && !epsonAddr()) printReceipts([o]);
       })
     );
     board.querySelectorAll("[data-ready]").forEach((b) =>
@@ -956,6 +978,12 @@
         act(b.dataset.recall, "making", { label: `${o?.code ?? ""} recalled` });
       })
     );
+    board.querySelectorAll("[data-print]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const o = orders.find((x) => x.id === b.dataset.print);
+        if (o) printOrder(o);
+      })
+    );
     board.querySelectorAll("[data-more]").forEach((b) =>
       b.addEventListener("click", () => openSheet(b.dataset.more))
     );
@@ -973,7 +1001,7 @@
       <div class="k-sheet">
         <h3>${esc(o.code)} · ${esc(o.customer_name)}</h3>
         ${o.demo ? "" : '<p class="warn">Canceling does NOT refund the payment — issue the refund in the Stripe dashboard.</p>'}
-        <button class="plain" id="sheetPrint">Print receipt</button>
+        <button class="plain" id="sheetPrint">${o.printed_at ? "Reprint" : "Print"} receipt</button>
         ${refundLink}
         <button class="danger" id="sheetCancel">Cancel this order</button>
         <button class="plain" id="sheetClose">Never mind</button>
@@ -981,7 +1009,7 @@
     document.body.appendChild(wrap);
     wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
     wrap.querySelector("#sheetClose").addEventListener("click", () => wrap.remove());
-    wrap.querySelector("#sheetPrint").addEventListener("click", () => { wrap.remove(); printReceipts([o]); });
+    wrap.querySelector("#sheetPrint").addEventListener("click", () => { wrap.remove(); printOrder(o); });
     wrap.querySelector("#sheetCancel").addEventListener("click", () => {
       wrap.remove();
       act(id, "canceled", { undoable: false });
@@ -996,6 +1024,10 @@
      start an order" so tapping a new ticket prints it too. The receipt is
      built into #kPrintArea, which only shows when printing (kitchen.html). */
   const printOnStart = () => { try { return localStorage.getItem(PRINT_STORE) === "1"; } catch { return false; } };
+  // paid time + the website's promised wait, on Florida's clock
+  const readyBy = (o) => new Date(new Date(o.paid_at || o.created_at).getTime() +
+    READY_MIN[o.fulfilment === "delivery" ? "delivery" : "pickup"] * 60000)
+    .toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
   const flStamp = (iso) => new Date(iso).toLocaleString("en-US",
     { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -1038,6 +1070,7 @@
       <div class="r-c r-big">${esc(o.code)}</div>
       <div class="r-c r-kind">${delivery ? "DELIVERY" : "PICKUP"}${o.demo ? " · TEST" : ""}</div>
       <div class="r-c">${flStamp(o.created_at)}</div>
+      <div class="r-c r-kind">${delivery ? "DELIVER" : "READY"} BY ${readyBy(o)}</div>
       <div class="r-hr"></div>
       <div>${esc(o.customer_name)}${o.customer_phone ? ` · ${esc(usPhone(o.customer_phone))}` : ""}</div>
       ${delivery && o.delivery_address ? `<div>${esc(o.delivery_address)}</div>` : ""}
@@ -1070,33 +1103,286 @@
     try { window.print(); } catch { /* no print support on this device */ }
   }
 
+  /* ---- Epson printer (2026-10-24) ---------------------------------------
+     Kareem's kitchen: Android tablet in Fully Kiosk + Epson TM-m30II-NT on the
+     same network. The page talks to the printer directly with Epson's
+     ePOS-Print XML (no app, no driver). Only the device that has a printer
+     address set prints; on it, every new paid order prints by itself once:
+     printed_at is claimed on the server before the ticket is sent, so a
+     refresh or a second tablet can't print it again. */
+  const epsonAddr = () => { try { return localStorage.getItem(EPSON_STORE) || ""; } catch { return ""; } };
+  const autoPrintOn = () => { try { return !!epsonAddr() && localStorage.getItem(AUTOPRINT_STORE) === "1"; } catch { return false; } };
+  const isPractice = (o) => String(o.id).startsWith("practice-");
+  const printBtn = (o) => isPractice(o) ? ""
+    : `<button class="t-print" data-print="${o.id}">${o.printed_at ? "Reprint" : "Print"}</button>`;
+
+  // the printer's own error codes, in kitchen words
+  const EPSON_ERRORS = {
+    EPTR_REC_EMPTY: "out of paper", EPTR_COVER_OPEN: "cover is open", EPTR_CUTTER: "paper is jammed in the cutter",
+    EPTR_MECHANICAL: "mechanical error, switch it off and on", EX_TIMEOUT: "printer is busy or offline",
+    DeviceNotFound: "printer not found", EX_ENPC_TIMEOUT: "printer is busy",
+  };
+
+  // 48 characters a line on 80mm paper (font A). ASCII only: the default code
+  // page prints accents and symbols as junk.
+  const W = 48;
+  const ascii = (t) => String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[×]/g, "x")
+    .replace(/[‒-―−]/g, "-").replace(/[^\x20-\x7e\n]/g, "");
+  const wrapText = (t, width = W, indent = "") => {
+    const out = [];
+    for (const para of ascii(t).split("\n")) {
+      let line = "";
+      for (const word of para.split(/\s+/).filter(Boolean)) {
+        if (!line) line = (out.length ? indent : "") + word;
+        else if ((line + " " + word).length <= width) line += " " + word;
+        else { out.push(line); line = indent + word; }
+        while (line.length > width) { out.push(line.slice(0, width)); line = indent + line.slice(width); }
+      }
+      out.push(line);
+    }
+    return out;
+  };
+  // left text wrapped, right text on the first line's right edge
+  const lr = (left, right = "") => {
+    const lines = wrapText(left, W - right.length - 1, "   ");
+    lines[0] = lines[0].padEnd(W - right.length) + right;
+    return lines.join("\n") + "\n";
+  };
+  const xe = (t) => ascii(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;").replace(/\n/g, "&#10;");
+  const HR = "-".repeat(W) + "\n";
+
+  function receiptXML(o) {
+    const delivery = o.fulfilment === "delivery";
+    const t = (body, attrs = "") => `<text${attrs}>${xe(body)}</text>`;
+    const big = (body) => `<text dw="true" dh="true" em="true">${xe(body)}</text><text dw="false" dh="false" em="false"/>`;
+    const parts = [
+      '<text lang="en" smooth="true"/>',
+      '<text align="center"/>',
+      t("Lily's Mediterranean Fresh Grill\n", ' em="true"'), '<text em="false"/>',
+      t("2 5th Ave STE C, Indialantic, FL 32903\n(321) 312-4444\n"),
+      t(HR),
+      big(`${o.code}\n`),
+      big(`${delivery ? "DELIVERY" : "PICKUP"}${o.demo ? " TEST" : ""}\n`),
+      t(`Ordered ${flStamp(o.created_at)}\n`),
+      `<text em="true">${xe(`${delivery ? "Deliver" : "Ready"} by ${readyBy(o)}\n`)}</text><text em="false"/>`,
+      '<text align="left"/>',
+      t(HR),
+      `<text em="true">${xe(wrapText(o.customer_name || "").join("\n") + "\n")}</text><text em="false"/>`,
+      o.customer_phone ? t(usPhone(o.customer_phone) + "\n") : "",
+      delivery && o.delivery_address ? t(wrapText(o.delivery_address +
+        (o.delivery_miles != null ? ` (${Number(o.delivery_miles).toFixed(1)} mi)` : "")).join("\n") + "\n") : "",
+      t(HR),
+    ];
+    for (const l of o.items || []) {
+      parts.push(`<text em="true">${xe(lr(`${l.qty}x ${l.name}`, l.unit_cents != null ? money(l.unit_cents * l.qty) : ""))}</text><text em="false"/>`);
+      for (const a of l.addons || []) parts.push(t(wrapText(`+ ${a.name}`, W - 3, "  ").map((s) => "   " + s).join("\n") + "\n"));
+    }
+    if (o.notes) parts.push(t(HR), `<text reverse="true" em="true">${xe(" NOTE ")}</text><text reverse="false"/>`,
+      `<text em="true">${xe("\n" + wrapText(o.notes).join("\n") + "\n")}</text><text em="false"/>`);
+    const sub = o.subtotal_cents ?? 0, tax = o.tax_cents ?? 0, del = o.delivery_fee_cents ?? 0,
+      tip = o.tip_cents ?? 0, total = o.total_cents ?? 0;
+    const off = sub + tax + del + tip - total; // same sum as the screen receipt
+    if (total) {
+      parts.push(t(HR), t(lr("Subtotal", money(sub))));
+      if (off > 0) parts.push(t(lr("Discount", "-" + money(off))));
+      parts.push(t(lr("Tax", money(tax))));
+      if (del) parts.push(t(lr("Delivery", money(del))));
+      if (tip) parts.push(t(lr(delivery ? "Driver tip" : "Tip", money(tip))));
+      parts.push(`<text em="true">${xe(lr("TOTAL", money(total)))}</text><text em="false"/>`,
+        '<text align="center"/>', t("PAID ONLINE\n"));
+    }
+    parts.push('<text align="center"/>');
+    const L = o.loyalty && loyalty ? o.loyalty : null;
+    if (L) {
+      const reward = `$${(loyalty.cents / 100).toFixed(loyalty.cents % 100 ? 2 : 0)}`;
+      parts.push(t(Math.floor(L.n / loyalty.every) - L.used > 0
+        ? `* Your next online order is ${reward} off *\n`
+        : `Online order ${L.n % loyalty.every} of ${loyalty.every}: then ${reward} off\n`));
+    }
+    if (!o.demo || o.club) {
+      parts.push(t(HR), t("JOIN LILY'S CLUB\n", ' em="true"'), '<text em="false"/>',
+        big(`${CLUB_PERCENT}% OFF\n`), t(`your next order (up to ${CLUB_MAX})\n`),
+        '<symbol type="qrcode_model_2" level="level_q" width="5">https://lilysmediterraneanfresh.com/club.html?src=receipt</symbol>',
+        t("\nScan to join free - members-only offers\n"));
+    }
+    parts.push(t(HR), t("Thank you! Order again at\nlilysmediterraneanfresh.com\n"), '<feed line="2"/>', '<cut type="feed"/>');
+    return `<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">${parts.join("")}</epos-print>`;
+  }
+
+  // One POST of ePOS-Print XML. No custom headers on purpose: a plain
+  // text/plain POST is a "simple" request, so there's no CORS preflight for
+  // the printer to answer (same as Odoo's Epson driver).
+  async function epsonPost(base, inner) {
+    const body = '<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>' +
+      inner + "</s:Body></s:Envelope>";
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 20000);
+    let r;
+    try {
+      r = await fetch(`${base}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`, { method: "POST", body, signal: ctl.signal });
+    } catch {
+      throw Object.assign(new Error("can't reach the printer"), { unreachable: true });
+    } finally { clearTimeout(timer); }
+    const text = await r.text().catch(() => "");
+    if (/success="true"/.test(text)) return;
+    const code = (text.match(/code="([^"]*)"/) || [])[1] || (r.ok ? "" : `HTTP ${r.status}`);
+    throw new Error(EPSON_ERRORS[code] || `printer said ${code || "no"}`);
+  }
+
+  // the saved address carries the scheme that worked in the test print
+  const epsonBase = (addr = epsonAddr()) => /^https?:\/\//.test(addr) ? addr : `${PRINTER_SCHEMES[0]}://${addr}`;
+  async function epsonSend(inner) {
+    if (!epsonAddr()) throw new Error("no printer set");
+    await epsonPost(epsonBase(), inner);
+  }
+
+  // test print only: try each scheme and keep the one that answers. Never in
+  // the auto path, where a second attempt could print the ticket twice.
+  async function epsonFind(inner) {
+    const host = epsonAddr().replace(/^https?:\/\//, "");
+    let last;
+    for (const scheme of PRINTER_SCHEMES) {
+      try {
+        await epsonPost(`${scheme}://${host}`, inner);
+        try { localStorage.setItem(EPSON_STORE, `${scheme}://${host}`); } catch { /* fine */ }
+        return scheme;
+      } catch (e) {
+        last = e;
+        if (!e.unreachable) throw e; // the printer answered: paper, cover, etc.
+      }
+    }
+    throw last;
+  }
+
+  // Print / Reprint button and the ··· sheet: always prints, and marks the
+  // order printed so auto-print leaves it alone afterwards
+  let printNote = null; // {text, ok} shown in the shell for a few seconds
+  const notePrint = (text, ok) => {
+    printNote = { text, ok };
+    updateShell();
+    setTimeout(() => { if (printNote?.text === text) { printNote = null; updateShell(); } }, ok ? 4000 : 12000);
+  };
+  async function printOrder(o) {
+    if (!epsonAddr()) { printReceipts([o]); return; } // iPad / AirPrint path
+    notePrint(`Printing ${o.code}...`, true);
+    try {
+      await epsonSend(receiptXML(o));
+      notePrint(`Printed ${o.code}`, true);
+      if (!isPractice(o)) {
+        o.printed_at = o.printed_at || new Date().toISOString();
+        call({ action: "print_claim", id: o.id }).catch(() => {});
+        renderBoard();
+      }
+    } catch (e) {
+      notePrint(`${o.code} did not print: ${e.message}`, false);
+    }
+  }
+
+  // new paid orders, once each, on the printing device only
+  let autoBusy = false;
+  let autoRetryAt = 0;
+  let autoErr = "";
+  const autoFails = new Map(); // order id -> failed auto attempts
+  async function autoPrint() {
+    if (!autoPrintOn() || autoBusy || Date.now() < autoRetryAt) return;
+    const due = orders.filter((o) => !isPractice(o) && !o.printed_at && ["paid", "making", "ready"].includes(o.status) &&
+      Date.now() - new Date(o.paid_at || o.created_at).getTime() < 3 * 3600 * 1000);
+    if (!due.length) return;
+    autoBusy = true;
+    try {
+      for (const o of due) {
+        const { claimed } = await call({ action: "print_claim", id: o.id });
+        o.printed_at = new Date().toISOString();
+        if (!claimed) continue; // printed already, by this tablet before a refresh or by another one
+        try {
+          await epsonSend(receiptXML(o));
+          if (autoErr) { autoErr = ""; updateShell(); }
+        } catch (e) {
+          const n = (autoFails.get(o.id) || 0) + 1;
+          autoFails.set(o.id, n);
+          if (n < AUTO_TRIES) {
+            o.printed_at = null;
+            autoErr = `${o.code} didn't print: ${e.message}. It prints by itself once the printer is fixed`;
+            await call({ action: "print_release", id: o.id }).catch(() => {});
+          } else {
+            // stays claimed: check the printer, then tap Reprint on the ticket
+            autoErr = `${o.code} didn't print ${n} times (${e.message}). Fix the printer, then tap Reprint on ${o.code}`;
+          }
+          autoRetryAt = Date.now() + 20000;
+          updateShell();
+          break;
+        }
+      }
+    } catch { /* offline: next poll tries again */ } finally {
+      autoBusy = false;
+      renderBoard();
+    }
+  }
+
   function openPrinter() {
     const wrap = document.createElement("div");
     wrap.className = "k-sheet-wrap";
-    const paint = () => {
+    const paint = (status = "") => {
+      const addr = epsonAddr();
       const on = printOnStart();
       wrap.innerHTML = `
         <div class="k-sheet">
           <h3>Receipt printer</h3>
-          <p class="warn">Receipts print through the iPad's print menu. The first time, tap <b>Printer</b> in that menu and pick yours; the iPad remembers it after that.</p>
-          <button class="${on ? "go" : "plain"}" id="prToggle">Print when I start an order: ${on ? "ON" : "OFF"}</button>
+          <label class="warn" for="prAddr">Epson printer address (leave empty on an iPad to use its print menu)</label>
+          <input id="prAddr" class="k-pr-addr" inputmode="decimal" autocomplete="off" placeholder="192.168.1.16" value="${esc(addr)}">
+          <button class="plain" id="prSave">Save address</button>
+          ${addr ? `
+            <button class="${autoPrintOn() ? "go" : "plain"}" id="prAuto">Print new orders automatically: ${autoPrintOn() ? "ON" : "OFF"}</button>
+            <p class="warn">Only switch this on for the one tablet next to the printer.</p>`
+          : `
+            <p class="warn">Receipts print through the iPad's print menu. The first time, tap <b>Printer</b> in that menu and pick yours; the iPad remembers it after that.</p>
+            <button class="${on ? "go" : "plain"}" id="prToggle">Print when I start an order: ${on ? "ON" : "OFF"}</button>`}
           <button class="plain" id="prTest">Print a test receipt</button>
+          ${status ? `<p class="warn" id="prStatus">${esc(status)}</p>` : ""}
           <button class="plain" id="prClose">Done</button>
         </div>`;
-      wrap.querySelector("#prToggle").addEventListener("click", () => {
+      wrap.querySelector("#prSave").addEventListener("click", () => {
+        const v = wrap.querySelector("#prAddr").value.trim().replace(/\/+$/, "");
+        try {
+          if (v) localStorage.setItem(EPSON_STORE, v);
+          else { localStorage.removeItem(EPSON_STORE); localStorage.removeItem(AUTOPRINT_STORE); }
+        } catch { /* fine */ }
+        paint(v ? "Saved. Tap Print a test receipt." : "Printer address removed.");
+        lastSnapshot = "";
+        renderBoard();
+      });
+      wrap.querySelector("#prAuto")?.addEventListener("click", () => {
+        try { localStorage.setItem(AUTOPRINT_STORE, autoPrintOn() ? "0" : "1"); } catch { /* fine */ }
+        paint();
+        autoRetryAt = 0;
+        autoPrint();
+      });
+      wrap.querySelector("#prToggle")?.addEventListener("click", () => {
         try { localStorage.setItem(PRINT_STORE, on ? "0" : "1"); } catch { /* fine */ }
         paint();
         lastSnapshot = ""; // repaint the "Tap to start + print" hints
         renderBoard();
       });
-      wrap.querySelector("#prTest").addEventListener("click", () => {
+      wrap.querySelector("#prTest").addEventListener("click", async () => {
         const now = new Date().toISOString();
-        printReceipts([{
-          code: "TEST-PRINT", demo: true, club: true, customer_name: "Printer test", customer_phone: "", fulfilment: "pickup",
-          items: [{ qty: 1, name: "Chicken Shawarma Wrap", unit_cents: 1339, addons: [{ name: "Extra garlic sauce" }] }],
-          notes: "If you can read this, the printer works.", created_at: now,
-          subtotal_cents: 1339, tax_cents: 94, total_cents: 1433,
-        }]);
+        const test = {
+          id: "test-print", code: "TEST-PRINT", demo: true, club: true, customer_name: "Printer test", customer_phone: "3213124444", fulfilment: "pickup",
+          items: [{ qty: 1, name: "Chicken Shawarma Wrap", unit_cents: 1715, addons: [{ name: "Seasoned Fries" }, { name: "Extra garlic sauce" }] },
+            { qty: 2, name: "Falafel", unit_cents: 770 }],
+          notes: "If you can read this, the printer works.", created_at: now, paid_at: now,
+          subtotal_cents: 3255, tax_cents: 228, total_cents: 3483,
+        };
+        if (!epsonAddr()) { printReceipts([test]); return; }
+        paint("Printing...");
+        try {
+          const scheme = await epsonFind(receiptXML(test));
+          paint(`Printed (${scheme}). Check the paper.`);
+        } catch (e) {
+          paint(e.unreachable
+            ? "Can't reach the printer. Check the address. In Fully Kiosk: Settings > Advanced Web Settings > switch on Ignore SSL Errors, set Mixed Content Mode to Always Allow, then try again."
+            : `The printer answered but didn't print: ${e.message}.`);
+        }
       });
       wrap.querySelector("#prClose").addEventListener("click", () => wrap.remove());
     };
