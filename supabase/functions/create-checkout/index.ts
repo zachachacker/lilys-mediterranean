@@ -14,7 +14,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 // Florida-time opening hours — keep in sync with data.js HOURS (0=Sun..6=Sat)
-const HOURS: Record<number, [number, number] | null> = { 0: [11, 22], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] };
+const HOURS: Record<number, [number, number] | null> = { 0: [11, 21.5], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] };
 
 function openNow(): boolean {
   const parts = new Intl.DateTimeFormat("en-US", {

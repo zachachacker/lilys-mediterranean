@@ -70,7 +70,7 @@ window.LILYS = {
   // 0=Sun..6=Sat; [open, close] in 24h, null = closed that day.
   // CONFIRMED by Kareem at the 2026-07-11 meeting: Mon/Tue 11-10, Wed CLOSED,
   // Thu 11-10, Fri/Sat 11-11, Sun 11-10.
-  HOURS: { 0: [11, 22], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] },
+  HOURS: { 0: [11, 21.5], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] },
   halal: true, // confirmed by owner — halal AND kosher
   // the eight Kareem marks as guest favourites on the printed menu (2026-07-25).
   // Names must match MENU entries exactly — the ✦ is looked up by name.

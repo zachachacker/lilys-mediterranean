@@ -220,10 +220,10 @@
   }
 
   /* ---- live open/closed pill + today highlight ----
-     Hours confirmed by Kareem (2026-10-24 call): Mon, Tue, Thu 11-9:30pm,
-     Fri-Sun 11-10pm, Wed closed. */
+     Hours confirmed by Kareem (2026-10-24 call): Sun, Mon, Tue, Thu 11-9:30pm,
+     Fri-Sat 11-10pm, Wed closed. Sunday unsure: 9:30 is the safe close until he confirms. */
   const HOURS = (window.LILYS && window.LILYS.HOURS) ||
-    { 0: [11, 22], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] };
+    { 0: [11, 21.5], 1: [11, 21.5], 2: [11, 21.5], 3: null, 4: [11, 21.5], 5: [11, 22], 6: [11, 22] };
   // The restaurant runs on Florida time regardless of where the visitor is.
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const day = now.getDay();
