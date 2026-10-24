@@ -1113,7 +1113,14 @@
      address set prints; on it, every new paid order prints by itself once:
      printed_at is claimed on the server before the ticket is sent, so a
      refresh or a second tablet can't print it again. */
-  const epsonAddr = () => { try { return localStorage.getItem(EPSON_STORE) || ""; } catch { return ""; } };
+  // Android = the Fully Kiosk tablet: its own print menu can't reach the Epson,
+  // so it always uses Lily's printer unless an address was typed in
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const epsonAddr = () => {
+    let a = "";
+    try { a = localStorage.getItem(EPSON_STORE) || ""; } catch { /* fine */ }
+    return a || (isAndroid ? KITCHEN_PRINTER : "");
+  };
   const autoPrintOn = () => { try { return !!epsonAddr() && localStorage.getItem(AUTOPRINT_STORE) === "1"; } catch { return false; } };
   const isPractice = (o) => String(o.id).startsWith("practice-");
   const printBtn = (o) => isPractice(o) ? ""
@@ -1329,7 +1336,9 @@
   function maybeAskPrinter() {
     let asked = "";
     try { asked = localStorage.getItem(PRINTER_ASKED_STORE) || ""; } catch { return; }
-    if (asked || epsonAddr() || tour || document.querySelector(".k-sheet-wrap")) return;
+    let auto = "";
+    try { auto = localStorage.getItem(AUTOPRINT_STORE) || ""; } catch { /* fine */ }
+    if (asked || auto || tour || document.querySelector(".k-sheet-wrap")) return;
     const wrap = document.createElement("div");
     wrap.className = "k-sheet-wrap";
     wrap.innerHTML = `
