@@ -20,6 +20,8 @@
   const PRINT_STORE = "lilys-kitchen-print-on-start";
   const EPSON_STORE = "lilys-kitchen-epson"; // printer address on this device, e.g. 192.168.1.16
   const AUTOPRINT_STORE = "lilys-kitchen-autoprint";
+  const PRINTER_ASKED_STORE = "lilys-kitchen-printer-asked"; // answered "is this the printer tablet?"
+  const KITCHEN_PRINTER = "192.168.1.16"; // the Epson's address on Lily's network (Kareem, 2026-10-24)
   // pickup / delivery ready times for the ticket; keep equal to data.js
   // prepMinutes / deliveryMinutes
   const READY_MIN = { pickup: 30, delivery: 40 };
@@ -247,6 +249,7 @@
       renderBoard();
       autoPrint();
       maybeAutoTour();
+      maybeAskPrinter();
     } catch (e) {
       if (e.auth) { logout(e.message); return; }
       failCount++;
@@ -487,7 +490,7 @@
     document.getElementById("kSoundBanner")?.addEventListener("click", () => ensureAudio());
     document.getElementById("kStock")?.addEventListener("click", openStock);
     document.getElementById("kPromo")?.addEventListener("click", openOffers);
-    document.getElementById("kPrinter")?.addEventListener("click", openPrinter);
+    document.getElementById("kPrinter")?.addEventListener("click", () => openPrinter());
     document.getElementById("kPrintRetry")?.addEventListener("click", () => { autoRetryAt = 0; autoPrint(); });
     document.getElementById("kPause")?.addEventListener("click", openPause);
     document.getElementById("kResume")?.addEventListener("click", () => setPause("resume"));
@@ -1320,7 +1323,36 @@
     }
   }
 
-  function openPrinter() {
+  // First open on a device with no printer set: ask once whether this is
+  // the tablet next to the Epson. Yes sets it up and prints a test straight
+  // away, so the kitchen never needs a setup link. Waits for the tutorial.
+  function maybeAskPrinter() {
+    let asked = "";
+    try { asked = localStorage.getItem(PRINTER_ASKED_STORE) || ""; } catch { return; }
+    if (asked || epsonAddr() || tour || document.querySelector(".k-sheet-wrap")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "k-sheet-wrap";
+    wrap.innerHTML = `
+      <div class="k-sheet">
+        <h3>Receipt printer</h3>
+        <p class="warn">Is this the tablet next to the receipt printer?</p>
+        <button class="go" id="askYes">Yes, set up printing</button>
+        <button class="plain" id="askNo">No, not this one</button>
+      </div>`;
+    const answer = (yes) => {
+      try {
+        localStorage.setItem(PRINTER_ASKED_STORE, yes ? "yes" : "no");
+        if (yes) { localStorage.setItem(EPSON_STORE, KITCHEN_PRINTER); localStorage.setItem(AUTOPRINT_STORE, "1"); }
+      } catch { /* fine */ }
+      wrap.remove();
+      if (yes) { lastSnapshot = ""; renderBoard(); openPrinter({ test: true }); }
+    };
+    wrap.querySelector("#askYes").addEventListener("click", () => answer(true));
+    wrap.querySelector("#askNo").addEventListener("click", () => answer(false));
+    document.body.appendChild(wrap);
+  }
+
+  function openPrinter({ test = false } = {}) {
     const wrap = document.createElement("div");
     wrap.className = "k-sheet-wrap";
     const paint = (status = "") => {
@@ -1330,7 +1362,7 @@
         <div class="k-sheet">
           <h3>Receipt printer</h3>
           <label class="warn" for="prAddr">Epson printer address (leave empty on an iPad to use its print menu)</label>
-          <input id="prAddr" class="k-pr-addr" inputmode="decimal" autocomplete="off" placeholder="192.168.1.16" value="${esc(addr)}">
+          <input id="prAddr" class="k-pr-addr" inputmode="decimal" autocomplete="off" placeholder="${KITCHEN_PRINTER}" value="${esc(addr)}">
           <button class="plain" id="prSave">Save address</button>
           ${addr ? `
             <button class="${autoPrintOn() ? "go" : "plain"}" id="prAuto">Print new orders automatically: ${autoPrintOn() ? "ON" : "OFF"}</button>
@@ -1389,6 +1421,7 @@
     paint();
     wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
     document.body.appendChild(wrap);
+    if (test) wrap.querySelector("#prTest").click();
   }
 
   /* -------------------------------------------------- 1s ticker -------- */
