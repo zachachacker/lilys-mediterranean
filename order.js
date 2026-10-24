@@ -26,6 +26,7 @@
   const clubTok = () => { try { return localStorage.getItem(CLUB_TOKEN) || ""; } catch { return ""; } };
   let club = null; // {points, tiers, on} from the club function
   let clubSpend = 0; // points of the chosen rung; 0 = none
+  let clubBday = false; // birthday treat chosen (only offered when the server says "ready")
   async function loadClub() {
     if (clubTok()) {
       try {
@@ -36,6 +37,7 @@
       } catch { /* offline: no points box; ordering is unaffected */ }
     }
     renderClub();
+    loadOffers(); // members-only offers depend on who's signed in
   }
   function renderClub() {
     const el = $("clubPts");
@@ -48,10 +50,13 @@
     }
     if (!count() || (club && !club.on)) { el.hidden = true; return; }
     const tiers = club?.tiers || [];
-    const spendCents = tiers.find((t) => t.points === clubSpend)?.cents || 0;
-    const earn = Math.floor(Math.max(0, subtotal() - spendCents) / 100);
+    const perks = club?.perks || {};
+    const bdayOk = club?.birthday === "ready" && perks.birthday_cents > 0;
+    if (!bdayOk) clubBday = false;
+    const spendCents = (tiers.find((t) => t.points === clubSpend)?.cents || 0) + (clubBday ? perks.birthday_cents : 0);
+    const earn = Math.floor(Math.max(0, subtotal() - spendCents) / 100) * (perks.double_today ? 2 : 1);
     if (!club) {
-      el.innerHTML = `<div class="cp-row"><span>Earn <b>${earn} points</b> on this order</span><a class="ink" href="club.html">Lily's Club</a></div>`;
+      el.innerHTML = `<div class="cp-row"><span>Earn <b>${earn} points</b> on this order</span><a class="ink" href="club.html">Join Lily's Club</a></div>`;
       el.hidden = false;
       return;
     }
@@ -60,15 +65,18 @@
       `<button type="button" class="cp-use${clubSpend === t.points ? " on" : ""}" data-pts="${t.points}" aria-pressed="${clubSpend === t.points}">
         Use ${t.points} points: ${money(t.cents)} off</button>`).join("");
     const next = tiers.find((t) => t.points > club.points);
-    el.innerHTML = `<div class="cp-row"><span>Lily's Club · <b>${club.points} points</b></span><span>+${earn} on this order</span></div>
-      ${btns ? `<div class="cp-btns">${btns}</div>` : next ? `<div class="cp-n">${next.points - club.points} more points to ${money(next.cents)} off</div>` : ""}
-      ${clubSpend ? `<div class="cp-n">Taken off at checkout.</div>` : ""}`;
+    const bday = bdayOk ? `<button type="button" class="cp-use cp-bday${clubBday ? " on" : ""}" data-bday aria-pressed="${clubBday}">
+        Happy birthday! ${money(perks.birthday_cents)} off</button>` : "";
+    el.innerHTML = `<div class="cp-row"><span>Lily's Club · <b>${club.points} points</b></span><span>+${earn} on this order${perks.double_today ? " (2x today!)" : ""}</span></div>
+      ${btns || bday ? `<div class="cp-btns">${bday}${btns}</div>` : next ? `<div class="cp-n">${next.points - club.points} more points to ${money(next.cents)} off</div>` : ""}
+      ${clubSpend || clubBday ? `<div class="cp-n">Taken off at checkout.</div>` : ""}`;
     el.hidden = false;
     el.querySelectorAll("[data-pts]").forEach((b) => b.addEventListener("click", () => {
       const p = Number(b.dataset.pts);
       clubSpend = clubSpend === p ? 0 : p;
       renderClub();
     }));
+    el.querySelector("[data-bday]")?.addEventListener("click", () => { clubBday = !clubBday; renderClub(); });
   }
   // must match scripts/sync-menu.mjs
   const slug = (s) => s.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -918,6 +926,7 @@
           offers_opt_in: $("cfClub")?.checked === true,
           club_token: clubTok(),
           club_points: clubSpend,
+          club_birthday: clubBday,
           source: window.LILYS_TRACK?.source() || "direct",
           source_detail: window.LILYS_TRACK?.detail() || "",
         }),
@@ -931,8 +940,9 @@
         throw new Error(`${j.error} We've removed it, so you can place the order without it.`);
       }
       // same for a points reward (signed out, not enough food...): drop it, keep the order
-      if (!r.ok && j.club && clubSpend) {
+      if (!r.ok && j.club && (clubSpend || clubBday)) {
         clubSpend = 0;
+        clubBday = false;
         loadClub();
         throw new Error(`${j.error} We've taken the reward off, so you can order without it.`);
       }
@@ -981,7 +991,7 @@
     let rows = [];
     try {
       const r = await fetch(
-        `${L.ORDERING.supabaseUrl}/rest/v1/promotions?select=label,days,start_min,end_min,starts_at,ends_at&active=eq.true`,
+        `${L.ORDERING.supabaseUrl}/rest/v1/promotions?select=label,days,start_min,end_min,starts_at,ends_at,members_only&active=eq.true`,
         { headers: { apikey: L.ORDERING.anonKey, Authorization: `Bearer ${L.ORDERING.anonKey}` } });
       const j = r.ok ? await r.json() : [];
       // only what's running right now, on the Florida clock (= create-checkout promoRunsAt)
@@ -1002,7 +1012,9 @@
       : "";
     if (!rows.length && !code) { box.hidden = true; return; }
     box.innerHTML = `<div class="offers-t">On right now</div>` +
-      rows.map((o) => `<div class="offer">${esc(o.label)}</div>`).join("") + code +
+      rows.map((o) => !o.members_only ? `<div class="offer">${esc(o.label)}</div>`
+        : club ? `<div class="offer"><i class="offer-tag">Members</i> ${esc(o.label)}</div>`
+        : `<div class="offer offer-locked"><i class="offer-tag">Members</i> ${esc(o.label)} <a class="ink" href="club.html">Join free to get it</a></div>`).join("") + code +
       `<div class="offers-n">Taken off automatically at checkout.</div>`;
     box.hidden = false;
     $("codeX")?.addEventListener("click", () => { dropCode(); loadOffers(); });

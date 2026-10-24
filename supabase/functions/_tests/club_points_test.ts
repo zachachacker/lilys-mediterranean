@@ -11,7 +11,7 @@ const shared = (src: string) => src.slice(src.indexOf(START), src.indexOf(END));
 const club = await read("../club/index.ts");
 const mod = await import(`data:application/typescript,${encodeURIComponent(
   shared(club).replace(/\nfunction /g, "\nexport function ") + "\nexport { CLUB_PAID };")}`);
-const { clubPoints, clubTiers } = mod;
+const { clubPoints, clubTiers, clubDouble, clubBirthday } = mod;
 
 const o = (over: Record<string, unknown>) => ({
   subtotal_cents: 0, discount_cents: 0, status: "done", created_at: new Date(0).toISOString(), demo: false,
@@ -67,7 +67,7 @@ Deno.test("club: reward tiers parse safely, cheapest first", () => {
 
 Deno.test("checkout: points re-counted on the server, rung must exist, food must cover it", async () => {
   const cc = await read("../create-checkout/index.ts");
-  assertStringIncludes(cc, "const tier = clubTiers(cfg.club_reward_tiers).find((t) => t.points === clubWant);");
+  assertStringIncludes(cc, "const tier = clubWant > 0 ? clubTiers(cfg.club_reward_tiers).find((t) => t.points === clubWant) : undefined;");
   assertStringIncludes(cc, "if (offerable() < tier.cents)");
   assertStringIncludes(cc, "if (balance < tier.points)");
   assertStringIncludes(cc, 'applied.push({ id: "club-points", label: `Lily\'s Club reward: ${tier.points} points`, cents: tier.cents, points: tier.points, email: clubEmail });');
@@ -81,4 +81,44 @@ Deno.test("club: codes are hashed, expire, and lock after 5 wrong tries", () => 
   assertStringIncludes(club, "const MAX_SENDS_PER_HOUR = 5;");
   // sessions are stored hashed too
   assertStringIncludes(club, 'insert({ token_hash: await sha256(token), email })');
+});
+
+Deno.test("perks: double points only on the chosen Florida weekdays, only from the start date", () => {
+  // 2026-10-26 is a Monday; 18:00Z = 2pm Florida
+  const mon = "2026-10-26T18:00:00Z", wed = "2026-10-28T18:00:00Z", oldMon = "2026-10-19T18:00:00Z";
+  const dbl = clubDouble("1,2", "2026-10-25T00:00:00-04:00");
+  const r = (at: string) => clubPoints(ME, [o({ customer_email: ME, subtotal_cents: 1000, created_at: at })], 0, Date.now(), dbl).earned;
+  assertEquals(r(mon), 20);
+  assertEquals(r(wed), 10);
+  assertEquals(r(oldMon), 10); // before the start date: never retro-doubled
+  // a bad setting doubles nothing
+  assertEquals(clubDouble("x,9", "never").days, []);
+});
+
+Deno.test("perks: birthday treat needs month set 60+ days, 3 paid orders, the right month, once a year (account and phone)", () => {
+  const now = Date.parse("2026-10-24T18:00:00Z"); // October in Florida
+  const old = new Date(now - 61 * 86400_000).toISOString();
+  const recent = new Date(now - 10 * 86400_000).toISOString();
+  const paid = (n: number) => Array.from({ length: n }, () => o({ customer_email: ME, subtotal_cents: 1000 }));
+  assertEquals(clubBirthday(ME, null, null, paid(3), now), "unset");
+  assertEquals(clubBirthday(ME, 11, old, paid(3), now), "month");
+  assertEquals(clubBirthday(ME, 10, recent, paid(3), now), "wait");   // set it 10 days ago: no
+  assertEquals(clubBirthday(ME, 10, old, paid(2), now), "order");     // only 2 orders: no
+  assertEquals(clubBirthday(ME, 10, old, paid(3), now), "ready");
+  assertEquals(clubBirthday(ME, 10, old, paid(3), now, true), "used"); // another account on the same phone used it
+  const usedOrder = o({ customer_email: ME, created_at: new Date(now - 5 * 86400_000).toISOString(),
+    discounts: [{ id: "club-birthday", email: ME, cents: 500 }] });
+  assertEquals(clubBirthday(ME, 10, old, [...paid(3), usedOrder], now), "used");
+  // last year's treat doesn't block this year's
+  const lastYear = o({ customer_email: ME, created_at: "2025-10-10T18:00:00Z", discounts: [{ id: "club-birthday", email: ME, cents: 500 }] });
+  assertEquals(clubBirthday(ME, 10, old, [...paid(3), lastYear], now), "ready");
+});
+
+Deno.test("perks: birth month set once, members-only offers only for members, welcome once", () => {
+  assertStringIncludes(club, '.eq("email", me).is("birth_month", null).select("birth_month");');
+  assertStringIncludes(club, 'await db.from("club_points").insert({ email, delta: pts, reason: "welcome bonus", by_who: "club" });');
+  return read("../create-checkout/index.ts").then((cc) => {
+    assertStringIncludes(cc, "(!p.members_only || !!clubEmail)");
+    assertStringIncludes(cc, 'const state = clubBirthday(clubEmail, mem.data?.birth_month ?? null, mem.data?.birth_month_set_at ?? null, mine, Date.now(), phoneUsed);');
+  });
 });

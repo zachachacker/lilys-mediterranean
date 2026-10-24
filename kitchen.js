@@ -34,11 +34,17 @@
   // the receipt's Club box (2026-10-24: points, not the old 10% pitch). Keep
   // equal to app_config club_reward_tiers '50:500,100:1200' (club_receipt_test.ts)
   const CLUB_RUNGS = "50 points = $5 off, 100 = $12 off";
-  // points this order earns: $1 of food after discounts (= club clubPoints)
+  // points this order earns: $1 of food after discounts, doubled on the
+  // Club's double-points days (= club clubPoints / clubDouble)
+  let clubDouble = { days: [], since: Infinity }; // from kitchen-api list
   const orderPoints = (o) => {
     const sub = o.subtotal_cents ?? 0, total = o.total_cents ?? 0;
     const off = total ? sub + (o.tax_cents ?? 0) + (o.delivery_fee_cents ?? 0) + (o.tip_cents ?? 0) - total : 0;
-    return Math.floor(Math.max(0, sub - Math.max(0, off)) / 100);
+    const pts = Math.floor(Math.max(0, sub - Math.max(0, off)) / 100);
+    const t = Date.parse(o.created_at);
+    const wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(
+      new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(new Date(t)));
+    return t >= clubDouble.since && clubDouble.days.includes(wd) ? pts * 2 : pts;
   };
   // QR for https://lilysmediterraneanfresh.com/club.html?src=receipt (qrcode 1.5.4,
   // error correction Q). Static on purpose: the 5% itself comes as a one-use
@@ -235,6 +241,13 @@
       const list = res.orders;
       pausedUntil = res.paused_until || null;
       loyalty = res.loyalty || null;
+      if (res.club_double) {
+        const since = Date.parse(res.club_double.since);
+        clubDouble = {
+          days: res.club_double.days.split(",").filter((d) => d.trim() !== "").map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+          since: Number.isFinite(since) ? since : Infinity,
+        };
+      }
       // a list snapshot can be older than a tap we just made — local wins
       list.forEach((o) => {
         const override = inFlight.get(o.id) ?? pending.find((p) => p.id === o.id)?.to;

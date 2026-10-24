@@ -248,7 +248,8 @@ Deno.serve(async (req) => {
     const until = Date.parse(p?.value ?? "");
     // loyalty progress for the printed receipt (2026-10-20): the count only;
     // the customer hash itself never leaves this function
-    const { data: lc } = await db.from("app_config").select("key,value").in("key", ["loyalty_enabled", "loyalty_every", "loyalty_cents"]);
+    const { data: lc } = await db.from("app_config").select("key,value")
+      .in("key", ["loyalty_enabled", "loyalty_every", "loyalty_cents", "club_double_days", "club_double_since"]);
     const lcfg = Object.fromEntries((lc ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
     const every = Number(lcfg.loyalty_every ?? "5"), cents = Number(lcfg.loyalty_cents ?? "0");
     const loyaltyOn = (lcfg.loyalty_enabled ?? "").trim() === "true" && Number.isInteger(every) && every >= 2 && cents > 0;
@@ -267,6 +268,8 @@ Deno.serve(async (req) => {
     return json({
       orders, now: new Date().toISOString(), paused_until: until > Date.now() ? p!.value : null,
       ...(loyaltyOn ? { loyalty: { every, cents } } : {}),
+      // Lily's Club double-points days, so the receipt prints the right points
+      club_double: { days: String(lcfg.club_double_days ?? ""), since: String(lcfg.club_double_since ?? "") },
     });
   }
 

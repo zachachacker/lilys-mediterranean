@@ -14,7 +14,8 @@ Deno.test("drift: promotions block in create-checkout is byte-identical to the m
   assertEquals(unexport(between(m, "export type Promo = {", "/* ── create-checkout/index.ts — delivery")).trim(),
     between(c, "type Promo = {", "/* ── discount links").trim());
   // the schedule filter is applied to what the database returns
-  assert(c.includes("promos = ((data ?? []) as Promo[]).filter((p) => promoRunsAt(p, fl.day, fl.minute));"));
+  // (2026-10-24: and members-only offers only for a signed-in Lily's Club member)
+  assert(c.includes(".filter((p) => promoRunsAt(p, fl.day, fl.minute) && (!p.members_only || !!clubEmail));"));
 });
 
 Deno.test("drift: manage-api validation is byte-identical to the mirror", async () => {

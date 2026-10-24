@@ -4,8 +4,10 @@
 // migrations/20261024_club_points.sql), so there is no balance to drift.
 //   POST {action:"send_code", email}
 //   POST {action:"verify", email, code, offers?}  -> {token}
-//   POST {action:"me"}                            -> member, points, rewards, recent orders
+//   POST {action:"info"}                          -> rewards + perks for the signed-out page
+//   POST {action:"me"}                            -> member, points, rewards, perks, deals, recent orders
 //   POST {action:"set_offers", on}                -> join / leave the offers email list
+//   POST {action:"set_birthday", month}           -> once; locked after (birthday treat rules: clubBirthday)
 //   POST {action:"sign_out"}
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -43,15 +45,32 @@ type ClubOrder = {
 };
 const CLUB_PAID = ["paid", "making", "ready", "done"];
 const CLUB_HOLD_MS = 2 * 3600 * 1000; // a reward on an unpaid checkout is held this long
-function clubPoints(email: string, orders: ClubOrder[], adjust: number, now: number): { earned: number; spent: number; balance: number } {
+type ClubDouble = { days: number[]; since: number }; // 2x points days (Florida weekday, 0=Sun)
+const NO_DOUBLE: ClubDouble = { days: [], since: Infinity };
+function clubDouble(days: string | undefined, since: string | undefined): ClubDouble {
+  const d = String(days ?? "").split(",").filter((s) => s.trim() !== "").map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  const t = Date.parse(String(since ?? ""));
+  return { days: d, since: Number.isFinite(t) ? t : Infinity };
+}
+const clubFl = (t: number) => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", year: "numeric", month: "numeric", weekday: "short",
+  }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  return { y: Number(p.year), m: Number(p.month), wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday) };
+};
+const isDouble = (dbl: ClubDouble, t: number) => t >= dbl.since && dbl.days.includes(clubFl(t).wd);
+const isMine = (o: ClubOrder, email: string) => (o.customer_email ?? "").toLowerCase() === email || o.club_email === email;
+const isHeld = (o: ClubOrder, now: number) =>
+  CLUB_PAID.includes(o.status) || (o.status === "pending" && now - Date.parse(o.created_at) < CLUB_HOLD_MS);
+function clubPoints(email: string, orders: ClubOrder[], adjust: number, now: number, dbl: ClubDouble = NO_DOUBLE): { earned: number; spent: number; balance: number } {
   let earned = 0, spent = 0;
   for (const o of orders) {
-    const paid = CLUB_PAID.includes(o.status);
-    const mine = (o.customer_email ?? "").toLowerCase() === email || o.club_email === email;
-    // $1 of food after discounts = 1 point; tax, delivery and tips earn nothing
-    if (paid && mine && !o.demo) earned += Math.floor(Math.max(0, (o.subtotal_cents ?? 0) - (o.discount_cents ?? 0)) / 100);
-    const held = paid || (o.status === "pending" && now - Date.parse(o.created_at) < CLUB_HOLD_MS);
-    if (held) for (const d of o.discounts ?? []) if (d?.id === "club-points" && d.email === email) spent += Number(d.points) || 0;
+    // $1 of food after discounts = 1 point (2 on a double day); tax, delivery and tips earn nothing
+    if (CLUB_PAID.includes(o.status) && isMine(o, email) && !o.demo) {
+      const pts = Math.floor(Math.max(0, (o.subtotal_cents ?? 0) - (o.discount_cents ?? 0)) / 100);
+      earned += isDouble(dbl, Date.parse(o.created_at)) ? pts * 2 : pts;
+    }
+    if (isHeld(o, now)) for (const d of o.discounts ?? []) if (d?.id === "club-points" && d.email === email) spent += Number(d.points) || 0;
   }
   return { earned, spent, balance: earned + adjust - spent };
 }
@@ -59,6 +78,26 @@ function clubTiers(raw: string | undefined): { points: number; cents: number }[]
   return String(raw ?? "").split(",").map((s) => s.split(":").map(Number))
     .filter(([p, c]) => Number.isInteger(p) && p > 0 && Number.isInteger(c) && c > 0)
     .map(([points, cents]) => ({ points, cents })).sort((a, b) => a.points - b.points);
+}
+// Birthday treat, made hard to fake (Zachary, 2026-10-24: "people will just
+// say it's my birthday and make an account"): the month is given once and
+// locked, must be on the account 60+ days, the account needs 3 paid orders
+// (a regular, not a fresh signup), and it's once per calendar year (Florida
+// clock) per account AND per phone (phoneUsed: the caller checks the phone
+// fingerprint across every account).
+const CLUB_BDAY_WAIT_MS = 60 * 86400 * 1000;
+const CLUB_BDAY_MIN_ORDERS = 3;
+type ClubBirthday = "ready" | "used" | "month" | "wait" | "order" | "unset";
+function clubBirthday(email: string, month: number | null, setAt: string | null, orders: ClubOrder[], now: number, phoneUsed = false): ClubBirthday {
+  if (!month) return "unset";
+  const today = clubFl(now);
+  const used = phoneUsed || orders.some((o) => isHeld(o, now) && clubFl(Date.parse(o.created_at)).y === today.y &&
+    (o.discounts ?? []).some((d) => d?.id === "club-birthday" && d.email === email));
+  if (used) return "used";
+  if (today.m !== month) return "month";
+  if (!setAt || now - Date.parse(setAt) < CLUB_BDAY_WAIT_MS) return "wait";
+  if (orders.filter((o) => CLUB_PAID.includes(o.status) && !o.demo && isMine(o, email)).length < CLUB_BDAY_MIN_ORDERS) return "order";
+  return "ready";
 }
 /* ── end of the shared copy ─────────────────────────────────────────── */
 
@@ -140,12 +179,39 @@ Deno.serve(async (req) => {
     if (!have) {
       const { error } = await db.from("club_members").insert({ email, member_code: memberCode() });
       if (error && !String(error.message).includes("duplicate")) return json({ error: "Please try again in a moment." }, 503);
+      // welcome bonus (2026-10-24): nobody starts on 0. Only on the insert that
+      // created the member, so signing in again never pays it twice.
+      if (!error) {
+        const { data: w } = await db.from("app_config").select("value").eq("key", "club_welcome_points").maybeSingle();
+        const pts = Number(w?.value ?? "0");
+        if (Number.isInteger(pts) && pts > 0 && pts <= 500) {
+          await db.from("club_points").insert({ email, delta: pts, reason: "welcome bonus", by_who: "club" });
+        }
+      }
     }
     const token = randomHex(32);
     const { error: sErr } = await db.from("club_sessions").insert({ token_hash: await sha256(token), email });
     if (sErr) return json({ error: "Please try again in a moment." }, 503);
     if (body.offers === true) await joinOffers(db, email);
     return json({ ok: true, token });
+  }
+
+  // the perks for the signed-out page, straight from the same settings
+  if (body.action === "info") {
+    const { data: rows } = await db.from("app_config").select("key,value").in("key", [
+      "club_points_enabled", "club_reward_tiers", "club_welcome_points", "club_double_days", "club_double_since", "club_birthday_cents",
+    ]);
+    const cfg = Object.fromEntries((rows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+    const dbl = clubDouble(cfg.club_double_days, cfg.club_double_since);
+    const { count } = await db.from("promotions").select("id", { count: "exact", head: true }).eq("active", true).eq("members_only", true);
+    return json({
+      on: (cfg.club_points_enabled ?? "").trim() === "true",
+      tiers: clubTiers(cfg.club_reward_tiers),
+      perks: {
+        welcome: Number(cfg.club_welcome_points ?? "0") || 0, double_days: dbl.days, double_today: isDouble(dbl, Date.now()),
+        birthday_cents: Number(cfg.club_birthday_cents ?? "0") || 0, members_deals: count ?? 0,
+      },
+    });
   }
 
   // everything below needs a signed-in member
@@ -170,20 +236,42 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  if (body.action === "set_birthday") {
+    const month = Number((body as { month?: unknown }).month);
+    if (!Number.isInteger(month) || month < 1 || month > 12) return json({ error: "Pick a month." }, 400);
+    // once only: a month that's already set never changes (stops birthday-hopping)
+    const { data, error } = await db.from("club_members").update({ birth_month: month, birth_month_set_at: new Date().toISOString() })
+      .eq("email", me).is("birth_month", null).select("birth_month");
+    if (error) return json({ error: "Please try again in a moment." }, 503);
+    if (!data?.length) return json({ error: "Your birthday month is already saved. Ask the restaurant if it's wrong." }, 400);
+    return json({ ok: true });
+  }
+
   if (body.action === "me") {
     const [mem, ords, adj, cfgRows, sub] = await Promise.all([
-      db.from("club_members").select("email,name,member_code,created_at").eq("email", me).maybeSingle(),
-      db.from("orders").select("code,subtotal_cents,discount_cents,status,created_at,demo,customer_email,club_email,discounts")
+      db.from("club_members").select("email,name,member_code,created_at,birth_month,birth_month_set_at").eq("email", me).maybeSingle(),
+      db.from("orders").select("code,subtotal_cents,discount_cents,status,created_at,demo,customer_email,club_email,discounts,customer_hash")
         .or(`customer_email.eq.${me},club_email.eq.${me}`).order("created_at", { ascending: false }).limit(500),
       db.from("club_points").select("delta,reason,created_at").eq("email", me).order("created_at", { ascending: false }),
-      db.from("app_config").select("key,value").in("key", ["club_points_enabled", "club_reward_tiers"]),
+      db.from("app_config").select("key,value").in("key", [
+        "club_points_enabled", "club_reward_tiers", "club_welcome_points", "club_double_days", "club_double_since", "club_birthday_cents",
+      ]),
       db.from("subscribers").select("unsubscribed_at").eq("email", me).maybeSingle(),
     ]);
     if (mem.error || ords.error || adj.error || !mem.data) return json({ error: "Please try again in a moment." }, 503);
     const cfg = Object.fromEntries((cfgRows.data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
     const orders = (ords.data ?? []) as (ClubOrder & { code: string })[];
     const adjust = (adj.data ?? []).reduce((s: number, r: { delta: number }) => s + r.delta, 0);
-    const pts = clubPoints(me, orders, adjust, Date.now());
+    const now = Date.now();
+    const dbl = clubDouble(cfg.club_double_days, cfg.club_double_since);
+    const pts = clubPoints(me, orders, adjust, now, dbl);
+    const bdayCents = Number(cfg.club_birthday_cents ?? "0");
+    const phoneUsed = await birthdayPhoneUsed(db, orders.map((o) => (o as { customer_hash?: string | null }).customer_hash), now);
+    // what's on: the same active promotions the order page shows, members-only ones marked
+    const { data: promos } = await db.from("promotions").select("label,members_only,days,start_min,end_min,starts_at,ends_at")
+      .eq("active", true).order("members_only", { ascending: false }).order("label");
+    const live = (promos ?? []).filter((p: { starts_at: string | null; ends_at: string | null }) =>
+      !(p.starts_at && Date.parse(p.starts_at) > now) && !(p.ends_at && Date.parse(p.ends_at) < now));
     return json({
       email: me,
       name: mem.data.name,
@@ -192,17 +280,42 @@ Deno.serve(async (req) => {
       points: Math.max(0, pts.balance),
       tiers: clubTiers(cfg.club_reward_tiers),
       offers: !!sub.data && !sub.data.unsubscribed_at,
+      since: mem.data.created_at,
+      perks: {
+        welcome: Number(cfg.club_welcome_points ?? "0") || 0,
+        double_days: dbl.days,
+        double_today: isDouble(dbl, now),
+        birthday_cents: Number.isInteger(bdayCents) && bdayCents > 0 ? bdayCents : 0,
+      },
+      birth_month: mem.data.birth_month,
+      birthday: clubBirthday(me, mem.data.birth_month, mem.data.birth_month_set_at, orders, now, phoneUsed),
+      deals: live.map((p: { label: string; members_only: boolean; days: number[] | null; start_min: number | null; end_min: number | null }) =>
+        ({ label: p.label, members_only: !!p.members_only, days: p.days, start_min: p.start_min, end_min: p.end_min })),
+      bonuses: (adj.data ?? []).slice(0, 10).map((r: { delta: number; reason: string; created_at: string }) => ({ delta: r.delta, reason: r.reason, at: r.created_at })),
       // recent paid orders and what each earned or spent
       history: orders.filter((o) => CLUB_PAID.includes(o.status) && !o.demo).slice(0, 10).map((o) => ({
         code: o.code, at: o.created_at,
-        earned: clubPoints(me, [o], 0, 0).earned,
-        spent: clubPoints(me, [o], 0, 0).spent,
+        earned: clubPoints(me, [o], 0, 0, dbl).earned,
+        spent: clubPoints(me, [o], 0, 0, dbl).spent,
+        double: isDouble(dbl, Date.parse(o.created_at)),
       })),
     });
   }
 
   return json({ error: "Unknown action" }, 400);
 });
+
+// the birthday treat is once a year per PHONE too: any account whose orders
+// share a phone fingerprint with this one counts (same check in create-checkout)
+async function birthdayPhoneUsed(db: DB, hashes: (string | null | undefined)[], now: number): Promise<boolean> {
+  const hs = [...new Set(hashes.filter((h): h is string => !!h))];
+  if (!hs.length) return false;
+  const y = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric" }).format(new Date(now));
+  const { data } = await db.from("orders").select("status,created_at").in("customer_hash", hs)
+    .filter("discounts", "cs", '[{"id":"club-birthday"}]').gte("created_at", `${y}-01-01T05:00:00Z`);
+  return (data ?? []).some((o: { status: string; created_at: string }) =>
+    ["paid", "making", "ready", "done"].includes(o.status) || (o.status === "pending" && now - Date.parse(o.created_at) < 2 * 3600 * 1000));
+}
 
 // ticked "email me offers": the code just proved the address, so the member
 // is confirmed straight away and the usual welcome (10% off) goes out once

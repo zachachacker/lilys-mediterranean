@@ -61,21 +61,33 @@
 <main>
 <section class="section dark menu-hero club-hero" id="club">
   <div class="wrap">
-    <div class="section-head club-box" id="clubBox">
-      <span class="eyebrow">Free to join</span>
-      <h1>Lily's Club</h1>
-      <p class="club-lede">Earn <strong>1 point for every $1</strong> you spend online. Points turn into money off your next order, automatically.</p>
-      <ul class="club-perks">
-        <li><b>50 points = $5 off</b>, or save up to <b>100 points = $12 off</b></li>
-        <li><b>Your past orders count</b>: sign in with the email you used at checkout</li>
-        <li><b>No password, no app</b>: we email you a 6-digit code</li>
+    <div class="club-box" id="clubBox">
+      <div class="cc-hero">
+        <div>
+          <span class="eyebrow">Free to join</span>
+          <h1>Lily's Club</h1>
+          <p class="club-lede">Every $1 you spend online earns a point. Points turn into money off, automatically, plus perks only members get.</p>
+        </div>
+        <div class="cc-card cc-demo" aria-hidden="true">
+          <div class="cc-top"><span class="cc-brand">Lily<em>'s</em> Club</span><span class="cc-tag">Member</span></div>
+          <div class="cc-pts"><b data-welcome>20</b><span>points waiting for you</span></div>
+          <div class="cc-bar"><i style="width:40%"></i></div>
+          <div class="cc-foot"><span>you@email.com</span><span>Welcome bonus</span></div>
+        </div>
+      </div>
+      <ul class="cc-perks" id="ccPerks">
+        <li><b data-welcome-big>+20</b><strong>Welcome bonus</strong><span>Points the moment you join. Nobody starts on zero.</span></li>
+        <li><b>2x</b><strong>Double points days</strong><span data-double-text>Every Monday and Tuesday.</span></li>
+        <li><b data-bday-big>$5</b><strong>Birthday treat</strong><span>Money off in your birthday month, every year.</span></li>
+        <li><b>★</b><strong>Members-only deals</strong><span>Offers you won't see unless you're signed in.</span></li>
       </ul>
+      <div class="cc-rungs-pitch" id="ccRungs"><span><b>50 points</b> = $5 off</span><span><b>100 points</b> = $12 off</span></div>
       <form class="club-form" id="clubForm" novalidate>
         <label for="clubEmail" class="sr-only">Your email</label>
         <input id="clubEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@email.com">
-        <button class="btn" type="submit">Send my code <span class="arw">→</span></button>
+        <button class="btn" type="submit">Join free / sign in <span class="arw">→</span></button>
       </form>
-      <p class="club-fine">We only email you the code. Offers emails are a separate tick box. <a class="ink" href="privacy.html">Privacy</a></p>
+      <p class="club-fine">No password, no app: we email you a 6-digit code. Use the email you pay with and your past orders count too. <a class="ink" href="privacy.html">Privacy</a></p>
       <p class="club-msg" id="clubMsg" role="status" aria-live="polite" hidden></p>
     </div>
   </div>
@@ -185,35 +197,96 @@
     return;
   }
 
-  // ---- signed in: points, rewards, recent orders --------------------------
+  // ---- signed in: the membership card, rewards, perks, deals -------------
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const DAYN = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+  const dayList = (ds) => ds.map((d) => DAYN[d]).join(" and ");
+  const hm = (m) => { const h = Math.floor(m / 60), mi = m % 60; return `${h % 12 || 12}${mi ? ":" + String(mi).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`; };
+  const whenText = (p) => {
+    const days = p.days && p.days.length && p.days.length < 7 ? (p.days.join() === "1,2,3,4,5" ? "Weekdays" : p.days.map((d) => DAYN[d].slice(0, 3)).join(", ")) : "Every day";
+    return days + (p.start_min != null && p.end_min != null ? `, ${hm(p.start_min)} to ${hm(p.end_min)}` : "");
+  };
   async function account() {
-    show(`<span class="eyebrow">Lily's Club</span><h1>Your points</h1><p class="club-lede">Loading...</p>`);
+    show(`<div class="cc-card cc-loading"><div class="cc-top"><span class="cc-brand">Lily<em>'s</em> Club</span></div><div class="cc-pts"><b>…</b></div></div>`);
     let me;
     try { me = await call(CLUB, { action: "me" }, true); }
     catch (e) { if (e.signin) { setTok(""); return signedOut(); } return fail(e); }
-    const tiers = me.tiers || [];
+    const tiers = me.tiers || [], perks = me.perks || {};
     const top = tiers.length ? tiers[tiers.length - 1].points : 100;
     const next = tiers.find((t) => t.points > me.points);
     const pct = Math.min(100, Math.round((me.points / top) * 100));
-    const rungs = tiers.map((t) => `<li class="${me.points >= t.points ? "ready" : ""}"><b>${money(t.cents)} off</b><span>${t.points} points</span>
-      <em>${me.points >= t.points ? "Ready to use" : `${t.points - me.points} to go`}</em></li>`).join("");
-    const hist = (me.history || []).map((h) => `<li><span>${esc(h.code)} · ${new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-      <span>${h.earned ? `+${h.earned}` : ""}${h.spent ? ` −${h.spent}` : ""}</span></li>`).join("");
-    show(`<span class="eyebrow">Lily's Club · ${esc(me.email)}</span>
-      <h1 class="club-pts"><span>${me.points}</span> points</h1>
+    const since = new Date(me.since).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    const rungs = tiers.map((t) => `<li class="${me.points >= t.points ? "ready" : ""}">
+        <b>${money(t.cents)} off</b><span>${t.points} points</span>
+        <em>${me.points >= t.points ? "Ready: it's in your cart when you order" : `${t.points - me.points} points to go`}</em></li>`).join("");
+    const orders = (me.history || []).length;
+    const bdayText = {
+      unset: "", ready: `Your ${money(perks.birthday_cents)} birthday treat is ready. It's in your cart when you order.`,
+      used: "Used this year. See you next birthday!",
+      month: `Unlocks in ${MONTHS[(me.birth_month || 1) - 1]}.`,
+      wait: "Unlocks once your month has been saved for 60 days.",
+      order: `Unlocks after 3 orders as a member (you have ${Math.min(orders, 3)}).`,
+    }[me.birthday] ?? "";
+    const bdayTile = !perks.birthday_cents ? "" : `<li class="${me.birthday === "ready" ? "ready" : ""}"><b>${money(perks.birthday_cents)}</b><strong>Birthday treat</strong>
+      ${me.birthday === "unset" ? `<span>Pick your birthday month. You can only set it once.</span>
+        <div class="cc-bday"><select id="bdayMonth" aria-label="Birthday month"><option value="">Month…</option>${MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("")}</select>
+        <button type="button" class="btn btn-sm" id="bdaySave">Save</button></div>`
+      : `<span>${esc(MONTHS[me.birth_month - 1])}. ${bdayText}</span>`}</li>`;
+    const doubleTile = !(perks.double_days || []).length ? "" : `<li class="${perks.double_today ? "ready" : ""}"><b>2x</b><strong>Double points</strong>
+      <span>${perks.double_today ? "Today! Every order earns double." : `Every ${dayList(perks.double_days)}.`}</span></li>`;
+    const welcomeTile = !perks.welcome ? "" : `<li class="done"><b>+${perks.welcome}</b><strong>Welcome bonus</strong><span>Added to your points.</span></li>`;
+    const memberDeals = (me.deals || []).filter((d) => d.members_only);
+    const otherDeals = (me.deals || []).filter((d) => !d.members_only);
+    const dealList = (ds, tag) => ds.map((d) => `<li>${tag ? '<i class="offer-tag">Members</i> ' : ""}<b>${esc(d.label)}</b><span>${esc(whenText(d))}</span></li>`).join("");
+    const hist = [
+      ...(me.history || []).map((h) => ({ at: h.at, text: `Order ${h.code}${h.double ? " (2x day)" : ""}`, pts: (h.earned ? `+${h.earned}` : "") + (h.spent ? ` −${h.spent}` : "") })),
+      ...(me.bonuses || []).map((b) => ({ at: b.at, text: b.reason.charAt(0).toUpperCase() + b.reason.slice(1), pts: (b.delta > 0 ? "+" : "") + b.delta })),
+    ].sort((x, y) => Date.parse(y.at) - Date.parse(x.at)).slice(0, 10)
+      .map((h) => `<li><span>${esc(h.text)} · ${new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span><span>${esc(h.pts)}</span></li>`).join("");
+    show(`
+      <div class="cc-card">
+        ${perks.double_today ? '<div class="cc-ribbon">2x points today</div>' : ""}
+        <div class="cc-top"><span class="cc-brand">Lily<em>'s</em> Club</span><span class="cc-tag">Member</span></div>
+        <div class="cc-pts"><b>${me.points}</b><span>points</span></div>
+        <div class="cc-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${top}" aria-valuenow="${me.points}"><i style="width:${pct}%"></i></div>
+        <div class="cc-next">${next ? `${next.points - me.points} more to ${money(next.cents)} off` : "Your biggest reward is ready"}</div>
+        <div class="cc-foot"><span>${esc(me.email)}</span><span>Member since ${esc(since)}</span></div>
+      </div>
       ${me.on ? "" : `<p class="club-lede">Points are paused right now. They're safe and will be back soon.</p>`}
-      <div class="club-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${top}" aria-valuenow="${me.points}"><i style="width:${pct}%"></i></div>
-      <p class="club-lede">${next ? `<strong>${next.points - me.points} more points</strong> to ${money(next.cents)} off.` : "You can use your biggest reward now."}
-        Rewards show up in your cart when you order online.</p>
+      <p class="cc-cta"><a class="btn" href="order.html?src=club">Order now <span class="arw">→</span></a></p>
+      <h2 class="club-h2">Your rewards</h2>
       <ul class="club-rungs">${rungs}</ul>
-      <p><a class="btn" href="order.html?src=club">Order now <span class="arw">→</span></a></p>
-      ${hist ? `<h2 class="club-h2">Recent orders</h2><ul class="club-hist">${hist}</ul>` : `<p class="club-fine">No orders on ${esc(me.email)} yet. Your first one earns points.</p>`}
+      <h2 class="club-h2">Your perks</h2>
+      <ul class="cc-perks cc-perks-in">${welcomeTile}${doubleTile}${bdayTile}</ul>
+      <h2 class="club-h2">Deals right now</h2>
+      ${memberDeals.length || otherDeals.length ? `<ul class="cc-deals">${dealList(memberDeals, true)}${dealList(otherDeals, false)}</ul>`
+        : `<p class="club-fine">No deals running right now. Members hear first when the next one starts.</p>`}
+      ${hist ? `<h2 class="club-h2">Points history</h2><ul class="club-hist">${hist}</ul>` : ""}
       <label class="club-check"><input type="checkbox" id="clubOffers" ${me.offers ? "checked" : ""}> Email me members-only offers</label>
-      <p class="club-fine">1 point per $1 of food (not tax, tips or delivery). Points come from orders paid with this email or while signed in here.
+      <p class="club-fine">1 point per $1 of food (not tax, tips or delivery). Points come from orders paid with ${esc(me.email)} or while signed in here.
         <button class="club-link" id="clubOut" type="button">Sign out</button></p>`);
     $("clubOffers").addEventListener("change", (e) => call(CLUB, { action: "set_offers", on: e.target.checked }, true).catch(() => { e.target.checked = !e.target.checked; }));
     $("clubOut").addEventListener("click", async () => { await call(CLUB, { action: "sign_out" }, true).catch(() => {}); setTok(""); location.reload(); });
+    $("bdaySave")?.addEventListener("click", async (e) => {
+      const month = Number($("bdayMonth").value);
+      if (!month) return;
+      if (!confirm(`Save ${MONTHS[month - 1]} as your birthday month? You can't change it later.`)) return;
+      e.target.disabled = true;
+      try { await call(CLUB, { action: "set_birthday", month }, true); account(); }
+      catch (err) { alert(err.message); e.target.disabled = false; }
+    });
   }
+
+  // signed-out page: fill the perks from the live settings (the HTML has sensible defaults)
+  call(CLUB, { action: "info" }).then((j) => {
+    const p = j.perks || {};
+    document.querySelectorAll("[data-welcome]").forEach((n) => { n.textContent = p.welcome || 0; });
+    document.querySelectorAll("[data-welcome-big]").forEach((n) => { n.textContent = `+${p.welcome || 0}`; });
+    document.querySelectorAll("[data-bday-big]").forEach((n) => { n.textContent = money(p.birthday_cents || 0); });
+    document.querySelectorAll("[data-double-text]").forEach((n) => { n.textContent = p.double_today ? "Today! Every order earns double." : (p.double_days || []).length ? `Every ${dayList(p.double_days)}.` : ""; });
+    const r = $("ccRungs");
+    if (r && (j.tiers || []).length) r.innerHTML = j.tiers.map((t) => `<span><b>${t.points} points</b> = ${money(t.cents)} off</span>`).join("");
+  }).catch(() => {});
 
   // ---- signed out: email, then the 6-digit code ---------------------------
   const outHTML = box.innerHTML;

@@ -1522,3 +1522,60 @@ fieldset.af-field[aria-invalid="true"] .af-chip { border-color: var(--ember); }
 .cp-use.on { background:#14532b; color:#F4F1E8; }
 .cp-use.on::before { content:"✓ "; }
 .cp-n { font-size:0.78rem; color:#6a6459; margin-top:0.35rem; }
+.cp-bday { border-color:#B4472B; color:#B4472B; }
+.cp-bday.on { background:#B4472B; color:#fff; }
+.offer-tag { font-style:normal; font-family:var(--mono, ui-monospace, monospace); font-size:0.58rem; letter-spacing:0.12em; text-transform:uppercase;
+  background:#E4A72E; color:#241a05; border-radius:99px; padding:2px 7px; vertical-align:2px; }
+.offer-locked { color:#6a6459; }
+.offer-locked a { font-size:0.8rem; font-weight:600; }
+
+/* Lily's Club page v2 (2026-10-24): a membership card, perk tiles, deals */
+.club-page .club-box { max-width: 720px; }
+.club-hero { align-items: flex-start; }
+.cc-hero { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: center; margin-bottom: 1.6rem; }
+@media (min-width: 760px) { .cc-hero { grid-template-columns: 1.1fr 1fr; } }
+.cc-card { position: relative; overflow: hidden; border-radius: 20px; padding: 1.3rem 1.4rem 1.1rem; color: var(--foam);
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--lemon) 30%, transparent), transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, color-mix(in srgb, var(--teal) 45%, transparent), transparent 60%),
+    linear-gradient(135deg, #14532b, #0e3a1f 70%);
+  border: 1px solid color-mix(in srgb, var(--lemon) 45%, transparent);
+  box-shadow: 0 18px 40px -18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12); max-width: 440px; }
+.cc-card::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.10) 48%, transparent 60%); }
+.cc-demo { transform: rotate(-3deg); }
+.cc-top { display: flex; justify-content: space-between; align-items: center; }
+.cc-brand { font-family: var(--serif); font-size: 1.35rem; font-weight: 600; }
+.cc-brand em { color: var(--lemon); }
+.cc-tag { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: #241a05;
+  background: var(--lemon); border-radius: 99px; padding: 3px 9px; }
+.cc-pts { display: flex; align-items: baseline; gap: 0.5rem; margin: 1.1rem 0 0.6rem; }
+.cc-pts b { font-family: var(--serif); font-size: clamp(3rem, 10vw, 4.2rem); line-height: 1; color: var(--lemon); font-variant-numeric: tabular-nums; }
+.cc-pts span { font-size: 1rem; opacity: 0.85; }
+.cc-bar { height: 10px; border-radius: 99px; background: rgba(244,241,232,0.18); overflow: hidden; }
+.cc-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--lemon), #f6d27a); transition: width 0.8s ease; }
+.cc-next { font-size: 0.85rem; margin-top: 0.45rem; opacity: 0.9; }
+.cc-foot { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1rem; font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; flex-wrap: wrap; }
+.cc-ribbon { position: absolute; top: 14px; right: -38px; transform: rotate(35deg); background: var(--ember); color: #fff;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 44px; z-index: 1; }
+.cc-loading { min-height: 180px; opacity: 0.7; }
+.cc-cta { margin: 1.2rem 0 0.4rem; }
+.cc-perks { list-style: none; padding: 0; margin: 0 0 1.4rem; display: grid; gap: 0.7rem; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .cc-perks { grid-template-columns: 1fr 1fr; } }
+.cc-perks li { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.9rem; align-items: start; padding: 0.95rem 1rem; border-radius: 14px;
+  background: color-mix(in srgb, var(--foam) 6%, transparent); border: 1px solid color-mix(in srgb, var(--foam) 16%, transparent); }
+.cc-perks li > b { grid-row: span 2; font-family: var(--serif); font-size: 1.7rem; line-height: 1; color: var(--lemon); min-width: 2.4ch; }
+.cc-perks li strong { font-size: 1rem; }
+.cc-perks li span { font-size: 0.86rem; opacity: 0.8; line-height: 1.4; grid-column: 2; }
+.cc-perks li.ready { border-color: var(--lemon); background: color-mix(in srgb, var(--lemon) 14%, transparent); }
+.cc-perks li.done > b { opacity: 0.7; }
+.cc-bday { grid-column: 2; display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.cc-bday select { font: inherit; font-size: 16px; padding: 0.45em 0.7em; border-radius: 10px; background: var(--foam); color: var(--char); border: 0; }
+.btn.btn-sm { padding: 0.5em 1em; font-size: 0.8rem; }
+.cc-rungs-pitch { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0 0 1.2rem; }
+.cc-rungs-pitch span { padding: 0.5rem 0.9rem; border-radius: 99px; border: 1px solid color-mix(in srgb, var(--lemon) 50%, transparent); font-size: 0.92rem; }
+.cc-rungs-pitch b { color: var(--lemon); }
+.cc-deals { list-style: none; padding: 0; margin: 0 0 1.2rem; display: grid; gap: 0.5rem; }
+.cc-deals li { padding: 0.75rem 1rem; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--lemon) 45%, transparent); display: grid; gap: 0.15rem; }
+.cc-deals li span { font-size: 0.82rem; opacity: 0.75; }

@@ -750,6 +750,7 @@ export type PromoRow = {
   item_ids: string[] | null; categories: string[] | null;
   days: number[] | null; start_min: number | null; end_min: number | null;
   starts_at: string | null; ends_at: string | null;
+  members_only?: boolean; // Lily's Club members only (2026-10-24)
 };
 
 export const isInt = (v: unknown, lo: number, hi: number) => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
@@ -818,6 +819,7 @@ export function validatePromo(
     return { ok: false, error: "The first day must be before the last day." };
   }
   if (typeof p.active === "boolean") row.active = p.active;
+  if (typeof p.members_only === "boolean") row.members_only = p.members_only;
   return { ok: true, row };
 }
 

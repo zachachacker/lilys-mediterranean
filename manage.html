@@ -621,7 +621,7 @@
               data-act="toggle" data-id="${esc(p.id)}"${b ? " disabled" : ""}></button>
           </div>
         </div>
-        <p class="sum">${esc(summary(p))}</p>
+        <p class="sum">${p.members_only ? "<b>Lily's Club members only.</b> " : ""}${esc(summary(p))}</p>
         <p class="st st-${st.cls}"><span class="dot" aria-hidden="true"></span>${esc(st.text)}</p>
         <div class="acts">
           <button class="btn btn-ghost" data-act="edit" data-id="${esc(p.id)}">Edit</button>
@@ -662,7 +662,7 @@
     id: null, active: false, kind: null, percent: 15,
     cats: new Set(), items: new Set(), item_id: "", buy: 1, free: 1, minDollars: "",
     days: new Set(ALL_DAYS), allDay: true, start: 660, end: 900, first: "", last: "",
-    label: "", labelTouched: false, saving: false, error: "",
+    label: "", labelTouched: false, saving: false, error: "", members: false,
   });
   const formFromPromo = (p) => {
     const f = {
@@ -675,7 +675,7 @@
       start: p.start_min ?? 660, end: p.end_min ?? 900,
       first: p.starts_at ? dateInputFromIso(p.starts_at) : "",
       last: p.ends_at ? dateInputFromIso(p.ends_at) : "",
-      label: p.label || "", labelTouched: true, saving: false, error: "",
+      label: p.label || "", labelTouched: true, saving: false, error: "", members: !!p.members_only,
     };
     // keep the name auto-updating if it is still the one we would have made
     f.labelTouched = f.label !== autoLabel(promoFromForm(f));
@@ -691,7 +691,7 @@
 
   // the form, shaped like a Promo (what we save, and what the preview reads)
   function promoFromForm(f) {
-    const p = { kind: f.kind, label: f.label.trim(), active: f.active };
+    const p = { kind: f.kind, label: f.label.trim(), active: f.active, members_only: !!f.members };
     if (f.id) p.id = f.id;
     if (f.kind === "percent_items" || f.kind === "percent_over") p.percent = Number(f.percent);
     if (f.kind === "percent_items") {
@@ -883,6 +883,13 @@
       <form id="offerForm" novalidate>
         ${dealHtml(f)}
         ${whenHtml(f)}
+        <section class="fs"><h2>Who gets it</h2>
+          <div class="toggle-row">
+            <span class="lab" id="memLab">Lily's Club members only</span>
+            <button type="button" class="sw" role="switch" id="memOnly" data-act="members" aria-labelledby="memLab" aria-checked="${!!f.members}"></button>
+          </div>
+          <p class="note">On: only customers signed in to Lily's Club get it. It shows on their Club page as a members-only deal.</p>
+        </section>
         <section class="fs"><h2>Name customers see</h2>
           <p class="note">We fill this in from your choices. You can change it.</p>
           <label class="lab" for="label">Name <span class="counter" id="labelCount"></span></label>
@@ -1146,6 +1153,7 @@
         f.days = new Set({ all: ALL_DAYS, wk: [1, 2, 3, 4, 5], we: [0, 6] }[t.dataset.v]);
         f.error = ""; syncForm(); break;
       case "allday": f.allDay = !f.allDay; f.error = ""; syncForm(); break;
+      case "members": f.members = !f.members; document.getElementById("memOnly")?.setAttribute("aria-checked", String(f.members)); break;
       case "cleardates":
         f.first = ""; f.last = "";
         document.getElementById("dFirst").value = "";
