@@ -52,6 +52,15 @@
   .k-dot.err { background: var(--red); }
   .k-tool { padding: 0.5em 0.7em; background: rgba(244,241,232,0.1); font-size: 15px; min-height: 44px; min-width: 44px; }
   .k-clock { font-size: 18px; font-weight: 700; }
+  /* narrow screens (phones, small tablets): the tools wrap onto a second row
+     instead of being pushed off the right edge, where the 🖨 button went
+     missing (Kareem, 2026-10-24); the status text gives way first */
+  @media (max-width: 900px) {
+    .k-head { height: auto; min-height: 56px; flex-wrap: wrap; padding: 6px 1rem; row-gap: 6px; }
+    .k-head-meta { flex-wrap: wrap; justify-content: flex-end; gap: 6px 0.6rem; }
+    .k-stamp { display: none; }
+    .k-banner { position: static; }
+  }
 
   /* ------------------------------------------------- system banners */
   .k-banner {
