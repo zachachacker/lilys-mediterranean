@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Lily's Club · Lily's Mediterranean Fresh Grill</title>
-<meta name="description" content="Join Lily's Club: 10% off your next order (up to $7.50), members-only offers and a first look at new dishes from Lily's Mediterranean in Indialantic, FL.">
+<meta name="description" content="Lily's Club: earn a point for every $1 you spend online at Lily's Mediterranean in Indialantic, FL. 50 points = $5 off, 100 points = $12 off. Free to join.">
 <link rel="canonical" href="https://lilysmediterraneanfresh.com/club.html">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#14532b">
@@ -62,20 +62,20 @@
 <section class="section dark menu-hero club-hero" id="club">
   <div class="wrap">
     <div class="section-head club-box" id="clubBox">
-      <span class="eyebrow">Members only</span>
+      <span class="eyebrow">Free to join</span>
       <h1>Lily's Club</h1>
-      <p class="club-lede">Join free and get <strong><span class="club-pct">10</span>% off your next online order</strong> (up to $7.50). After that: our best offers and a first look at new dishes, about once a month.</p>
+      <p class="club-lede">Earn <strong>1 point for every $1</strong> you spend online. Points turn into money off your next order, automatically.</p>
       <ul class="club-perks">
-        <li><b><span class="club-pct">10</span>% off</b> your next order, just for joining (up to $7.50)</li>
-        <li><b>Members-only offers</b> you won't see anywhere else</li>
-        <li><b>First taste</b> of new dishes and specials</li>
+        <li><b>50 points = $5 off</b>, or save up to <b>100 points = $12 off</b></li>
+        <li><b>Your past orders count</b>: sign in with the email you used at checkout</li>
+        <li><b>No password, no app</b>: we email you a 6-digit code</li>
       </ul>
       <form class="club-form" id="clubForm" novalidate>
         <label for="clubEmail" class="sr-only">Your email</label>
         <input id="clubEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@email.com">
-        <button class="btn" type="submit">Join the club <span class="arw">→</span></button>
+        <button class="btn" type="submit">Send my code <span class="arw">→</span></button>
       </form>
-      <p class="club-fine">About once a month. Unsubscribe any time with one tap. We never share your email. <a class="ink" href="privacy.html">Privacy</a></p>
+      <p class="club-fine">We only email you the code. Offers emails are a separate tick box. <a class="ink" href="privacy.html">Privacy</a></p>
       <p class="club-msg" id="clubMsg" role="status" aria-live="polite" hidden></p>
     </div>
   </div>
@@ -126,29 +126,41 @@
 <script src="track.js"></script>
 <script src="main.js"></script>
 <script>
-/* Lily's Club page: join form, the welcome email's Claim button (#c=), and
-   unsubscribe (#u=). Tokens ride the #fragment, never the query string. */
+/* Lily's Club page (accounts + points 2026-10-24): sign in with an emailed
+   6-digit code, then see points, rewards and recent orders. Still handles the
+   offers email's Claim button (#c=) and unsubscribe (#u=). Tokens ride the
+   #fragment, never the query string; the session token lives in localStorage. */
 (() => {
   "use strict";
   const L = window.LILYS, O = L && L.ORDERING;
   if (!O) return;
-  const FN = `${O.supabaseUrl}/functions/v1/deals`;
+  const DEALS = `${O.supabaseUrl}/functions/v1/deals`;
+  const CLUB = `${O.supabaseUrl}/functions/v1/club`;
+  const TOKEN = "lilys-club-token";
   const $ = (id) => document.getElementById(id);
-  document.querySelectorAll(".club-pct").forEach((n) => { n.textContent = O.clubPercent || 5; });
-  const post = async (body) => {
-    const r = await fetch(FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const money = (c) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
+  const getTok = () => { try { return localStorage.getItem(TOKEN) || ""; } catch { return ""; } };
+  const setTok = (t) => { try { t ? localStorage.setItem(TOKEN, t) : localStorage.removeItem(TOKEN); } catch { /* private mode */ } };
+  const call = async (url, body, auth) => {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: O.anonKey, Authorization: `Bearer ${O.anonKey}`, ...(auth ? { "x-club-token": getTok() } : {}) },
+      body: JSON.stringify(body),
+    });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
+    if (!r.ok) throw Object.assign(new Error(j.error || "Something went wrong. Please try again."), { signin: !!j.signin });
     return j;
   };
   const box = $("clubBox");
   const show = (html) => { box.innerHTML = html; };
+  const fail = (e) => show(`<h1>Hmm.</h1><p class="club-lede">${esc(e.message)}</p><p><a class="btn" href="club.html">Back to Lily's Club</a></p>`);
+
   const m = /^#([cu])=([0-9a-f]{32})$/.exec(location.hash);
   if (m) history.replaceState(null, "", location.pathname); // keep the token out of shared URLs
-
   if (m && m[1] === "c") {
     show(`<span class="eyebrow">Members only</span><h1>Welcome to the club!</h1><p class="club-lede">Getting your offer ready...</p>`);
-    post({ action: "confirm", token: m[2] }).then((j) => {
+    call(DEALS, { action: "confirm", token: m[2] }).then((j) => {
       if (j.offer) {
         show(`<span class="eyebrow">Members only</span><h1>You're in!</h1><p class="club-lede">Taking you to the menu with your welcome offer applied...</p>`);
         setTimeout(() => { location.href = `order.html?src=club#t=${j.offer}`; }, 1200);
@@ -157,37 +169,99 @@
           <p class="club-lede">Your welcome offer has already been used. Watch your inbox for members-only offers.</p>
           <p><a class="btn" href="order.html">Order now <span class="arw">→</span></a></p>`);
       }
-    }).catch((e) => show(`<h1>Hmm.</h1><p class="club-lede">${e.message.replace(/</g, "&lt;")}</p>`));
+    }).catch(fail);
     return;
   }
   if (m && m[1] === "u") {
-    show(`<span class="eyebrow">Lily's Club</span><h1>Leave the club?</h1>
-      <p class="club-lede">You'll stop getting members-only offers. You can rejoin any time.</p>
+    show(`<span class="eyebrow">Lily's Club</span><h1>Stop offers emails?</h1>
+      <p class="club-lede">You'll stop getting members-only offers by email. Your points stay.</p>
       <p><button class="btn" id="unsubBtn" type="button">Unsubscribe</button></p>`);
     $("unsubBtn").addEventListener("click", async () => {
       try {
-        await post({ action: "unsubscribe", token: m[2] });
-        show(`<h1>You're unsubscribed.</h1><p class="club-lede">Sorry to see you go. Your food will still be just as good.</p>`);
-      } catch (e) { show(`<h1>Hmm.</h1><p class="club-lede">${e.message.replace(/</g, "&lt;")}</p>`); }
+        await call(DEALS, { action: "unsubscribe", token: m[2] });
+        show(`<h1>You're unsubscribed.</h1><p class="club-lede">No more offers emails. Your points are still yours.</p>`);
+      } catch (e) { fail(e); }
     });
     return;
   }
 
-  $("clubForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = $("clubEmail").value.trim();
+  // ---- signed in: points, rewards, recent orders --------------------------
+  async function account() {
+    show(`<span class="eyebrow">Lily's Club</span><h1>Your points</h1><p class="club-lede">Loading...</p>`);
+    let me;
+    try { me = await call(CLUB, { action: "me" }, true); }
+    catch (e) { if (e.signin) { setTok(""); return signedOut(); } return fail(e); }
+    const tiers = me.tiers || [];
+    const top = tiers.length ? tiers[tiers.length - 1].points : 100;
+    const next = tiers.find((t) => t.points > me.points);
+    const pct = Math.min(100, Math.round((me.points / top) * 100));
+    const rungs = tiers.map((t) => `<li class="${me.points >= t.points ? "ready" : ""}"><b>${money(t.cents)} off</b><span>${t.points} points</span>
+      <em>${me.points >= t.points ? "Ready to use" : `${t.points - me.points} to go`}</em></li>`).join("");
+    const hist = (me.history || []).map((h) => `<li><span>${esc(h.code)} · ${new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+      <span>${h.earned ? `+${h.earned}` : ""}${h.spent ? ` −${h.spent}` : ""}</span></li>`).join("");
+    show(`<span class="eyebrow">Lily's Club · ${esc(me.email)}</span>
+      <h1 class="club-pts"><span>${me.points}</span> points</h1>
+      ${me.on ? "" : `<p class="club-lede">Points are paused right now. They're safe and will be back soon.</p>`}
+      <div class="club-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${top}" aria-valuenow="${me.points}"><i style="width:${pct}%"></i></div>
+      <p class="club-lede">${next ? `<strong>${next.points - me.points} more points</strong> to ${money(next.cents)} off.` : "You can use your biggest reward now."}
+        Rewards show up in your cart when you order online.</p>
+      <ul class="club-rungs">${rungs}</ul>
+      <p><a class="btn" href="order.html?src=club">Order now <span class="arw">→</span></a></p>
+      ${hist ? `<h2 class="club-h2">Recent orders</h2><ul class="club-hist">${hist}</ul>` : `<p class="club-fine">No orders on ${esc(me.email)} yet. Your first one earns points.</p>`}
+      <label class="club-check"><input type="checkbox" id="clubOffers" ${me.offers ? "checked" : ""}> Email me members-only offers</label>
+      <p class="club-fine">1 point per $1 of food (not tax, tips or delivery). Points come from orders paid with this email or while signed in here.
+        <button class="club-link" id="clubOut" type="button">Sign out</button></p>`);
+    $("clubOffers").addEventListener("change", (e) => call(CLUB, { action: "set_offers", on: e.target.checked }, true).catch(() => { e.target.checked = !e.target.checked; }));
+    $("clubOut").addEventListener("click", async () => { await call(CLUB, { action: "sign_out" }, true).catch(() => {}); setTok(""); location.reload(); });
+  }
+
+  // ---- signed out: email, then the 6-digit code ---------------------------
+  const outHTML = box.innerHTML;
+  function signedOut() {
+    show(outHTML);
+    $("clubForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = $("clubEmail").value.trim().toLowerCase();
+      const msg = $("clubMsg");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; msg.hidden = false; return; }
+      const btn = e.target.querySelector("button");
+      btn.disabled = true;
+      try { await call(CLUB, { action: "send_code", email }); codeStep(email); }
+      catch (err) { msg.textContent = err.message; msg.hidden = false; btn.disabled = false; }
+    });
+  }
+  function codeStep(email) {
+    show(`<span class="eyebrow">Check your inbox</span><h1>Type your code</h1>
+      <p class="club-lede">We sent a 6-digit code to <strong>${esc(email)}</strong>.</p>
+      <form class="club-form" id="codeForm" novalidate>
+        <label for="clubCode" class="sr-only">6-digit code</label>
+        <input id="clubCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456" required>
+        <button class="btn" type="submit">Sign in <span class="arw">→</span></button>
+      </form>
+      <label class="club-check"><input type="checkbox" id="codeOffers"> Also email me members-only offers, with 10% off my next order for joining (up to $7.50). About once a month, unsubscribe any time.</label>
+      <p class="club-msg" id="clubMsg" role="status" aria-live="polite" hidden></p>
+      <p class="club-fine"><button class="club-link" id="codeAgain" type="button">Send a new code</button> · <button class="club-link" id="codeBack" type="button">Use a different email</button></p>`);
+    $("clubCode").focus();
     const msg = $("clubMsg");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; msg.hidden = false; return; }
-    const btn = e.target.querySelector("button");
-    btn.disabled = true;
-    try {
-      await post({ action: "join", email, via: window.LILYS_TRACK?.source() || "" });
-      show(`<span class="eyebrow">Almost there</span><h1>Check your inbox</h1>
-        <p class="club-lede">We've sent your welcome gift to <strong>${email.replace(/</g, "&lt;")}</strong>. Tap <b>Claim</b> in that email and you're in.</p>`);
-    } catch (err) {
-      msg.textContent = err.message; msg.hidden = false; btn.disabled = false;
-    }
-  });
+    $("codeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector("button");
+      btn.disabled = true;
+      try {
+        const j = await call(CLUB, { action: "verify", email, code: $("clubCode").value, offers: $("codeOffers").checked });
+        setTok(j.token);
+        account();
+      } catch (err) { msg.textContent = err.message; msg.hidden = false; btn.disabled = false; }
+    });
+    $("codeAgain").addEventListener("click", async () => {
+      try { await call(CLUB, { action: "send_code", email }); msg.textContent = "New code sent."; }
+      catch (err) { msg.textContent = err.message; }
+      msg.hidden = false;
+    });
+    $("codeBack").addEventListener("click", signedOut);
+  }
+
+  if (getTok()) account(); else signedOut();
 })();
 </script>
 

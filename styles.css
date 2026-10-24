@@ -1488,3 +1488,36 @@ fieldset.af-field[aria-invalid="true"] .af-chip { border-color: var(--ember); }
 .perks li { font-size: 0.86rem; font-weight: 700; padding: 0.32rem 0.75rem; border-radius: 99px;
   border: 1.5px solid currentColor; opacity: 0.92; }
 .perks li::before { content: "✓ "; color: var(--go); }
+
+/* Lily's Club account (2026-10-24): points, progress to the next reward, rungs */
+.club-pts { font-variant-numeric: tabular-nums; }
+.club-pts span { color: var(--lemon); }
+.club-bar { height: 12px; border-radius: 99px; background: color-mix(in srgb, var(--foam) 14%, transparent); overflow: hidden; margin: 0.4rem 0 0.2rem; }
+.club-bar i { display: block; height: 100%; background: var(--lemon); border-radius: 99px; transition: width 0.6s ease; }
+.club-rungs { list-style: none; padding: 0; margin: 0 0 1.4rem; display: grid; gap: 0.5rem; }
+.club-rungs li { display: grid; grid-template-columns: 1fr auto; gap: 0.1rem 1rem; padding: 0.8rem 1rem; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--foam) 22%, transparent); }
+.club-rungs li b { font-size: 1.15rem; }
+.club-rungs li span { opacity: 0.75; text-align: right; }
+.club-rungs li em { grid-column: 1 / -1; font-style: normal; font-size: 0.85rem; opacity: 0.8; }
+.club-rungs li.ready { border-color: var(--lemon); background: color-mix(in srgb, var(--lemon) 12%, transparent); }
+.club-rungs li.ready em { color: var(--lemon); opacity: 1; font-weight: 700; }
+.club-h2 { font-size: var(--step-1); margin: 1.6rem 0 0.5rem; }
+.club-hist { list-style: none; padding: 0; margin: 0 0 1rem; }
+.club-hist li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid color-mix(in srgb, var(--foam) 12%, transparent);
+  font-family: var(--mono); font-size: 0.85rem; }
+.club-check { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0.9rem 0 0; font-size: 0.9rem; line-height: 1.45; cursor: pointer; }
+.club-check input { width: 20px; height: 20px; flex: none; margin: 1px 0 0; accent-color: var(--lemon); }
+.club-link { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+
+/* Lily's Club points in the cart (2026-10-24) */
+.club-cart { border:1px dashed rgba(180,71,43,0.45); background:rgba(228,167,46,0.08);
+  border-radius:10px; padding:0.7rem 0.85rem; margin-bottom:0.9rem; font-size:0.92rem; }
+.cp-row { display:flex; justify-content:space-between; gap:0.8rem; flex-wrap:wrap; align-items:baseline; }
+.cp-row b { color:#14532b; }
+.cp-btns { display:grid; gap:0.4rem; margin-top:0.55rem; }
+.cp-use { font:inherit; font-weight:700; padding:0.6rem 0.8rem; min-height:44px; border-radius:99px; cursor:pointer;
+  border:1.5px solid #14532b; background:#fff; color:#14532b; text-align:center; }
+.cp-use.on { background:#14532b; color:#F4F1E8; }
+.cp-use.on::before { content:"✓ "; }
+.cp-n { font-size:0.78rem; color:#6a6459; margin-top:0.35rem; }

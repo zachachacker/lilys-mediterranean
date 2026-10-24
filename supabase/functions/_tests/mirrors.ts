@@ -256,7 +256,7 @@ export function floridaNow(): { day: number; minute: number } {
 
 export function applyPromotions(lines: PLine[], promos: Promo[]) {
   const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
-  const applied: { id: string; label: string; cents: number }[] = [];
+  const applied: { id: string; label: string; cents: number; points?: number; email?: string }[] = [];
   let discount = 0;
 
   for (const p of promos.filter((x) => x.kind === "bogo")) {

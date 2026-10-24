@@ -157,7 +157,7 @@ function floridaNow(): { day: number; minute: number } {
 
 function applyPromotions(lines: PLine[], promos: Promo[]) {
   const subtotal = lines.reduce((s, l) => s + l.unit_cents * l.qty, 0);
-  const applied: { id: string; label: string; cents: number }[] = [];
+  const applied: { id: string; label: string; cents: number; points?: number; email?: string }[] = [];
   let discount = 0;
 
   for (const p of promos.filter((x) => x.kind === "bogo")) {
@@ -236,6 +236,33 @@ function loyaltyDue(paidOrders: number, usedRewards: number, every: number): boo
   if (!Number.isInteger(every) || every < 2) return false;
   return Math.floor(paidOrders / every) > usedRewards;
 }
+
+/* ── Lily's Club points (2026-10-24; byte-identical in club/index.ts and
+   create-checkout/index.ts, checked by club_points_test.ts) ────────────── */
+type ClubOrder = {
+  subtotal_cents: number | null; discount_cents: number | null; status: string; created_at: string; demo: boolean | null;
+  customer_email: string | null; club_email: string | null; discounts: { id?: string; email?: string; points?: number }[] | null;
+};
+const CLUB_PAID = ["paid", "making", "ready", "done"];
+const CLUB_HOLD_MS = 2 * 3600 * 1000; // a reward on an unpaid checkout is held this long
+function clubPoints(email: string, orders: ClubOrder[], adjust: number, now: number): { earned: number; spent: number; balance: number } {
+  let earned = 0, spent = 0;
+  for (const o of orders) {
+    const paid = CLUB_PAID.includes(o.status);
+    const mine = (o.customer_email ?? "").toLowerCase() === email || o.club_email === email;
+    // $1 of food after discounts = 1 point; tax, delivery and tips earn nothing
+    if (paid && mine && !o.demo) earned += Math.floor(Math.max(0, (o.subtotal_cents ?? 0) - (o.discount_cents ?? 0)) / 100);
+    const held = paid || (o.status === "pending" && now - Date.parse(o.created_at) < CLUB_HOLD_MS);
+    if (held) for (const d of o.discounts ?? []) if (d?.id === "club-points" && d.email === email) spent += Number(d.points) || 0;
+  }
+  return { earned, spent, balance: earned + adjust - spent };
+}
+function clubTiers(raw: string | undefined): { points: number; cents: number }[] {
+  return String(raw ?? "").split(",").map((s) => s.split(":").map(Number))
+    .filter(([p, c]) => Number.isInteger(p) && p > 0 && Number.isInteger(c) && c > 0)
+    .map(([points, cents]) => ({ points, cents })).sort((a, b) => a.points - b.points);
+}
+/* ── end of the shared copy ─────────────────────────────────────────── */
 
 /* ── analytics (2026-10-08) ─────────────────────────────────────────────
    Where the order came from (set by the site from the landing URL/referrer)
@@ -371,6 +398,7 @@ Deno.serve(async (req) => {
     items?: CartLine[]; name?: string; phone?: string; notes?: string;
     action?: string; fulfilment?: string; address?: string; tip_cents?: unknown;
     source?: unknown; source_detail?: unknown; promo_token?: unknown; offers_opt_in?: unknown;
+    club_token?: unknown; club_points?: unknown;
   };
   try {
     body = await req.json();
@@ -713,6 +741,42 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Lily's Club (2026-10-24): a signed-in member earns points on this order
+  // whatever email they give Stripe (club_email), and may spend a reward rung.
+  // Points are re-counted here from the orders themselves, never trusted from
+  // the page; the spend rides in orders.discounts and holds while they pay.
+  let clubEmail: string | null = null;
+  const clubToken = String(body.club_token ?? "");
+  const clubWant = Number(body.club_points ?? 0);
+  if (/^[0-9a-f]{64}$/.test(clubToken)) {
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clubToken)))]
+      .map((b) => b.toString(16).padStart(2, "0")).join("");
+    const { data: sess } = await db.from("club_sessions").select("email").eq("token_hash", hash).maybeSingle();
+    clubEmail = sess?.email ?? null;
+  }
+  if (clubWant > 0) {
+    const tier = clubTiers(cfg.club_reward_tiers).find((t) => t.points === clubWant);
+    if ((cfg.club_points_enabled ?? "").trim() !== "true" || !tier) return json({ error: "That reward isn't available right now.", club: true }, 400);
+    if (!clubEmail) return json({ error: "Please sign in to Lily's Club again to use your points.", club: true }, 400);
+    if (offerable() < tier.cents) {
+      return json({ error: `The $${(tier.cents / 100).toFixed(0)} reward needs at least $${(tier.cents / 100).toFixed(0)} of food (lunch specials don't count).`, club: true }, 400);
+    }
+    const [ords, adj] = await Promise.all([
+      db.from("orders").select("subtotal_cents,discount_cents,status,created_at,demo,customer_email,club_email,discounts")
+        .or(`customer_email.eq.${clubEmail},club_email.eq.${clubEmail}`).limit(1000),
+      db.from("club_points").select("delta").eq("email", clubEmail),
+    ]);
+    if (ords.error || adj.error) {
+      console.error("club points count failed:", ords.error?.message ?? adj.error?.message);
+      return json({ error: "Ordering is temporarily unavailable — please try again in a moment." }, 503);
+    }
+    const adjust = (adj.data ?? []).reduce((sum: number, r: { delta: number }) => sum + r.delta, 0);
+    const { balance } = clubPoints(clubEmail, (ords.data ?? []) as ClubOrder[], adjust, Date.now());
+    if (balance < tier.points) return json({ error: `You have ${Math.max(0, balance)} points; that reward needs ${tier.points}.`, club: true }, 400);
+    discount += tier.cents;
+    applied.push({ id: "club-points", label: `Lily's Club reward: ${tier.points} points`, cents: tier.cents, points: tier.points, email: clubEmail });
+  }
+
   let deliveryMiles: number | null = null;
   let deliveryFee = 0;
   if (fulfilment === "delivery") {
@@ -772,6 +836,7 @@ Deno.serve(async (req) => {
         // ticked "Get special offers" (unticked by default); the webhook adds
         // the Stripe email to the deals list once the order is paid
         offers_opt_in: body.offers_opt_in === true,
+        club_email: clubEmail,
         demo,
         payment_provider: demo ? "demo" : provider,
         // our own session token — the confirmation page looks orders up by it.

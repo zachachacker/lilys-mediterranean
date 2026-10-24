@@ -17,6 +17,53 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const money = (cents) => `$${(cents / 100).toFixed(2)}`;
+
+  /* ---- Lily's Club points (2026-10-24) -----------------------------------
+     Signed in on club.html (token in localStorage): the cart shows the
+     balance and lets them spend one reward rung. create-checkout re-counts
+     the points from the orders themselves; the page only picks the rung. */
+  const CLUB_TOKEN = "lilys-club-token";
+  const clubTok = () => { try { return localStorage.getItem(CLUB_TOKEN) || ""; } catch { return ""; } };
+  let club = null; // {points, tiers, on} from the club function
+  let clubSpend = 0; // points of the chosen rung; 0 = none
+  async function loadClub() {
+    if (clubTok()) {
+      try {
+        const r = await fetch(`${FN}/club`, { method: "POST", headers: { ...HDRS, "x-club-token": clubTok() }, body: JSON.stringify({ action: "me" }) });
+        const j = await r.json().catch(() => ({}));
+        if (r.status === 401) { try { localStorage.removeItem(CLUB_TOKEN); } catch { /* fine */ } club = null; }
+        else if (r.ok) club = j;
+      } catch { /* offline: no points box; ordering is unaffected */ }
+    }
+    renderClub();
+  }
+  function renderClub() {
+    const el = $("clubPts");
+    if (!el) return;
+    if (!count() || (club && !club.on)) { el.hidden = true; return; }
+    const tiers = club?.tiers || [];
+    const spendCents = tiers.find((t) => t.points === clubSpend)?.cents || 0;
+    const earn = Math.floor(Math.max(0, subtotal() - spendCents) / 100);
+    if (!club) {
+      el.innerHTML = `<div class="cp-row"><span>Earn <b>${earn} points</b> on this order</span><a class="ink" href="club.html">Lily's Club</a></div>`;
+      el.hidden = false;
+      return;
+    }
+    if (clubSpend && !tiers.some((t) => t.points === clubSpend && club.points >= t.points)) clubSpend = 0;
+    const btns = tiers.filter((t) => club.points >= t.points).map((t) =>
+      `<button type="button" class="cp-use${clubSpend === t.points ? " on" : ""}" data-pts="${t.points}" aria-pressed="${clubSpend === t.points}">
+        Use ${t.points} points: ${money(t.cents)} off</button>`).join("");
+    const next = tiers.find((t) => t.points > club.points);
+    el.innerHTML = `<div class="cp-row"><span>Lily's Club · <b>${club.points} points</b></span><span>+${earn} on this order</span></div>
+      ${btns ? `<div class="cp-btns">${btns}</div>` : next ? `<div class="cp-n">${next.points - club.points} more points to ${money(next.cents)} off</div>` : ""}
+      ${clubSpend ? `<div class="cp-n">Taken off at checkout.</div>` : ""}`;
+    el.hidden = false;
+    el.querySelectorAll("[data-pts]").forEach((b) => b.addEventListener("click", () => {
+      const p = Number(b.dataset.pts);
+      clubSpend = clubSpend === p ? 0 : p;
+      renderClub();
+    }));
+  }
   // must match scripts/sync-menu.mjs
   const slug = (s) => s.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // in-house price string -> ONLINE cents (data.js applies the 3% markup);
@@ -619,6 +666,7 @@
       showMinimum();
     }
     if (cartBar) cartBar.hidden = n === 0;
+    renderClub();
     renderActions();
     saveCart();
   };
@@ -862,6 +910,8 @@
           tip_cents: tipCents,
           promo_token: promoCode?.token || "",
           offers_opt_in: $("cfClub")?.checked === true,
+          club_token: clubTok(),
+          club_points: clubSpend,
           source: window.LILYS_TRACK?.source() || "direct",
           source_detail: window.LILYS_TRACK?.detail() || "",
         }),
@@ -873,6 +923,12 @@
         dropCode();
         loadOffers();
         throw new Error(`${j.error} We've removed it, so you can place the order without it.`);
+      }
+      // same for a points reward (signed out, not enough food...): drop it, keep the order
+      if (!r.ok && j.club && clubSpend) {
+        clubSpend = 0;
+        loadClub();
+        throw new Error(`${j.error} We've taken the reward off, so you can order without it.`);
       }
       if (!r.ok) throw new Error(j.error || "Something went wrong.");
       // the cart survives until the order is truly done — if they cancel on
@@ -947,6 +1003,7 @@
   }
 
   loadOffers();
+  loadClub();
   readCodeFromLink();
   loadAvailability();
   document.addEventListener("visibilitychange", () => {

@@ -45,10 +45,12 @@ Deno.test("drift: the progress counter is the same in order-status and kitchen-a
   assertStringIncludes(await read("../kitchen-api/index.ts"), "const orders = (data ?? []).map(({ customer_hash, ...o }) => {");
 });
 
-Deno.test("website perks say what the loyalty settings do", async () => {
-  const mig = await read("../../migrations/20261020_loyalty.sql");
-  assertStringIncludes(mig, "('loyalty_every', '5'), ('loyalty_cents', '1000')");
+// 2026-10-24: Lily's Club points replaced the 5-orders reward (loyalty_enabled
+// switched to 'false' in app_config); the perks now advertise the first rung
+Deno.test("website perks say what the Club points settings do", async () => {
+  const mig = await read("../../migrations/20261024_club_points.sql");
+  assertStringIncludes(mig, "('club_reward_tiers', '50:500,100:1200')");
   for (const page of ["../../../order.html", "../../../index.html"]) {
-    assertStringIncludes(await read(page), "<li>$10 off after every 5 orders</li>");
+    assertStringIncludes(await read(page), "<li>$1 = 1 point, 50 points = $5 off</li>");
   }
 });
